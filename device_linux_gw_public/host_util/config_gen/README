@@ -1,0 +1,63 @@
+********************************************************************************
+Copyright 2011-2018 Ayla Networks, Inc.  All rights reserved.
+Use of the accompanying software is permitted only in accordance
+with and subject to the terms of the Software License Agreement
+with Ayla Networks, Inc., a copy of which can be obtained from
+Ayla Networks, Inc.
+********************************************************************************
+
+config_gen README
+
+INTRO:
+
+config_gen is a standalone utility to simulate the manufacturing flow for
+a device running the Ayla Linux client.  It generates a fully populated JSON
+configuration file for devd (Ayla device daemon) as well as appending an entry
+to the manufacturing log file that must be submitted to Ayla to activate
+the device using the generated config file.
+
+
+BUILD INSTRUCTIONS:
+
+Build config_gen by cd-ing into the config_gen project directory and typing
+"make install".  This will compile the config_gen tool, dependent libraries,
+and copy the executable to the default build install directory:
+<project root>/build/native/util.  Note: the following Linux packages are
+required:
+* openssl (developer package)
+* jansson (version 2.7)
+
+
+USAGE INSTRUCTIONS:
+
+Run the utility from the Linux command line using the following parameters:
+config_gen -d <dsn_path> -i <oem_info_file> [-n]|[-m <MAC_address>] [-o <output_dir>] [-v <verbosity>]
+
+Required:
+* dsn_path - 		the path to the DSN XML file output by the Ayla Factory
+			Service
+* oem_info_file -	the path to the OEM info file containing OEM and
+			manufacturing-specific info.  See the sample_input
+			directory to see what information should be included
+			in the oem_info file.
+Optional:
+* no_mfg_log -		Omits manufacturing log generation.  Logs are not required
+			for development devices.
+* MAC_address -		the MAC address of the device this config file will be
+			used with.  This is a required parameter unless the mfg
+			log is not generated (-n option).  The MAC must be
+			input as six bytes in hexidecimal, without delimiters.
+* output_dir -		The directory to write config files, used DSN files,
+			and the manufacturing log to.  This directory will be
+			created if it does not exist.
+* verbosity -		Adjusts the verbosity of console output.
+			0 - Silent.  No console output will be printed if 
+			    correct command line parameters are provided.
+			1 - Print errors, warnings, and info (default).
+			2 - Print debug messages in addition to default output.
+
+Example usage:
+config_gen -d dsns/AC000W000123456.xml -i ./oem_info -m 112233445566 -o ./ayla_config -v 1
+
+			
+

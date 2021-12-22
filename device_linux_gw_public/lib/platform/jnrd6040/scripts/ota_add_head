@@ -1,0 +1,72 @@
+#! /bin/bash
+#
+# Copyright 2014-2018 Ayla Networks, Inc.  All rights reserved.
+#
+# ota_add_head
+#
+cmdname=`basename $0`
+
+IMAGE_VER=0.1
+PROG_NAME=AY004SZG0
+
+PLATFORM=AY001MRT
+
+TIMESTAMP=`date --utc '+%Y-%m-%dT%H:%M:%SZ'`
+
+usage() {
+	echo "usage:  $cmdname [<options>] <in-file> <out-file>" >&2
+	exit 1
+}
+
+while [ $# -gt 2 ]
+do
+	arg="$2"
+	case "$1" in
+	-m | "--model")
+		PLATFORM="$arg"
+		shift
+		;;
+	-p | "--prog_name")
+		PROG_NAME="$arg"
+		shift
+		;;
+	-v | "--version")
+		IMAGE_VER="$arg"
+		shift
+		;;
+	*)
+		echo "$cmdname: unknown parameter $1" >&2
+		usage
+		;;
+	esac
+	shift
+done
+
+SCM_REV=`git rev-parse --verify --short HEAD || echo`
+SCM_PLUS=`git diff-index --quiet HEAD || echo +`
+SCM_REV=$SCM_REV$SCM_PLUS
+
+BUILD="$PROG_NAME $IMAGE_VER $TIMESTAMP $USER/$WORKSPACE_LABEL/$SCM_REV"
+	
+if [ $# -ne 2 ]
+then
+	usage
+fi
+in=$1
+out=$2
+if [ ! -f "$in" ]; then
+	echo "$cmdname: input file $in does not exist" >&2
+	exit 1
+fi
+
+(
+	echo ayla_ota_version 1
+	echo platform $PLATFORM
+	echo image_date	$TIMESTAMP
+	echo image_version "$IMAGE_VER"
+	echo image_build "$BUILD"
+	echo image_md5 `md5sum < $in | sed -e 's/ .*//'`
+	echo image_len `stat -Lc '%s' $in`
+	echo
+	cat $in
+) >$out

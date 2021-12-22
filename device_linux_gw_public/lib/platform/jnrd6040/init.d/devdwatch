@@ -1,0 +1,32 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright 2014-2018 Ayla Networks, Inc.  All rights reserved
+#
+
+START=99
+STOP=60
+NAME=devdwatch
+DAEMON=/sbin/devdwatch
+
+start() {
+	ulimit -c unlimited
+	#
+	# If default config files are missing from /config,
+	# restore them from /etc/ayla.
+	#
+	if [ -d /config ]; then
+		files=`ls /etc/ayla/*.conf`
+		for f in $files; do
+			if [ ! -f /config/`basename $f` ]; then
+				cp $f /config/
+			fi
+		done 
+	fi
+	echo "Starting devdwatch"
+	start-stop-daemon -S -x $DAEMON
+}
+
+stop() {
+	echo "Stopping devdwatch"
+	start-stop-daemon -s SIGUSR1 -K -x $DAEMON
+}

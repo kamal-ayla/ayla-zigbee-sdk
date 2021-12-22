@@ -1,0 +1,8 @@
+region US					# Device region code
+oem aabbccee					# OEM ID
+oem_model sample_oem_model			# OEM model
+oem_secret deadbeefdeadbeefdeadbeefdeadbeef	# OEM secret
+mfg_model Sample-manufacturer-model		# Manufacturer model
+mfg_serial Sample-manufacturer-serial-number	# Manufacturer S/N (optional)
+mfg_sw_version v1.2.3_F				# Manufacturer SW version (optional)
+odm devices_R_us				# Original Device Manufacturer name (optional)

@@ -1,0 +1,20 @@
+config wifi-device 'mt7620'
+        option type 'mt7620'
+        option vendor 'ralink'
+        option band '2.4G'
+        option channel '0'
+        option auotch '2'
+
+config wifi-iface
+        option device 'mt7620'
+        option ifname 'ra0'
+        option mode 'ap'
+        option ssid 'Ayla-AP'
+        option encryption 'none'
+        option network 'ap'
+
+config wifi-iface
+        option device 'mt7620'
+        option ifname 'apcli0'
+        option mode 'sta'
+        option network 'wan'

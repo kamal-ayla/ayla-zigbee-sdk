@@ -1,0 +1,104 @@
+Ayla device_linux Make Options
+
+=== Build Hierarchy ===
+
+Each library, module, and tool has its own makefile.  In addition, there is a
+top-level makefile that recursively invokes all sub makefiles in the correct order.
+The top-level makefile supports all build targets and variables listed below,
+as well as several additional targets and variables providing finer grained control
+over what components are built.  Apart from minor customizations, the sub-makefiles
+should remain simple and consistent, and the majority of the build variable
+definitions and rules should remain in the common make scripts in <build root>/make.
+
+<build root>
+     |
+     |--[lib]
+     |    |--[app]
+     |    |    |--Library for application daemons
+     |    |
+     |    |--[ayla]
+     |    |     |--Ayla common library
+     |    |
+     |    |--[platform]
+     |           |--Platform-specific library
+     |
+     |--[daemon]
+     |     |--Core device services, including devd, cond, and logd
+     |
+     |--[app]
+     |    |--Example application daemons
+     |
+     |--[util]
+     |     |--Command-line utilities and tools for use with Ayla services
+     |
+     |--[host_util]
+     |       |--[config_gen]
+     |       |        |--Stand-alone utility to generate a devd config file on a host machine
+     |       |
+     |       |--[gw_setup]
+     |               |--Host TCL scripts and resources for use on the manufacturing line
+     |
+     |--[dev_kit]
+     |      |--Setup scripts, files, and resources for the Raspberry Pi dev kit
+     |
+     |--[ext]
+     |    |--External code/libraries included in Ayla build...
+     |
+     |--[make]
+           |--common makefiles...
+
+
+=== Make Targets ===
+
+all - (default target) builds all modules and dependencies, including libraries, executables, and utilities.
+clean - removes the build output, which restores the source tree to its original state.
+install - performs a normal build, if necessary, and copies the build output files to the install directory.
+          The default install directory is <build root>/build/<arch>/.  The default <arch> is called "native".
+          Each makefile has a recipe for the install target, and this can be updated to suit your needs,
+          or left empty to do nothing.  The "install" target is useful for two reasons:
+          #1 When building natively and test running Ayla modules, you can cd to the <install>/bin directory
+          where the executables are installed, and run them from there.
+          Config/resource files are commonly installed in <install>/etc.
+          #2 When building device_linux as a package in an embedded Linux build,
+          it is convenient to have all output files in a single directory.
+
+=== Make Variables ===
+
+Several optional make variables are supported.
+
+Cross Compilation Variables:
+INSTALL_ROOT=<install directory> directory to install files when "make install" is called.
+TOOLCHAIN_DIR=<toolchain directory> path to the root directory of a cross compilation
+                                    package (where bin, include, and lib are)
+ARCH=<cross compiler prefix> for example, "arm-linux-gnu" or "mipsel-linux"
+EXTLIB_DIR=<dependency install directory> top-level directory or list of directories
+					  where dependencies for the target platform are installed.
+					  Makefiles expect to see lib and include directories
+					  inside each EXTLIB_DIR.
+					  
+Build Customization Variables:
+PROD=<product> Variable used by some makefiles to select platform-specific code.
+	       It is expected that whitebox developers will add support for new
+	       PRODs in the makefiles that need them, and will specify these PRODs
+	       when building code for their platforms. PRODs currently supported
+	       include: "generic", "raspberry_pi", and "jnr6040"
+APP=<app directory> directory to build for the application.  Selects from app/<app directory>
+NO_WIFI=1 omits the Wi-Fi connection manager and associated components from the build.
+NO_LOGD=1 omits the logging daemon from the build
+
+Examples:
+Make command for native build and install to default directory:
+   make install
+
+Make command to build natively and install in an external directory:
+   make INSTALL_ROOT=~/workspace/ayla_build install
+
+Make command for a cross compiled build and install in default directory:
+   make ARCH=arm-linux-gnu TOOLCHAIN_DIR=/opt/arm_toolchain EXTLIB_DIR=../ext install
+
+=== Build Output ===
+
+ALL build output is written to the <build root>/build/<arch>/obj directory.
+NO files are written into the original source tree.  Executables can be test
+run by making and cd-ing into the build or install directory.  This means you can
+do native and cross compiled builds in parallel without doing a clean.

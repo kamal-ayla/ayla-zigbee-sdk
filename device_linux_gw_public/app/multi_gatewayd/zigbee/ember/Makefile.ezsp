@@ -1,0 +1,284 @@
+# This Makefile defines how to build a unix host application connected to an
+# Ember NCP EZSP device.  This also works for Windows machines running
+# Cygwin.
+
+# Variables
+
+# If using a different compiler than GCC, you can create a makefile
+# that overrides the following variables.  
+#   COMPILER - Compiler binary path
+#   LINKER - Linker binary path
+#   ARCHIVE - Optional archive tool.
+#   COMPILER_INCLUDES - Any additional compiler includes each prefixed with -I
+#   COMPILER_DEFINES - Any additional compiler defines each prefixed with -D
+#   COMPILER_FLAGS - The set of compiler flags (not including dependencies)
+#   LINKER_FLAGS - The set of linker flags
+#   ARCHIVE_FLAGS - The set of archive tool flags.
+#   DEPENDENCY_FLAGS - The set of dependency generation flags used to generate
+#     dependencies at the same time compilation is executed.
+#   DEPENDENCY_POST_PROCESS - An optional post processing step for massaging
+#     generated depenendencies.  Only necessary when using a compiler on the 
+#     non-native platform (e.g. Windows compiler on Linux)
+#   PLATFORM_HEADER_FILE - The header file defining the basic int8u, int32u,
+#     and other typedefs and platform elements.
+#   BOARD_HEADER_FILE - The header file describing any board specific options.
+#   ARCHIVE_EXTENSION - The file extension for archives if not using the standard
+#     .a file extension.
+#
+# Then pass the makefile to this one on the command line with:
+#   "cd app/builder/ember; make -f Makefile.ezsp"
+#
+
+
+COMPILER ?= gcc
+LINKER   ?= gcc
+ARCHIVE  ?= ar
+
+ARCHIVE_EXTENSION ?= .a
+
+LIB_NAME = em3588stack5.7.4
+
+CC = $(COMPILER)
+LD = $(LINKER)
+SHELL = /bin/sh
+
+ifneq ($(CURDIR),$(shell dirname $(abspath $(lastword $(MAKEFILE_LIST)))))
+$(error This makefile should only be invoked under its current directory ($(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))))
+endif
+
+COMPILER_INCLUDES ?= 
+
+INCLUDES= \
+  $(COMPILER_INCLUDES) \
+  -I./../../.. \
+  -I./../../../protocol/zigbee_5.7/app/framework \
+  -I./../../../protocol/zigbee_5.7/app/framework/../.. \
+  -I./../../../protocol/zigbee_5.7/app/framework/../../stack \
+  -I./../../../protocol/zigbee_5.7/app/framework/../util \
+  -I./../../../protocol/zigbee_5.7/app/framework/../util/common \
+  -I./../../../protocol/zigbee_5.7/app/framework/../util/ezsp \
+  -I./../../../protocol/zigbee_5.7/app/framework/../util/serial \
+  -I./../../../protocol/zigbee_5.7/app/framework/../util/zigbee-framework \
+  -I./../../../protocol/zigbee_5.7/app/framework/cli \
+  -I./../../../protocol/zigbee_5.7/app/framework/include \
+  -I./../../../protocol/zigbee_5.7/app/framework/security \
+  -I./../../../protocol/zigbee_5.7/app/framework/util \
+  -I./../../../app/builder/ember \
+  -I./../../../platform/base/hal \
+  -I./../../../platform/base/hal/plugin \
+  -I./../../../platform/base/hal/.. \
+  -I./../../../platform/base/hal/micro/generic \
+  -I./../../../platform/base/hal/micro/unix/host \
+ \
+
+APP_BUILDER_OUTPUT_DIRECTORY=.
+APP_BUILDER_CONFIG_HEADER=$(APP_BUILDER_OUTPUT_DIRECTORY)/ember.h
+APP_BUILDER_STORAGE_FILE=$(APP_BUILDER_OUTPUT_DIRECTORY)/ember_endpoint_config.h
+
+PLATFORM_HEADER_FILE ?= \"../../../platform/base/hal/micro/unix/compiler/gcc.h\"
+BOARD_HEADER_FILE    ?= \"../../../platform/base/hal/micro/unix/host/board/host.h\"
+
+DEFINES = \
+  $(COMPILER_DEFINES) \
+  -DUNIX \
+  -DUNIX_HOST \
+  -DPHY_NULL \
+  -DCONFIGURATION_HEADER=\"../../../protocol/zigbee_5.7/app/framework/util/config.h\" \
+  -DEZSP_HOST \
+  -DGATEWAY_APP \
+  -DZA_GENERATED_HEADER=\"$(APP_BUILDER_CONFIG_HEADER)\" \
+  -DATTRIBUTE_STORAGE_CONFIGURATION=\"$(APP_BUILDER_STORAGE_FILE)\" \
+  -DPLATFORM_HEADER=$(PLATFORM_HEADER_FILE) \
+  -DBOARD_HEADER=$(BOARD_HEADER_FILE) \
+  -DEMBER_AF_API_EMBER_TYPES=\"stack/include/ember-types.h\" \
+  -DEZSP_ASH=1 \
+  
+
+
+COMPILER_FLAGS ?= \
+  -Wall \
+  -ggdb \
+  -O0
+
+APPLICATION_FILES= \
+  ../../../protocol/zigbee_5.7/app/framework/cli/core-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/network-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/option-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/plugin-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/security-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/zcl-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/cli/zdo-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/security/af-node.c \
+  ../../../protocol/zigbee_5.7/app/framework/security/af-security-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/security/af-trust-center.c \
+  ../../../protocol/zigbee_5.7/app/framework/security/crypto-state.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/af-event.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/af-main-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/af-main-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/attribute-size.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/attribute-storage.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/attribute-table.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/client-api.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/message.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/multi-network.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/print.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/print-formatter.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/process-cluster-message.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/process-global-message.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/service-discovery-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/service-discovery-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/time-util.c \
+  ../../../protocol/zigbee_5.7/app/framework/util/util.c \
+  ../../../protocol/zigbee_5.7/app/framework/../util/common/library.c \
+  ../../../protocol/zigbee_5.7/app/framework/../util/serial/command-interpreter2.c \
+  ../../../protocol/zigbee_5.7/app/framework/../util/zigbee-framework/zigbee-device-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/../util/zigbee-framework/zigbee-device-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/../../stack/framework/event-control.c \
+  ../../../platform/base/hal/micro/generic/buzzer-stub.c \
+  ../../../platform/base/hal/micro/generic/crc.c \
+  ../../../platform/base/hal/micro/generic/led-stub.c \
+  ../../../platform/base/hal/micro/generic/antenna-stub.c \
+  ../../../platform/base/hal/micro/generic/mem-util.c \
+  ../../../platform/base/hal/micro/generic/random.c \
+  ../../../platform/base/hal/micro/generic/system-timer.c \
+  ../../../platform/base/hal/micro/unix/host/micro.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/address-table/address-table.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/address-table/address-table-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/concentrator/concentrator-support.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/concentrator/concentrator-support-cli.c \
+  ../../../protocol/zigbee_5.7/app/util/source-route-common.c \
+  ../../../protocol/zigbee_5.7/app/util/source-route-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/counters/counters-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/counters/counters-ota-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/counters/counters-host.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/form-and-join/form-and-join-afv2.c \
+  ../../../protocol/zigbee_5.7/app/util/common/form-and-join.c \
+  ../../../protocol/zigbee_5.7/app/util/common/form-and-join-host-adapter.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/heartbeat/heartbeat.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/identify/identify.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/identify/identify-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/identify-feedback/identify-feedback.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/network-find/network-find.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-common/ota-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-server/ota-server.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-server/ota-server-page-request.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-server/ota-server-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-server-policy/ota-server-policy.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-storage-common/ota-storage-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-storage-common/ota-storage-common-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/ota-storage-posix-filesystem/ota-storage-linux.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/price-common/price-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/price-common/price-common-time.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/price-common/price-common-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/simple-metering-client/simple-metering-client.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/simple-metering-client/simple-metering-client-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin/time-server/time-server.c \
+  ../../../protocol/zigbee_5.7/app/util/ezsp/ezsp-callbacks.c \
+  ../../../protocol/zigbee_5.7/app/util/ezsp/ezsp-enum-decode.c \
+  ../../../protocol/zigbee_5.7/app/util/ezsp/ezsp-frame-utilities.c \
+  ../../../protocol/zigbee_5.7/app/util/ezsp/ezsp.c \
+  ../../../protocol/zigbee_5.7/app/ezsp-host/ezsp-host-io.c \
+  ../../../protocol/zigbee_5.7/app/ezsp-host/ezsp-host-queues.c \
+  ../../../protocol/zigbee_5.7/app/ezsp-host/ezsp-host-ui.c \
+  ../../../protocol/zigbee_5.7/app/util/ezsp/serial-interface-uart.c \
+  ../../../protocol/zigbee_5.7/app/ezsp-host/ash/ash-host-ui.c \
+  ../../../protocol/zigbee_5.7/app/ezsp-host/ash/ash-host.c \
+  ../../../platform/base/hal/micro/generic/ash-common.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin-host/file-descriptor-dispatch/file-descriptor-dispatch.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin-host/gateway/gateway-support.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin-host/gateway/backchannel-support.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin-host/gateway/gateway-support-cli.c \
+  ../../../protocol/zigbee_5.7/app/framework/plugin-host/ncp-configuration/ncp-configuration.c \
+  ../../../platform/base/hal/plugin/serial/ember-printf-convert.c \
+  ../../../app/util/serial/linux-serial.c \
+
+
+LIBRARIES = \
+ \
+
+
+OUTPUT_DIR = $(APP_BUILDER_OUTPUT_DIRECTORY)
+LIB_DIR = $(OUTPUT_DIR)/lib
+OBJ_DIR = $(LIB_DIR)/obj
+OUTPUT_DIR_CREATED = $(OBJ_DIR)/created
+# Build a list of object files from the source file list, but all objects
+# live in the $(OBJ_DIR) above.  The list of object files
+# created assumes that the file part of the filepath is unique
+# (i.e. the bar.c of foo/bar.c is unique across all sub-directories included).
+APPLICATION_OBJECTS= $(shell echo $(APPLICATION_FILES) | xargs -n1 echo | sed -e 's^.*/\(.*\)\.c^$(OBJ_DIR)/\1\.o^')
+
+TARGET_FILE= $(LIB_DIR)/lib$(LIB_NAME)$(ARCHIVE_EXTENSION)
+
+
+# -MMD and -MF generates Makefile dependencies while at the same time compiling.
+# -MP notes to add a dummy 'build' rule for each header file.  This 
+# prevent a problem where a removed header file will generate an error because a
+# dependency references it but it can't be found anymore.
+DEPENDENCY_FLAGS ?= -MMD -MP -MF $(@D)/$*.d 
+
+# Dependency post process is a way to massage generated dependencies.
+# This is necessary for example when using Make under Cygwin but compiling
+# using a native Windows compiler that generates native Windows paths
+# that Cygwin will choke on.  Or if compiling on Linux using Wine to run a 
+# Windows compiler, a similar problem can occur.  
+DEPENDENCY_POST_PROCESS ?=
+
+CPPFLAGS= $(INCLUDES) $(DEFINES) $(COMPILER_FLAGS) $(DEPENDENCY_FLAGS)
+LINKER_FLAGS ?=
+
+ifdef NO_READLINE
+  CPPFLAGS += -DNO_READLINE
+else
+  LINKER_FLAGS +=  \
+    -lreadline \
+    -lncurses 
+endif
+
+ARCHIVE_FLAGS ?= rus
+
+# Rules
+
+default: all
+
+all: $(TARGET_FILE)
+
+UPDATED = $(OBJ_DIR)/ember_endpoint_config_updated
+$(UPDATED): ./ember_endpoint_config.h $(OUTPUT_DIR_CREATED)
+	sed -i 's/EMBER_AF_GENERATED_PLUGIN_TICK_FUNCTION_DECLARATIONS /EMBER_AF_GENERATED_PLUGIN_TICK_FUNCTION_DECLARATIONS_NOT_USE /g' ./ember_endpoint_config.h
+	sed -i 's/EMBER_AF_GENERATED_PLUGIN_TICK_FUNCTION_CALLS /EMBER_AF_GENERATED_PLUGIN_TICK_FUNCTION_CALLS_NOT_USE /g' ./ember_endpoint_config.h
+	touch $(UPDATED)
+
+$(OUTPUT_DIR_CREATED):
+	mkdir -p $(OUTPUT_DIR)
+	mkdir -p $(LIB_DIR)
+	mkdir -p $(OBJ_DIR)
+	touch $(OUTPUT_DIR_CREATED)
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(APPLICATION_OBJECTS:.o=.d)
+endif
+
+$(TARGET_FILE): $(APPLICATION_OBJECTS) $(LIBRARIES)
+	@echo -e '\nAPPLICATION_OBJECTS=$(APPLICATION_OBJECTS)\n'
+	$(ARCHIVE) $(ARCHIVE_FLAGS) $(TARGET_FILE) $^
+	@echo -e '\n$@ build success'
+
+clean:
+	rm -rf $(LIB_DIR)
+
+# To facilitate generating all output files in a single output directory, we
+# must create separate .o and .d rules for all the different sub-directories
+# used by the source files.
+# If additional directories are added that are not already in the
+# $(APPLICATION_FILES) above, new rules will have to be created below.
+
+# Object File rules
+
+VPATH += $(dir $(APPLICATION_FILES))
+
+$(OBJ_DIR)/%.o: %.c $(OUTPUT_DIR_CREATED) $(UPDATED)
+	$(CC) $(CPPFLAGS) -c $< -o $(OBJ_DIR)/$(@F)
+	$(DEPENDENCY_POST_PROCESS)
+
+# Dependency rules
+# No explicit rules.  Dependencies are generated as part of the compile step.

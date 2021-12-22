@@ -1,0 +1,64 @@
+#! /bin/sh
+#
+# Copyright 2014-2018 Ayla Networks, Inc.  All rights reserved.
+#
+
+#
+# Setup to boot the other (alt_firmware) partition.
+#
+cmdname=`basename $0`
+
+#
+# split a line at the specified characters, using IFS.
+#
+split_line() {
+	IFS="$1"
+	shift
+	set -- $@
+	unset IFS
+	echo $@
+}
+
+#
+# Return the currently running image number
+#
+current_image() {
+	image=unknown
+	for arg in `cat /proc/cmdline`; do
+		set -- `split_line '=' $arg`
+		if [ "$1" == "ota_image" -a $# = 2 ]; then
+			image=$2
+			break
+		fi
+	done
+	echo $image
+}
+
+#
+# determine whether we're running on the primary or secondary partition
+#
+image=`current_image`
+
+case "$image" in
+0)
+	next_image=1
+	;;
+1)
+	next_image=0
+	;;
+*)
+	echo "$cmdname: current OTA image not found or invalid" 2>&1
+	exit 1
+	;;
+esac
+echo "$cmdname: image current $image next $next_image" >&2
+
+env_image=`fw_printenv -n ota_image`
+
+if [ "$env_image" != "$next_image" ]
+then
+	echo "$cmdname: running: fw_setenv ota_image $next_image" >&2
+	fw_setenv ota_image $next_image
+else
+	echo "$cmdname: already set to boot other image" >&2
+fi

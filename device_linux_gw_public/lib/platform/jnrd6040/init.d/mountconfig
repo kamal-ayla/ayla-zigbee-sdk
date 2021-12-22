@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright 2014-2018 Ayla Networks, Inc.
+#
+
+START=11
+STOP=97
+
+start() {
+	local bdev=`find_mtd_part config`
+	if [ -z "$bdev" ]; then
+		echo "mountconfig: no mtd config partition" >/dev/console
+		echo "mountconfig: no mtd config partition"
+		return 1
+	fi
+	mkdir -p /config
+	mount -t jffs2 -o noatime $bdev /config
+}
+
+stop() {
+	umount /config
+}

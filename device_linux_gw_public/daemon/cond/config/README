@@ -1,0 +1,105 @@
+Cond Configuration
+
+The Ayla configuration daemon uses the standard JSON configuration file format
+shared by all Ayla daemons.  This directory contains sub-directories with
+default factory configuration files for each of the demo Wi-Fi platform
+implementations.  Many fields in the Cond factory config file are optional,
+and may be omitted to use the default value.  The "wifi" top-level object
+contains the core Wi-Fi configuration.  There is also a "wifi_platform" object
+that contains fields defined by the platform-specific Wi-Fi implementation,
+but this readme will focus on the "wifi" object.
+
+
+Supported Cond "wifi" Config File Fields
+
+Name: enable
+Type: boolean
+Default: true
+Description: Master enable for the Wi-Fi state machine.  If this is false,
+	the Wi-Fi AP and station will be disabled.
+
+Name: interface
+Type: string
+Description: The name of the station mode network interface.
+
+Name: ap_interface
+Type: string
+Default: defaults to the value set for "interface".
+Description: The name of the AP mode network interface.  Omitting this field,
+	or setting it to the same value as "interface" has will automatically
+	disable simultaneous AP and Station mode.  Using different "interface"
+	and "ap_interface" values will enable simultaneous AP and station mode
+	unless "simultaneous_ap_sta" is explicitly set to false.
+
+Name: simultaneous_ap_sta
+Type: boolean
+Default: [No default]
+Description: This is an optional field in the factory config, and should only
+	be defined if it is desired to explicitly override the default
+	behavior for simultaneous AP and station mode described above. 
+
+Name: ap_ip_address
+Type: string
+Default: 192.168.0.1
+Description: The static IP address to configure the AP network interface with
+	when AP mode is enabled.
+
+Name: ap_window_at_startup
+Type: boolean
+Default: true
+Description: If set to true, an AP window is opened as soon as cond starts.
+	AP mode is allowed for the duration of the AP window.  If this is set
+	to false, the AP window is only opened when a WIFI_AP_WINDOW_OPEN
+	message is sent from an external interface, such as acli or another
+	application.
+
+Name: ap_window_duration
+Type: integer
+Default: 0
+Description: This defines the length of the AP window in minutes.  If omitted
+	or set to 0, the AP window never closes, once opened.
+
+Name: ap_window_secure
+Type: boolean
+Default: false
+Description: Setting this value to true disables AP mode completely once >= 1
+	valid Wi-Fi profiles have been added.  This is an added security option
+	to prevent the device from reverting to AP mode once a valid Wi-Fi
+	profile has been saved.
+
+Name: profile_save_mode
+Type: string
+Default: save-on-cloud-up
+Description: This determines the policy used for saving Wi-Fi profiles added
+	using the WIFI_CONNECT interface.  The default is preferred in most
+	cases, but the following values are supported:
+	"save-never" - never save profile on Wi-Fi connect.  For testing.
+	"save-on-add" - save profile immediately before connecting.
+	"save-on-connect" - save profile once connected to Wi-Fi network.
+	"save-on-cloud-up" - save profile once connected to Wi-Fi and Ayla cloud.
+
+Name: profile
+Type: array
+Description: An array of saved Wi-Fi profiles.  Generally, this is left empty
+	in the factory config file, but it is possible to add a default Wi-Fi
+	profile that will be available on a factory reset system.  Profiles
+	are in the following format:
+	{
+		"ssid": "",
+		"security": "",
+		"key": ""
+	}
+
+Name: ap_profile
+Type: object
+Default:
+	{
+		"enable":true,
+		"ssid":"Ayla-$MAC",
+		"channel": 1,
+		"security":"none"
+	}
+Description: The network profile describing the device's own AP.  This is in
+	a similar format as regular profiles, with the addition of an explicit
+	channel number.  The ap_profile also supports variable expansion for
+	its "ssid" value.  Currently, $MAC and $DSN are supported.
