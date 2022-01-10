@@ -1,0 +1,31 @@
+
+   IAR ELF Tool V9.22.0.164 [BUILT at IAR]
+   Copyright 2007-2016 IAR Systems AB.
+
+Loading xncp-led_3.out
+Saving srec file to xncp-led_3.s37
+Parsing file xncp-led_3.s37...
+Parse .s37 format for flash
+
+Approximate Usage Information:
+RAM Usage:
+  APPLICATION_CONFIGURATION_HEADER usage: 0x20000000-0x200014a7 (5288 bytes)
+  Available for future use:               0x200014a8-0x2000e9ef (54600 bytes)
+  Call Stack:                             0x2000e9f0-0x2000f34f (2400 bytes)
+  Globals and Statics:                    0x2000f350-0x2000ffef (3232 bytes)
+  NO_INIT and Debug Channel:              0x2000fff0-0x2000ffff (16 bytes)
+Flash Usage:
+  Reserved for Bootloader:                0x08000000-0x08003fff (16384 bytes)
+  CODE and Tables:                        0x08004000-0x0802607b (139388 bytes)
+  CONST and INITC:                        0x0802607c-0x0802680e (1939 bytes)
+  Available for future use:               0x0802680f-0x08076fff (329713 bytes)
+  Reserved for SIMEE:                     0x08077000-0x0807ffff (36864 bytes)
+
+Usage Summary:
+  65536 total bytes RAM, 10936 used, 54600 available
+  524288 total bytes Flash, 194575 used, 329713 available
+
+Setting AAT timestamp to current time: 0x5ed74250
+Create ebl image file
+Wrote image stamp into AAT.
+DONE

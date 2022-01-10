@@ -1,0 +1,114 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=91
+USE_PROCD=1
+
+
+if [ -e /etc/config/devd.conf ]; 
+then 
+    echo "The file Exists"
+else
+    echo "The file is not present"
+    /usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
+    cp *.conf /etc/config/devd.conf
+fi
+
+# Lists of supported JSON requests
+JSON_URIS="
+regtoken.json
+local_reg.json
+time.json
+push_button_reg.json
+status.json
+lanota.json
+wifi_scan.json
+wifi_stop_ap.json
+wifi_connect.json
+wifi_scan_results.json
+wps_pbc.json
+wifi_profile.json
+wifi_profiles.json
+wifi_status.json"
+
+server_root="/www/docroot"
+
+start_service() {
+    prod_id=$(cat /proc/nvram/boardid)
+    if [[ "$prod_id" == "GBNT-4" ]] || [[ "$prod_id" == "GCNT-N" ]] || [[ "$prod_id" == "GBNT-3" ]]
+    then
+        cp /etc/ayla/cdc-acm.ko /lib/modules/4.1.52/cdc-acm.ko
+        modprobe cdc-acm.ko
+        echo "install"
+    fi
+
+    echo "start"
+
+    local devPid=$(pgrep -f devd)
+    if [ ${#devPid} -gt 0 ]; then
+        echo "devd is already running. Stopping it now before continuing."
+        # For some reason, in this case, procd stops devd but leaves
+        # devd running by itself. start should never be called if
+        # devd is already running, but just in case...
+        killall devd
+    fi
+
+    procd_open_instance
+    procd_set_param command /usr/bin/devd --debug -t -c /etc/config/devd.conf
+    procd_set_param pidfile /var/run/devd.pid
+    procd_close_instance
+	
+    for file in $JSON_URIS
+    do
+	echo "creating stub: $server_root/$file"
+        touch "$server_root/$file"
+    done
+
+    echo "restarting nginx"
+        /etc/init.d/nginx restart
+
+    sleep 2
+
+    echo "Calling the acgi to listen on port 8088"
+    procd_open_instance
+    procd_set_param command spawn-fcgi -a 127.0.0.1 -p 8088 -n /usr/bin/acgi
+    procd_set_param pidfile /var/run/acgi.pid
+    procd_close_instance
+
+}
+stop_service() {
+    local acgiPid=$(pgrep -f acgi)
+    if [ ${#acgiPid} -gt 0 ]; then
+       echo "Stopping spawn-fcgi"
+       kill $acgiPid
+       sleep 2 
+    fi    
+
+    local devPid=$(pgrep -f devd)
+    if [ ${#devPid} -gt 0 ]; then
+        echo "Stopping devd..."
+        kill $devPid
+
+
+        echo "Sent TERM to devd"
+
+        # Now that the signal is sent, we have to monitor devd and wait
+        # for it to stop.
+        DEVD_STOP_COUNTER=0
+        DEVD_WAIT_SECONDS=15
+        while [ "x`pidof devd`" != "x" -a ${DEVD_STOP_COUNTER} -lt ${DEVD_WAIT_SECONDS} ]; do
+            echo "Waiting for devd stop (${DEVD_STOP_COUNTER})"
+            sleep 1
+            let DEVD_STOP_COUNTER=DEVD_STOP_COUNTER+1
+        done
+
+        if [ "x`pidof devd`" != "x" ] ; then
+            echo "devd force-stopped after ${DEVD_STOP_COUNTER} seconds."
+            killall -KILL devd
+        else
+            echo "devd stopped in ${DEVD_STOP_COUNTER} seconds."
+        fi
+    else
+        echo "devd not running."
+    fi
+}

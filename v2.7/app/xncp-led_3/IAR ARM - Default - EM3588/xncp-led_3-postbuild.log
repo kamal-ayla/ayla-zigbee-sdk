@@ -1,0 +1,2 @@
+INFO:root:Creation of 32 bit srec file:  "D:/IARSystems/EmbeddedWorkbench7.80/arm/bin/ielftool.exe" "xncp-led_3.out" --srec --srec-s3only "xncp-led_3.s37"
+INFO:root:Creation of ebl file: D:\SiliconLabs\v4\developer\adapter_packs\commander\commander.exe ebl create "xncp-led_3.ebl" --app "xncp-led_3.s37" --device em3588 
