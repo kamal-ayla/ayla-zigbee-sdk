@@ -10,8 +10,13 @@ then
     echo "The file Exists"
 else
     echo "The file is not present"
-    /usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
-    cp *.conf /etc/config/devd.conf
+	if [[ -f /etc/config/*.xml  && -f /etc/config/oem_info ]];then
+		/usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
+    		cp /etc/ayla/*.conf /etc/config/devd.conf
+		rm /etc/config/oem_info
+	else
+    		echo "All required files are not present\n"
+	fi
 fi
 
 # Lists of supported JSON requests
