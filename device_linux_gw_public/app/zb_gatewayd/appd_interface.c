@@ -55,6 +55,7 @@
 #define ZB_TEMPLATE_BUTTON			"button"
 #define ZB_TEMPLATE_LOCK			"lock"
 #define ZB_TEMPLATE_TEMPHUMI			"temphumi"
+#define ZB_TEMPLATE_TEMPHUMI_MEASURE		"thm"
 
 #define ZB_TEMPLATE_LIGHT_VERSION		"1.0"
 #define ZB_TEMPLATE_DIMM_LIGHT_VERSION		"1.0"
@@ -94,12 +95,13 @@
 #define ZB_DEVICE_ID_MULTI			0x0402
 #define ZB_DEVICE_ID_TRI_BUTTON			0x0402
 #define ZB_DEVICE_ID_CENT_PLUG			0x0100
+#define ZB_DEVICE_ID_CENTRALITE_OUTLET		0x0100
 #define ZB_DEVICE_ID_BULB			0x0101
 #define ZB_DEVICE_ID_LOCK			0x000A
 #define ZB_DEVICE_ID_TEMPHUMI			0x0302
 #define ZB_DEVICE_ID_MOTION_NEO			0x0000
 #define ZB_DEVICE_ID_POWERSTRIP			0x0009
-#define ZB_DEVICE_ID_SMART_PLUG1			0x0009
+#define ZB_DEVICE_ID_SMART_PLUG1		0x0009
 
 
 #define ZB_MODEL_ID_LEAK			"water"
@@ -119,6 +121,18 @@
 #define ZB_MODEL_ID_MOTION_NEO			"hfcudw5"
 #define ZB_MODEL_ID_POWERSTRIP			"TS0115"
 #define ZB_MODEL_ID_HEIMAN_PLUG 		"SmartPlug"
+#define ZB_MODEL_ID_PANASONIC_PLUG      	"FB56-SKT17AC1.4"
+#define ZB_MODEL_ID_SALUS_TEMPHUMI		"SS909ZB"
+#define ZB_MODEL_ID_SALUS_LEAK			"SS901ZB"
+#define ZB_MODEL_ID_SALUS_VALVE			"SC900ZB"
+#define ZB_MODEL_ID_SALUS_THERMOSTAT		"ST898ZB"
+#define ZB_MODEL_ID_CENTRALITE_OUTLET		"4200-C"
+#define ZB_MODEL_ID_CENTRALITE_TEMPHUMI		"3310-G"
+#define ZB_MODEL_ID_CENTRALITE_MOTION		"3328-G"
+#define ZB_MODEL_ID_CENTRALITE_DOOR		"3323-G"
+#define ZB_MODEL_ID_CENTRALITE_LEAK		"3315-G"
+#define ZB_MODEL_ID_CENTRALITE_THERMOSTAT	" "
+
 
 #define MAINS_POLL_PERIOD			60000
 #define BATTERY_POLL_INTERVAL			10
@@ -474,7 +488,7 @@ static struct nd_prop_info prop_info_array[] = {
 	},
 	{
 		.device_id = ZB_DEVICE_ID_LEAK,
-		.model_id = "3315-G",
+		.model_id = ZB_MODEL_ID_CENTRALITE_LEAK,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_LEAK,
 		.template_version = ZB_TEMPLATE_LEAK_VERSION,
@@ -484,6 +498,15 @@ static struct nd_prop_info prop_info_array[] = {
 	{
 		.device_id = ZB_DEVICE_ID_LEAK,
 		.model_id = "SZ-WTD03N",
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_LEAK,
+		.template_version = ZB_TEMPLATE_LEAK_VERSION,
+		.prop_def = zb_template_leak,
+		.def_size = ARRAY_LEN(zb_template_leak)
+	},
+	{
+		.device_id = ZB_DEVICE_ID_LEAK,
+		.model_id = ZB_MODEL_ID_SALUS_LEAK,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_LEAK,
 		.template_version = ZB_TEMPLATE_LEAK_VERSION,
@@ -518,6 +541,15 @@ static struct nd_prop_info prop_info_array[] = {
 		.def_size = ARRAY_LEN(zb_template_valve)
 	},
 	{
+		.device_id = ZB_DEVICE_ID_VALVE,
+		.model_id = ZB_MODEL_ID_SALUS_VALVE,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_VALVE,
+		.template_version = ZB_TEMPLATE_VALVE_VERSION,
+		.prop_def = zb_template_valve,
+		.def_size = ARRAY_LEN(zb_template_valve)
+	},
+	{
 		.device_id = ZB_DEVICE_ID_IAS_ZONE,
 		.model_id = ZB_MODEL_ID_SMOKE,
 		.subdevice_key = ZB_SUBDEVICE,
@@ -537,7 +569,7 @@ static struct nd_prop_info prop_info_array[] = {
 	},
 	{
 		.device_id = ZB_DEVICE_ID_MOTION,
-		.model_id = "3328-G",
+		.model_id = ZB_MODEL_ID_CENTRALITE_MOTION,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_MOTION,
 		.template_version = ZB_TEMPLATE_MOTION_VERSION,
@@ -597,6 +629,24 @@ static struct nd_prop_info prop_info_array[] = {
 		.template_version = ZB_TEMPLATE_THERMOSTAT_VERSION,
 		.prop_def = zb_template_thermostat,
 		.def_size = ARRAY_LEN(zb_template_thermostat)
+	},
+	{
+		.device_id = ZB_DEVICE_ID_THERMOSTAT,
+		.model_id = ZB_MODEL_ID_SALUS_THERMOSTAT,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_THERMOSTAT,
+		.template_version = ZB_TEMPLATE_THERMOSTAT_VERSION,
+		.prop_def = zb_template_thermostat,
+		.def_size = ARRAY_LEN(zb_template_thermostat)
+	},
+	{
+		.device_id = ZB_DEVICE_ID_CENTRALITE_OUTLET,
+		.model_id = ZB_MODEL_ID_CENTRALITE_OUTLET,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_SMART_PLUG,
+		.template_version = ZB_TEMPLATE_SMART_PLUG_VERSION,
+		.prop_def = zb_template_smart_plug,
+		.def_size = ARRAY_LEN(zb_template_smart_plug)
 	},
 	{
 		.device_id = ZB_DEVICE_ID_CENT_PLUG,
@@ -670,9 +720,27 @@ static struct nd_prop_info prop_info_array[] = {
 		.prop_def = zb_template_temphumi,
 		.def_size = ARRAY_LEN(zb_template_temphumi)
 	},
+		{
+		.device_id = ZB_DEVICE_ID_TEMPHUMI,
+		.model_id = ZB_MODEL_ID_CENTRALITE_TEMPHUMI,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_TEMPHUMI_MEASURE,
+		.template_version = "1.0",
+		.prop_def = zb_template_temphumi_light,
+		.def_size = ARRAY_LEN(zb_template_temphumi_light)
+	},
 	{
 		.device_id = ZB_DEVICE_ID_TEMPHUMI,
 		.model_id = "RH3052",
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_TEMPHUMI,
+		.template_version = "1.0",
+		.prop_def = zb_template_temphumi,
+		.def_size = ARRAY_LEN(zb_template_temphumi)
+	},
+	{
+		.device_id = ZB_DEVICE_ID_TEMPHUMI,
+		.model_id = ZB_MODEL_ID_SALUS_TEMPHUMI,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_TEMPHUMI,
 		.template_version = "1.0",
@@ -690,7 +758,7 @@ static struct nd_prop_info prop_info_array[] = {
 	},
 	{
 		.device_id = ZB_DEVICE_ID_SMART_PLUG1,
-		.model_id = "FB56-SKT17AC1.4",
+		.model_id = ZB_MODEL_ID_PANASONIC_PLUG,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_SMART_PLUG,
 		.template_version = "1.0",
@@ -790,6 +858,15 @@ static struct nd_prop_info prop_info_array[] = {
 	{
 		.device_id = ZB_DEVICE_ID_IAS_ZONE,
 		.model_id = "RH3040",
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_IAS_ZONE,
+		.template_version = ZB_TEMPLATE_IAS_ZONE_VERSION,
+		.prop_def = zb_template_ias_zone,
+		.def_size = ARRAY_LEN(zb_template_ias_zone)
+	},
+	{
+		.device_id = ZB_DEVICE_ID_IAS_ZONE,
+		.model_id = ZB_MODEL_ID_CENTRALITE_DOOR,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_IAS_ZONE,
 		.template_version = ZB_TEMPLATE_IAS_ZONE_VERSION,
@@ -2802,6 +2879,11 @@ void appd_ias_zone_status_change_handler(uint16_t node_id, uint8_t *msg)
 				alarm, zb_node->addr);
 			appd_send_node_prop(zb_node, ZB_PRESS_PROP_NAME,
 					&alarm);
+		} else if (!strcmp(info->model_id, "DoorSensor-EM")){
+			alarm = change->status.alarm2_opened;
+			log_info("Update multi sensor status(%d) for node %s",
+		    	alarm, zb_node->addr);
+			appd_send_node_prop(zb_node, ZB_STATUS_PROP_NAME, &alarm);
 		} else {
 			alarm = change->status.alarm1_opened;
 			log_info("Update sensor status(%d) for node %s",
