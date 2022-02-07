@@ -463,6 +463,19 @@ static const struct node_prop_def zb_template_temphumi_light[] = {
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
+static const struct node_prop_def zb_template_measure_temphumi[] = {
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_MEASURE_HUMIDITY,	    PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+};
+
 /* IAS Zone prop define */
 
 static const struct node_prop_def zb_template_ias_zone[] = {
@@ -725,9 +738,9 @@ static struct nd_prop_info prop_info_array[] = {
 		.model_id = ZB_MODEL_ID_CENTRALITE_TEMPHUMI,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_TEMPHUMI_MEASURE,
-		.template_version = "1.0",
-		.prop_def = zb_template_temphumi_light,
-		.def_size = ARRAY_LEN(zb_template_temphumi_light)
+		.template_version = "2.0",
+		.prop_def = zb_template_measure_temphumi,
+		.def_size = ARRAY_LEN(zb_template_measure_temphumi)
 	},
 	{
 		.device_id = ZB_DEVICE_ID_TEMPHUMI,

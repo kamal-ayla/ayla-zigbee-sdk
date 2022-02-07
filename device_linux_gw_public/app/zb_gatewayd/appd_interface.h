@@ -32,6 +32,7 @@
 #define ZB_LOCAL_TEMPERATURE		"local_temperature"
 #define ZB_LOCAL_HUMIDITY		"local_humidity"
 #define ZB_MEASURE_TEMPERATURE		"measure_temperature"
+#define ZB_MEASURE_HUMIDITY		"measure_humidity"
 #define ZB_FAN_MODE			"fan_mode"
 #define ZB_TEMPERATURE_DISPLAY		"temperature_display"
 #define ZB_LEAK_ALARM_PROP_NAME		"leak_alarm"

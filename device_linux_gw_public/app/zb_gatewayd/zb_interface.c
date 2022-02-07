@@ -991,6 +991,15 @@ int zb_prop_set_handler(struct node *node, struct node_prop *prop,
 					ZCL_TEMP_MEASUREMENT_CLUSTER_ID,
 					ZCL_TEMP_MEASURED_VALUE_ATTRIBUTE_ID);
 			}
+		} else if (!strcmp(prop->name, ZB_MEASURE_HUMIDITY)) {
+			find = true;
+			ret = appd_node_bind_control(node_id,
+				ZCL_RELATIVE_HUMIDITY_MEASUREMENT_CLUSTER_ID, bool_value);
+			if (bool_value) {
+				zb_send_read_attribute_request(node_id,
+					ZCL_RELATIVE_HUMIDITY_MEASUREMENT_CLUSTER_ID,
+					ZCL_RELATIVE_HUMIDITY_MEASURED_VALUE_ATTRIBUTE_ID);
+			}
 		}
 		break;
 	case PROP_DECIMAL:
