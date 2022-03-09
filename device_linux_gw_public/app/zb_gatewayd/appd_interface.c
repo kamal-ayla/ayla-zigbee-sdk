@@ -2252,6 +2252,8 @@ void appd_device_specific_complete_handler(uint16_t node_id,
 	} else if (!strcmp(info->alias, "temphumi")) {
 		appd_node_bind_control(node_id,
 		ZCL_TEMP_MEASUREMENT_CLUSTER_ID, 1);
+		appd_node_bind_control(node_id,
+		ZCL_RELATIVE_HUMIDITY_MEASUREMENT_CLUSTER_ID, 1);
 	} else {
 		log_debug("no device specific handlers found");
 	}
@@ -3279,6 +3281,7 @@ void appd_bind_response_handler(uint16_t node_id,
 		zb_send_read_on_off_request(node_id);
 	} else if (info->device_id == ZB_DEVICE_ID_TEMPHUMI) {
 		zb_send_read_temp_request(node_id);
+		zb_send_read_humi_request(node_id);
 	} else if (info->device_id == 0x0106) {
 		zb_send_read_temp_request(node_id);
 	} else if (info->device_id == ZB_DEVICE_ID_MOTION_NEO) {

@@ -1000,16 +1000,18 @@ static bool zbc_humi_measurement_cluster_msg_handle(uint16_t source,
 			uint8_t frame_type, uint8_t cmd_id, uint8_t *msg,
 			uint16_t msgLen)
 {
+	log_debug("received humidity measurement ------- %f",(*(int16_t *)(msg + 3) / (double)100.00));
+	log_debug("received humidity measurement ------- %f",(*(int16_t *)(msg + 4) / (double)100.00));
 	if (frame_type == ZCL_GLOBAL_COMMAND) {
 		switch (cmd_id) {
 		case ZCL_REPORT_ATTRIBUTES_COMMAND_ID:
-			log_debug("received humidity measurement"
+			log_debug("received humidity measurement ZCL_REPORT_ATTRIBUTES_COMMAND_ID"
 				" attribute");
 			appd_update_decimal_prop(source, ZB_LOCAL_HUMIDITY,
 			    (*(uint16_t *)(msg + 3) / (double)100.00));
 			break;
 		case ZCL_READ_ATTRIBUTES_RESPONSE_COMMAND_ID:
-			log_debug("received humidity measurement"
+			log_debug("received humidity measurement ZCL_READ_ATTRIBUTES_RESPONSE_COMMAND_ID"
 				" attribute");
 			appd_update_decimal_prop(source, ZB_LOCAL_HUMIDITY,
 			    (*(uint16_t *)(msg + 4) / (double)100.00));

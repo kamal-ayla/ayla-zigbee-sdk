@@ -72,6 +72,8 @@ int zb_send_read_on_off_request(uint16_t node_id);
  */
 int zb_send_read_temp_request(uint16_t node_id);
 
+int zb_send_read_humi_request(uint16_t node_id);
+
 /*
  * Send write CIE address request to node
  */

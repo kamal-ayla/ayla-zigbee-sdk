@@ -470,6 +470,18 @@ int zb_send_read_temp_request(uint16_t node_id)
 }
 
 /*
+ * Send read humidity request to node (added by Saritha)
+ */
+int zb_send_read_humi_request(uint16_t node_id)
+{
+	log_debug("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+	log_debug("zb_send_read_humi_request received humidity measurement");
+	return zb_send_read_attribute_request(node_id,
+		ZCL_RELATIVE_HUMIDITY_MEASUREMENT_CLUSTER_ID,
+		ZCL_RELATIVE_HUMIDITY_ATTRIBUTE_ID);
+}
+
+/*
  * Send write attribute to node
  */
 static int zb_send_write_attribute_request(uint16_t node_id,
