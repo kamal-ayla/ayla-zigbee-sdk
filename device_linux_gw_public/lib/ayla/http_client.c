@@ -716,6 +716,7 @@ int http_client_send(struct http_client_context *context,
 	http_parse_init(&context->header_parser, context->req.parse_list, arg);
 
 	curl_easy_setopt(context->curl, CURLOPT_URL, url);
+	curl_easy_setopt(context->curl, CURLOPT_CAINFO, "/etc/ayla/ssl/certs/cert.pem");
 	curl_easy_setopt(context->curl, CURLOPT_HTTPHEADER,
 	    context->req.header);
 	curl_easy_setopt(context->curl, CURLOPT_LOW_SPEED_TIME,
