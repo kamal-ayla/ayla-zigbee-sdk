@@ -232,6 +232,7 @@ static int dl_curl(struct ota_download_param *ota_param,
 	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, ota_param->url);
+	curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ayla/ssl/certs/cert.pem");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, dl_curl_headers);
 	if (!ota_param->lan_connect) {
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
@@ -679,7 +680,7 @@ int dl_put_lan_ota_status(
 	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, ota_status_url);
-
+	curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ayla/ssl/certs/cert.pem");
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dl_curl_recv_dump);
 
 	/* set to PUT */

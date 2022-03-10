@@ -359,6 +359,7 @@ static int client_lan_send(struct device_state *dev, struct client_lan_reg *lan,
 
 	header = curl_slist_append(NULL, "Content-Type: application/json");
 	curl_easy_setopt(curl, CURLOPT_URL, link);
+	curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ayla/ssl/certs/cert.pem");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, client_lan_recv_resp);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, lan);

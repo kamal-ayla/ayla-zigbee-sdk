@@ -66,6 +66,8 @@ define Package/ayla-zigbee-sdk/install
 	$(CP) $(PKG_INSTALL_DIR)/lib/platform/libplatform.a $(1)/lib/platform
 	$(INSTALL_DIR) $(1)/etc/ssl/certs
 	$(CP) $(PKG_BUILD_DIR)/device_linux_gw_public/daemon/devd/certs/* $(1)/etc/ssl/certs
+	$(INSTALL_DIR) $(1)/etc/ayla/ssl/certs
+	$(CP) ./files/cert.pem $(1)/etc/ayla/ssl/certs/
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/ayla.init $(1)/etc/init.d/ayla
 	$(INSTALL_DIR) $(1)/www/docroot

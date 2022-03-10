@@ -313,6 +313,7 @@ static int logd_curl_post_msgs(void)
 
 	/* configure fixed size POST */
 	curl_easy_setopt(state.curl, CURLOPT_URL, config.log_url);
+	curl_easy_setopt(state.curl, CURLOPT_CAINFO, "/etc/ayla/ssl/certs/cert.pem");
 	curl_easy_setopt(state.curl, CURLOPT_POSTFIELDSIZE, post_size);
 	curl_easy_setopt(state.curl, CURLOPT_POSTFIELDS, post_data);
 
