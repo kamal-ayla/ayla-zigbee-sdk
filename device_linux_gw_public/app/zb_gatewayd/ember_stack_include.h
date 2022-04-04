@@ -33,6 +33,12 @@
 #include \
     "app/framework/plugin/network-creator-security/network-creator-security.h"
 
+#include \
+    "stack/include/zigbee-device-stack.h"
+
+#include \
+    "stack/include/ember-types.h"
+
 #ifdef EMBER_AF_PLUGIN_FRAGMENTATION
 #include "app/framework/plugin/fragmentation/fragmentation.h"
 #endif

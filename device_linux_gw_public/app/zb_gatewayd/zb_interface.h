@@ -204,6 +204,12 @@ void zb_poll(void);
 int zb_permit_join(uint8_t duration, bool broadcast);
 
 /*
+ * Change zibee network channel
+ */
+int zb_network_channel_change(uint8_t channel);
+
+
+/*
  * Gateway bind prop handler
  * cmd format: source node address,destination node address,cluster_id
  * format example: 00158D00006F95F1,00158D00006F9405,0x0006
