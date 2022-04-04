@@ -55,11 +55,12 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v1.1";
+const char *appd_template_version = "zigbee_gateway_demo_v2.0";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
 static unsigned int zb_join_enable;
+static unsigned int zb_change_channel;
 static u8 zb_join_status;
 static u8 zb_network_up;
 static char zb_bind_cmd[PROP_STRING_LEN + 1];
@@ -707,6 +708,33 @@ static int appd_gw_join_enable_set(struct prop *prop, const void *val,
 	return 0;
 }
 
+
+/*
+ * Set zigbee channel
+ */
+static int appd_gw_change_channel_set(struct prop *prop, const void *val,
+        size_t len, const struct op_args *args)
+{
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                log_err("prop_arg_set returned error");
+                return -1;
+        }
+
+	/* set zigbee channel */
+
+	if (zb_network_channel_change(zb_change_channel) < 0) {
+		log_debug("set zigbee channel to %u failed", zb_change_channel);
+                return -1;
+	} else {
+		log_debug("set zigbee channel to %u success", zb_change_channel);
+	}
+
+	prop_send_by_name("zb_change_channel");
+
+	return 0;
+}
+
 /*
  * Bind a node with another node
  */
@@ -775,6 +803,14 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &zb_join_enable,
 		.len = sizeof(zb_join_enable)
 	},
+	{
+                .name = "zb_change_channel",
+                .type = PROP_INTEGER,
+                .set = appd_gw_change_channel_set,
+                .send = prop_arg_send,
+                .arg = &zb_change_channel,
+                .len = sizeof(zb_change_channel)
+        },
 	{
 		.name = "num_nodes",
 		.type = PROP_INTEGER,

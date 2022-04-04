@@ -1177,3 +1177,35 @@ int zb_permit_join(uint8_t duration, bool broadcast)
 	return 0;
 }
 
+
+/*
+ * Change the zigbee network channel
+ */
+int zb_network_channel_change(uint8_t channel)
+{
+	EmberStatus status;
+
+	if (channel < EMBER_MIN_802_15_4_CHANNEL_NUMBER) {
+		channel = EMBER_MIN_802_15_4_CHANNEL_NUMBER;
+		log_debug("zigbee channal is out of range");
+        } else if (channel >= EMBER_MAX_802_15_4_CHANNEL_NUMBER) {
+		channel = EMBER_MAX_802_15_4_CHANNEL_NUMBER - 1;
+		log_debug("zigbee channal is out of range");
+        } else {
+		;
+	}
+
+  	status = emberChannelChangeRequest(channel);   
+
+	log_debug("Changing to channel %d: 0x%X", channel, status);
+
+	if (status != EMBER_SUCCESS) {
+                log_err("%s returned 0x%x","Channel change", status);
+        } else {
+		log_debug("Channel change success");
+        }
+
+        return 0;
+}
+
+
