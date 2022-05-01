@@ -67,6 +67,16 @@ static char zb_bind_cmd[PROP_STRING_LEN + 1];
 static char zb_bind_result[PROP_STRING_LEN + 1];
 static unsigned int num_nodes;
 
+/* system info*/
+static u8 sysinfo_update_period;
+static unsigned controller_status;
+static char up_time[50];
+static char curr_uptime[50];
+#define SYSINFO_UPDATE_PERIOD_IN_SECONDS 	120
+#define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
+#define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
+
+
 
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
@@ -735,6 +745,64 @@ static int appd_gw_change_channel_set(struct prop *prop, const void *val,
 	return 0;
 }
 
+
+/*
+ * To get the controller status
+ */
+static int appd_get_controller_status()
+{
+	int controllerstatus = 0;
+	FILE *fptr;
+
+	fptr = popen(GET_MESH_CONTROLLER_STATUS,"r");
+	if (fptr == NULL) {
+		log_err("Mesh controller status get failed");
+		exit(1);
+	}
+
+	fscanf(fptr, "%d", &controllerstatus);
+	pclose(fptr);
+	return  controllerstatus;
+}
+
+/*
+ *Send the Controller status
+ */
+ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	controller_status = appd_get_controller_status();
+	return prop_arg_send(prop, req_id, opts);
+}
+
+
+/*
+ *To get the device uptime.
+ */
+static void appd_get_uptime(char *uptime)
+{
+	FILE *fd;
+
+	fd = popen(GET_DEVICE_UPTIME,"r");
+	if(fd == NULL) {
+		log_err("Get device uptime  failed");
+		exit(1);
+	}
+	fscanf(fd, "%[^\n]", uptime);
+	pclose(fd);
+
+}
+/*
+ * device uptime.
+ */
+static enum err_t appd_uptime_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	appd_get_uptime(up_time);
+	return prop_arg_send(prop, req_id, opts);
+}
+
+
 /*
  * Bind a node with another node
  */
@@ -804,12 +872,12 @@ static struct prop appd_gw_prop_table[] = {
 		.len = sizeof(zb_join_enable)
 	},
 	{
-                .name = "zb_change_channel",
-                .type = PROP_INTEGER,
-                .set = appd_gw_change_channel_set,
-                .send = prop_arg_send,
-                .arg = &zb_change_channel,
-                .len = sizeof(zb_change_channel)
+		.name = "zb_change_channel",
+		.type = PROP_INTEGER,
+		.set = appd_gw_change_channel_set,
+		.send = prop_arg_send,
+		.arg = &zb_change_channel,
+		.len = sizeof(zb_change_channel)
         },
 	{
 		.name = "num_nodes",
@@ -846,6 +914,21 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
 		.arg = &zb_bind_result,
 		.len = sizeof(zb_bind_result)
+	},
+		/* system information */
+	{
+		.name = "controller_status",
+		.type = PROP_BOOLEAN,
+		.send = appd_controller_status_send,
+		.arg = &controller_status,
+		.len = sizeof(controller_status),
+	},
+	{
+		.name = "up_time",
+		.type = PROP_STRING,
+		.send = appd_uptime_send,
+		.arg = &up_time,
+		.len = sizeof(up_time),
 	}
 };
 
@@ -960,6 +1043,19 @@ void appd_poll(void)
 	if (num_nodes != node_count()) {
 		prop_send_by_name("num_nodes");
 	}
+
+	/*calling the fuction to get the sysinfo */
+	if (sysinfo_update_period >= SYSINFO_UPDATE_PERIOD_IN_SECONDS) {
+		prop_send_by_name("controller_status");
+
+		appd_get_uptime(curr_uptime);
+		if (strcmp(up_time, curr_uptime)) {
+			prop_send_by_name("up_time");
+		}
+		sysinfo_update_period = 0;
+	}
+	sysinfo_update_period += 1;
+
 	return;
 }
 
