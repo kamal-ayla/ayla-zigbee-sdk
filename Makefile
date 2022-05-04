@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ayla-zigbee-sdk
-PKG_RELEASE:=1.1
+PKG_RELEASE:=1.2
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 PKG_INSTALL_DIR := $(PKG_BUILD_DIR)/device_linux_gw_public/build/$(TARGET_CROSS)/obj
@@ -50,7 +50,7 @@ endef
 define Package/ayla-zigbee-sdk/install
 	$(INSTALL_DIR) $(1)/bin
 	$(INSTALL_BIN) ./files/apply_ota.sh $(1)/bin/apply_ota.sh
-	$(INSTALL_BIN) ./files/get_sysinfo.sh $(1)/bin/get_sysinfo.sh
+	$(INSTALL_BIN) ./files/get_stainfo.sh $(1)/bin/get_stainfo.sh
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/zb_gatewayd/appd $(1)/bin
@@ -75,6 +75,7 @@ define Package/ayla-zigbee-sdk/install
 	$(CP) ./files/docroot/* $(1)/www/docroot
 	$(INSTALL_DIR) $(1)/etc/ayla
 	$(INSTALL_BIN) ./files/cdc-acm.ko $(1)/etc/ayla
+
 
 
 endef

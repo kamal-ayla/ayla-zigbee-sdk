@@ -20,6 +20,26 @@ CALLBACK_STUB_UPDATED= $(OBJ_DIR)/callback-stub-updated
 
 
 #
+# AT&T virtual node paths
+#
+ATT_DIR = att
+
+#
+# AT&T source files
+#
+ATT_SOURCES = \
+        $(ATT_DIR)/vt_interface.c \
+        $(ATT_DIR)/att_interface.c
+
+ATT_INCLUDES = \
+        -I$(ATT_DIR) \
+        -I./ \
+
+ATT_LDFLAGS =
+
+
+
+#
 # List of source files to build
 #
 SOURCES = \
@@ -28,6 +48,7 @@ SOURCES = \
 	$(EMBER_PROJECT_NAME)/callback-stub.c \
 	$(EMBER_PROJECT_NAME)/stack-handler-stub.c \
 	$(EMBER_PROJECT_NAME)/znet-cli.c \
+	$(ATT_SOURCES) \
 	appd_interface.c \
 	zb_callback.c \
 	zb_interface.c \
@@ -52,7 +73,7 @@ INCLUDES= \
 #
 # Compiler and linker flags
 #
-TARGET_CFLAGS = $(INCLUDES)
+TARGET_CFLAGS = $(INCLUDES) $(ATT_INCLUDES)
 
 #TARGET_LDFLAGS = -l$(EMBER_LIB_NAME) -L$(EMBER_LIB_DIR) -lreadline -lncurses
 TARGET_LDFLAGS += -L$(PKG_BUILD_DIR)/libopkg/

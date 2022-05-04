@@ -50,6 +50,7 @@ enum gw_interface {
 	GI_ZIGBEE,
 	GI_ZWAVE,
 	GI_BLE,
+	GI_VT,
 };
 
 enum gw_power {

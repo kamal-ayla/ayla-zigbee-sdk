@@ -47,6 +47,8 @@
 #include "gateway.h"
 #include "node.h"
 #include "zb_interface.h"
+#include "att/vt_interface.h"
+#include "att/att_interface.h"
 
 #include <libgen.h>
 #include <stdlib.h>
@@ -75,10 +77,8 @@ static char up_time[50];
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
 
 
-
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
-
 
 /*
  * Send the appd software version.
@@ -940,23 +940,148 @@ static struct prop appd_gw_prop_table[] = {
 	}
 };
 
+
+/*
+ * Handler called by the generic node management layer to prompt the network
+ * interface layer to populate the nodes information and properties.
+ * If callback is supplied and this function returns 0,
+ * callback MUST be invoked when the operation completes.
+ */
+static int node_query_info_handler(struct node *node,
+                void (*callback)(struct node *, enum node_network_result))
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_query_info_handler(node, callback);
+        } else if (node->interface == GI_VT) {
+                return vt_query_info_handler(node, callback);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return -1;
+        }
+}
+
+
+/*
+ * Handler called by the generic node management layer to prompt the network
+ * interface layer to perform any setup operations required to manage the
+ * node.
+ * If callback is supplied and this function returns 0,
+ * callback MUST be invoked when the operation completes.
+ */
+static int node_configure_handler(struct node *node,
+                void (*callback)(struct node *, enum node_network_result))
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_configure_handler(node, callback);
+        } else if (node->interface == GI_VT) {
+                return vt_configure_handler(node, callback);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return -1;
+        }
+}
+
+
+/*
+ * Handler called by the generic node management layer to prompt the network
+ * interface layer to send a new property value to the node.
+ * If callback is supplied and this function returns 0,
+ * callback MUST be invoked when the operation completes.
+ */
+static int node_prop_set_handler(struct node *node, struct node_prop *prop,
+                void (*callback)(struct node *, struct node_prop *,
+                enum node_network_result))
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_prop_set_handler(node, prop, callback);
+        } else if (node->interface == GI_VT) {
+                return vt_prop_set_handler(node, prop, callback);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return -1;
+        }
+}
+
+
+
+/*
+ * Handler called by the generic node management layer to prompt the network
+ * interface layer to remove the node from the network.
+ * If callback is supplied and this function returns 0,
+ * callback MUST be invoked when the operation completes.
+ */
+static int node_leave_handler(struct node *node,
+                void (*callback)(struct node *, enum node_network_result))
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_leave_handler(node, callback);
+        } else if (node->interface == GI_VT) {
+                return vt_leave_handler(node, callback);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return -1;
+        }
+}
+
+
+/*
+ * Save node info to json object
+ */
+json_t *node_conf_save_handler(const struct node *node)
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_conf_save_handler(node);
+        } else if (node->interface == GI_VT) {
+                return vt_conf_save_handler(node);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return NULL;
+        }
+}
+
+
+/*
+ * Restore node info from json object
+ */
+int node_conf_loaded_handler(struct node *node, json_t *net_state_obj)
+{
+        ASSERT(node != NULL);
+        if (node->interface == GI_ZIGBEE) {
+                return zb_conf_loaded_handler(node, net_state_obj);
+        } else if (node->interface == GI_VT) {
+                return vt_conf_loaded_handler(node, net_state_obj);
+        } else {
+                log_err("do not support %d protocol node", node->interface);
+                return -1;
+        }
+}
+
+
 /*
  * Initialize node network callback interface
  */
 void appd_node_network_callback_init(void)
 {
-	struct node_network_callbacks network_callbacks = {
-		.node_query_info = zb_query_info_handler,
-		.node_configure = zb_configure_handler,
-		.node_prop_set = zb_prop_set_handler,
-		.node_leave = zb_leave_handler,
-		.node_conf_save = zb_conf_save_handler,
-		.node_conf_loaded = zb_conf_loaded_handler,
-	};
+        struct node_network_callbacks network_callbacks = {
+                .node_query_info = node_query_info_handler,
+                .node_configure = node_configure_handler,
+                .node_prop_set = node_prop_set_handler,
+                .node_leave = node_leave_handler,
+                .node_conf_save = node_conf_save_handler,
+                .node_conf_loaded = node_conf_loaded_handler,
+        };
 
-	/* Setup generic node management hooks */
-	node_set_network_callbacks(&network_callbacks);
+        /* Setup generic node management hooks */
+        node_set_network_callbacks(&network_callbacks);
 }
+
+
+
 
 /*
  * Hook for the app library to initialize the user-defined application.
@@ -1051,6 +1176,8 @@ void appd_poll(void)
 	if (num_nodes != node_count()) {
 		prop_send_by_name("num_nodes");
 	}
+
+	att_poll();
 
 	return;
 }
