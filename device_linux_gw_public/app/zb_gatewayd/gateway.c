@@ -55,7 +55,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.0";
+const char *appd_template_version = "zigbee_gateway_demo_v2.1";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -68,11 +68,9 @@ static char zb_bind_result[PROP_STRING_LEN + 1];
 static unsigned int num_nodes;
 
 /* system info*/
-static u8 sysinfo_update_period;
-static unsigned controller_status;
+static u8  get_sysinfo_status;
+static unsigned int controller_status;
 static char up_time[50];
-static char curr_uptime[50];
-#define SYSINFO_UPDATE_PERIOD_IN_SECONDS 	120
 #define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
 
@@ -745,63 +743,65 @@ static int appd_gw_change_channel_set(struct prop *prop, const void *val,
 	return 0;
 }
 
+/*
+ *To get the sysinfo
+ */
+static int appd_sysinfo_set(struct prop *prop, const void *val,
+        size_t len, const struct op_args *args)
+{
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
+	}
+
+	if (get_sysinfo_status) {
+			prop_send_by_name("controller_status");
+			prop_send_by_name("up_time");
+			log_debug("get sysinfo success");
+	}
+
+	get_sysinfo_status = 0;
+	prop_send_by_name("get_sysinfo_status");
+
+	return 0;
+}
 
 /*
  * To get the controller status
  */
-static int appd_get_controller_status()
+static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
+                  const struct op_options *opts)
 {
-	int controllerstatus = 0;
-	FILE *fptr;
+	FILE *fp;
 
-	fptr = popen(GET_MESH_CONTROLLER_STATUS,"r");
-	if (fptr == NULL) {
+	fp = popen(GET_MESH_CONTROLLER_STATUS,"r");
+	if (fp == NULL) {
 		log_err("Mesh controller status get failed");
 		exit(1);
 	}
-
-	fscanf(fptr, "%d", &controllerstatus);
-	pclose(fptr);
-	return  controllerstatus;
-}
-
-/*
- *Send the Controller status
- */
- static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
-                   const struct op_options *opts)
-{
-	controller_status = appd_get_controller_status();
+	fscanf(fp, "%d", &controller_status);
+	pclose(fp);
 	return prop_arg_send(prop, req_id, opts);
-}
 
+}
 
 /*
  *To get the device uptime.
  */
-static void appd_get_uptime(char *uptime)
-{
-	FILE *fd;
-
-	fd = popen(GET_DEVICE_UPTIME,"r");
-	if(fd == NULL) {
-		log_err("Get device uptime  failed");
-		exit(1);
-	}
-	fscanf(fd, "%[^\n]", uptime);
-	pclose(fd);
-
-}
-/*
- * device uptime.
- */
 static enum err_t appd_uptime_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
-	appd_get_uptime(up_time);
+	FILE *fp;
+
+	fp = popen(GET_DEVICE_UPTIME,"r");
+	if (fp == NULL) {
+		log_err("Get device uptime  failed");
+		exit(1);
+	}
+	fscanf(fp, "%[^\n]", up_time);
+	pclose(fp);
 	return prop_arg_send(prop, req_id, opts);
 }
-
 
 /*
  * Bind a node with another node
@@ -916,6 +916,14 @@ static struct prop appd_gw_prop_table[] = {
 		.len = sizeof(zb_bind_result)
 	},
 		/* system information */
+	{
+		.name = "get_sysinfo_status",
+		.type = PROP_BOOLEAN,
+		.set = appd_sysinfo_set,
+		.send = prop_arg_send,
+		.arg = &get_sysinfo_status,
+		.len = sizeof(get_sysinfo_status),
+	},
 	{
 		.name = "controller_status",
 		.type = PROP_BOOLEAN,
@@ -1043,18 +1051,6 @@ void appd_poll(void)
 	if (num_nodes != node_count()) {
 		prop_send_by_name("num_nodes");
 	}
-
-	/*calling the fuction to get the sysinfo */
-	if (sysinfo_update_period >= SYSINFO_UPDATE_PERIOD_IN_SECONDS) {
-		prop_send_by_name("controller_status");
-
-		appd_get_uptime(curr_uptime);
-		if (strcmp(up_time, curr_uptime)) {
-			prop_send_by_name("up_time");
-		}
-		sysinfo_update_period = 0;
-	}
-	sysinfo_update_period += 1;
 
 	return;
 }
