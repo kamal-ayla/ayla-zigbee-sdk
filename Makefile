@@ -50,6 +50,7 @@ endef
 define Package/ayla-zigbee-sdk/install
 	$(INSTALL_DIR) $(1)/bin
 	$(INSTALL_BIN) ./files/apply_ota.sh $(1)/bin/apply_ota.sh
+	$(INSTALL_BIN) ./files/get_sysinfo.sh $(1)/bin/get_sysinfo.sh
 	$(INSTALL_BIN) ./files/get_stainfo.sh $(1)/bin/get_stainfo.sh
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
