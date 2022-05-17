@@ -2,7 +2,7 @@
 
 
 get_assoclist() {
-	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" "`
+	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
 	cat /dev/null > /tmp/assoclist.txt
 
         for interface in $interfaces                        
@@ -22,7 +22,7 @@ get_sta_associated_ap()
                 return                                                                     
         fi
 
-	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" "`
+	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
 
         for interface in $interfaces
         do
@@ -39,6 +39,99 @@ get_sta_associated_ap()
 	echo "0"
 }
 
+get_sta_interface()
+{
+
+		interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
+		for interface in $interfaces
+		do
+		MODE=`uci get wireless.${interface}.mode`
+		if [ $MODE == "sta" ]; then
+			echo $interface
+		return
+
+		fi
+		done
+		echo "0"
+}
+
+
+get_sta_rssi()
+{
+	sta_interface=`get_sta_interface`
+	if [ $sta_interface == "0" ]; then
+		echo "0"
+	else
+		RSSI=`wl -i $sta_interface rssi`
+		if [ $RSSI == "32" ]; then
+			echo "0"
+			return
+		fi
+
+		echo $RSSI
+		fi
+
+}
+
+
+get_sta_noise()
+{
+	sta_interface=`get_sta_interface`
+	sta_bssid=`get_sta_bssid`
+	if [[ $sta_bssid == "00:00:00:00:00:00" || $sta_interface == "0" ]]; then
+		echo "0"
+	else
+		wl -i $sta_interface noise
+	fi
+
+}
+
+
+get_sta_channel()
+{
+	sta_interface=`get_sta_interface`
+	sta_bssid=`get_sta_bssid`	
+	if [[ $sta_bssid == "00:00:00:00:00:00" || $sta_interface == "0" ]]; then
+		echo "0"
+	else
+		wl -i $sta_interface channel | grep "current mac channel" | awk '{print $4}'
+	fi
+
+}
+
+
+get_sta_ssid()
+{
+	sta_interface=`get_sta_interface`
+	if [ $sta_interface == "0" ]; then
+		echo " "
+	else
+		SSID=`wl -i $sta_interface ssid | sed 's/[" ]//g' | cut -d":" -f2`
+		if [ -z $SSID ]; then
+			echo " "
+		else
+			echo $SSID
+		fi
+	fi
+
+}
+
+get_sta_bssid()
+{
+	sta_interface=`get_sta_interface`
+	if [ $sta_interface == "0" ]; then
+		echo "00:00:00:00:00:00"
+		return
+	else
+		BSSID=`wl -i $sta_interface bssid`
+		if [ -z $BSSID ]; then
+			echo "00:00:00:00:00:00"
+		else
+			echo $BSSID
+		fi
+	fi
+
+}
 
 get_rssi()
 {
@@ -65,7 +158,7 @@ get_noise()
                                                                     
         ap_interface=`get_sta_associated_ap $1`                           
         if [ $ap_interface == "0" ]; then                                     
-                echo "0"                                              
+                echo "0" 
         else                                                                              
  		wl -i $ap_interface noise
 	fi                                                
@@ -86,7 +179,7 @@ get_ssid()
         else
 		uci get wireless.${ap_interface}.ssid
 	fi
-} 
+}
 
 
 get_channel()
@@ -98,7 +191,7 @@ get_channel()
 
 	ap_interface=`get_sta_associated_ap $1`
         if [ $ap_interface == "0" ]; then          
-                echo "0"             
+               echo "0" 
         else
 		wl -i $ap_interface channel | grep "current mac channel" | awk '{print $4}'
 	fi
@@ -189,8 +282,24 @@ case "$1" in
 	-assoc_ap)
 		get_sta_associated_ap $Macaddr
 		;;
+	-sta_rssi)
+		get_sta_rssi
+		;;
+	-sta_noise)
+		get_sta_noise
+		;;
+	-sta_channel)
+		get_sta_channel
+		;;
+	-sta_ssid)
+		get_sta_ssid
+		;;
+	-sta_bssid)
+		get_sta_bssid
+		;;
 	*)
-		echo "Usage: get_devinfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap]" 
+		echo "Usage: get_devinfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel]"
 		exit 1
 		;;
 esac

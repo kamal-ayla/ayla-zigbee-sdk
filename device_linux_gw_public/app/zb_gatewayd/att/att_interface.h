@@ -30,9 +30,6 @@
 #define ATT_POC_GET_PARENT_NODE        "get_stainfo.sh -parent"
 
 
-
-#define ATT_POLL_PERIOD_SEC    	 300
-
 #define ATT_POC_ADDR_LEN         32
 #define ATT_POC_STR_LEN          50
 #define ATT_POC_NODE_MAX         100
@@ -41,6 +38,9 @@
 #define COMMAND_LEN 64
 #define DATA_SIZE   128
 
+
+#define ATT_DATA_DEVIATION_DB 	10
+#define MAC_ADDR_LEN 		6
 /*
  * Get AT&T node data
  */
@@ -76,6 +76,7 @@ int att_node_add(const char *mac_addr);
 
 int att_set_node_data(char *id, char *name, char *value);
 
+int att_check_data_deviation(char *macaddr, char *name, char *value);
 
 void att_update_nodes_data(void);
 
@@ -86,6 +87,8 @@ void att_node_left(const char *addr);
 uint16_t att_get_node_index_by_mac(const char *mac);
 
 uint16_t att_get_available_node_id(void);
+
+void att_set_poll_period(int period);
 
 int exec_systemcmd(char *cmd, char *retBuf, int retBufSize);
 #endif /* __ATT_INTERFACE_H__ */
