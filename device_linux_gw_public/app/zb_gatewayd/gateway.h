@@ -11,6 +11,10 @@
 
 #include <app/app.h>
 
+#define WIFI_STA_MIN_UPDATE_PERIOD_MINS      1
+#define WIFI_STA_DEFAULT_UPDATE_PERIOD_MINS  10
+#define WIFI_STA_MAX_UPDATE_PERIOD_MINS      300
+
 /* Application software version */
 extern const char *appd_version;
 

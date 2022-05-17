@@ -50,6 +50,7 @@
 #include "att/vt_interface.h"
 #include "att/att_interface.h"
 
+#include "pthread.h"
 #include <libgen.h>
 #include <stdlib.h>
 /* Maximum # of datapoints allowed in a batch */
@@ -57,7 +58,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.1";
+const char *appd_template_version = "zigbee_gateway_demo_v2.2";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -75,6 +76,37 @@ static unsigned int controller_status;
 static char up_time[50];
 #define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
+
+#define WIFI_STA_ADDR_LEN               50
+extern char command[COMMAND_LEN];
+extern char data[DATA_SIZE];
+static pthread_t vnode_poll_thread = (pthread_t)NULL;
+static unsigned int wifi_sta_info_update_period_min;
+
+static int appd_check_wifi_sta_data_deviation(char *name, char *value);
+static int appd_send_wifi_sta_data(char *name, char *value);
+
+/* Station properties  */
+static int wifi_sta_info_update;
+static int wifi_sta_channel;
+static int wifi_sta_noise;
+static int wifi_sta_RSSI;
+static char wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN];
+static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
+
+
+#define WIFI_STA_RSSI			"wifi_sta_RSSI"
+#define WIFI_STA_NOISE			"wifi_sta_noise"
+#define WIFI_STA_CHANNEL		"wifi_sta_channel"
+#define WIFI_STA_ASSOCIATED_SSID	"wifi_sta_associated_SSID"
+#define WIFI_STA_ASSOCIATED_BSSID	"wifi_sta_associated_BSSID"
+
+#define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
+#define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
+#define WIFI_GET_STA_CHANNEL            "get_stainfo.sh -sta_channel"
+#define WIFI_GET_STA_ASSOCIATED_SSID    "get_stainfo.sh -sta_ssid"
+#define WIFI_GET_STA_ASSOCIATED_BSSID   "get_stainfo.sh -sta_bssid"
+
 
 
 /* Node property batch list */
@@ -804,6 +836,190 @@ static enum err_t appd_uptime_send(struct prop *prop, int req_id,
 }
 
 /*
+ * Set Wifi sta_info update period
+ */
+
+static int appd_get_wifi_sta_info_update(struct prop *prop, const void *val,
+        size_t len, const struct op_args *args)
+{
+
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+		log_err("prop_arg_set returned error");
+		return -1;
+        }
+
+	if (wifi_sta_info_update < WIFI_STA_MIN_UPDATE_PERIOD_MINS) {
+		wifi_sta_info_update = WIFI_STA_MIN_UPDATE_PERIOD_MINS;
+		log_debug("wifi_sta_info_update value is out of range");
+	} else if (wifi_sta_info_update > WIFI_STA_MAX_UPDATE_PERIOD_MINS) {
+		wifi_sta_info_update = WIFI_STA_MAX_UPDATE_PERIOD_MINS;
+		log_debug("wifi_sta_info_update value is out of range");
+	} else if (wifi_sta_info_update == 0) {
+		wifi_sta_info_update = WIFI_STA_DEFAULT_UPDATE_PERIOD_MINS;
+		log_debug("wifi_sta_info_update value set to deafult period");
+	} else {
+		;
+	}
+
+	prop_send_by_name("set_wifi_stainfo_update_min");
+
+	att_set_poll_period(wifi_sta_info_update);
+
+	return 0;
+}
+
+
+void appd_wifi_sta_poll()
+{
+
+	if (wifi_sta_info_update == 0) {
+		 wifi_sta_info_update = WIFI_STA_DEFAULT_UPDATE_PERIOD_MINS;
+		 prop_send_by_name("set_wifi_stainfo_update_min");
+		 att_set_poll_period(wifi_sta_info_update);
+	}
+
+	sprintf(command, WIFI_GET_STA_RSSI);
+	exec_systemcmd(command, data, DATA_SIZE);
+	if (appd_check_wifi_sta_data_deviation(WIFI_STA_RSSI, data)) {
+		appd_send_wifi_sta_data(WIFI_STA_RSSI, data);
+	}
+
+	sprintf(command, WIFI_GET_STA_NOISE);
+	exec_systemcmd(command, data, DATA_SIZE);
+	if (appd_check_wifi_sta_data_deviation(WIFI_STA_NOISE, data)) {
+		appd_send_wifi_sta_data(WIFI_STA_NOISE, data);
+        }
+
+
+	if (wifi_sta_info_update_period_min >= wifi_sta_info_update || wifi_sta_info_update_period_min == 0) {
+		sprintf(command, WIFI_GET_STA_RSSI);
+		exec_systemcmd(command, data, DATA_SIZE);
+		appd_send_wifi_sta_data(WIFI_STA_RSSI, data);
+
+		sprintf(command, WIFI_GET_STA_NOISE);
+		exec_systemcmd(command, data, DATA_SIZE);
+		appd_send_wifi_sta_data(WIFI_STA_NOISE, data);
+
+		wifi_sta_info_update_period_min = 0;
+	}
+
+	wifi_sta_info_update_period_min += 1;
+
+	sprintf(command, WIFI_GET_STA_CHANNEL);
+	exec_systemcmd(command, data, DATA_SIZE);
+	appd_send_wifi_sta_data(WIFI_STA_CHANNEL, data);
+
+	sprintf(command, WIFI_GET_STA_ASSOCIATED_SSID);
+	exec_systemcmd(command, data, DATA_SIZE);
+	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_SSID, data);
+
+	sprintf(command, WIFI_GET_STA_ASSOCIATED_BSSID);
+	exec_systemcmd(command, data, DATA_SIZE);
+	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_BSSID, data);
+}
+
+
+static int appd_check_wifi_sta_data_deviation(char *name, char *value)
+{
+        int tmp = 0;
+	int deviation = 0;
+
+        if (!strcmp(name, WIFI_STA_NOISE)) {
+
+		tmp = atoi(value);
+
+                deviation = abs(abs(tmp) - abs(wifi_sta_noise));
+
+                if ( deviation >= ATT_DATA_DEVIATION_DB) {
+                        return 1;
+                } else {
+                        return 0;
+                }
+
+        } else if (!strcmp(name, WIFI_STA_RSSI)) {
+
+		tmp = atoi(value);
+
+                deviation = abs(abs(tmp) - abs(wifi_sta_RSSI));
+
+                if ( deviation >= ATT_DATA_DEVIATION_DB) {
+                        return 1;
+                } else {
+                        return 0;
+                }
+        }
+
+	return 0;
+}
+
+
+static int appd_send_wifi_sta_data(char *name, char *value)
+{
+	int tmp = 0;
+
+	if (!strcmp(name, WIFI_STA_CHANNEL)) {
+
+		tmp = atoi(value);
+
+		if (tmp == wifi_sta_channel) {
+			return 0;
+		}
+
+		wifi_sta_channel = tmp;
+
+		prop_send_by_name(name);
+
+	} else if (!strcmp(name, WIFI_STA_NOISE)) {
+
+                tmp = atoi(value);
+
+                if (tmp == wifi_sta_noise) {
+                      return 0;
+                }
+
+                wifi_sta_noise = tmp;
+
+		prop_send_by_name(name);
+
+	} else if (!strcmp(name, WIFI_STA_RSSI)) {
+
+                tmp = atoi(value);
+
+                if (tmp == wifi_sta_RSSI) {
+                        return 0;
+                }
+
+                wifi_sta_RSSI = tmp;
+
+		prop_send_by_name(name);
+        
+	} else if (!strcmp(name, WIFI_STA_ASSOCIATED_SSID)) {
+       
+       		if (!strcmp(value, wifi_sta_associated_SSID)) {
+                        return 0;
+                }
+                strncpy(wifi_sta_associated_SSID, value, WIFI_STA_ADDR_LEN);
+                wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+		prop_send_by_name(name);
+        
+	} else if (!strcmp(name, WIFI_STA_ASSOCIATED_BSSID)) {
+
+                if (!strcmp(value, wifi_sta_associated_BSSID)) {
+                        return 0;
+                }
+                strncpy(wifi_sta_associated_BSSID, value, WIFI_STA_ADDR_LEN);
+                wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN - 1] = '\0'; 
+
+		prop_send_by_name(name);
+	}
+
+	return 0;
+}
+
+
+/*
  * Bind a node with another node
  */
 static int appd_gw_bind_cmd_set(struct prop *prop, const void *val,
@@ -937,6 +1153,50 @@ static struct prop appd_gw_prop_table[] = {
 		.send = appd_uptime_send,
 		.arg = &up_time,
 		.len = sizeof(up_time),
+	},
+	{
+                .name = "set_wifi_stainfo_update_min",
+                .type = PROP_INTEGER,
+                .set = appd_get_wifi_sta_info_update,
+                .send = prop_arg_send,
+                .arg = &wifi_sta_info_update,
+                .len = sizeof(wifi_sta_info_update),
+        },
+	/*wifi Station  properties*/
+	{
+		.name = "wifi_sta_channel",
+		.type = PROP_INTEGER,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_channel,
+		.len = sizeof(wifi_sta_channel),
+	},
+	{
+		.name = "wifi_sta_noise",
+		.type = PROP_INTEGER,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_noise,
+		.len = sizeof(wifi_sta_noise),
+	},
+	{
+		.name = "wifi_sta_RSSI",
+		.type = PROP_INTEGER,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_RSSI,
+		.len = sizeof(wifi_sta_RSSI),
+	},
+	{
+		.name = "wifi_sta_associated_BSSID",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_associated_BSSID,
+		.len = sizeof(wifi_sta_associated_BSSID),
+	},
+	{
+		.name = "wifi_sta_associated_SSID",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_associated_SSID,
+		.len = sizeof(wifi_sta_associated_SSID),
 	}
 };
 
@@ -1163,6 +1423,18 @@ void appd_exit(int status)
 
 }
 
+static void vnode_poll_thread_fun(void) 
+{
+	 while(1) {
+		 att_poll();
+
+		 appd_wifi_sta_poll();
+
+		 sleep(60);
+	 }
+}
+
+
 /*
  * Function called during each main loop iteration.  This may be used to
  * perform routine tasks that are not linked to a specific timer or file event.
@@ -1177,7 +1449,12 @@ void appd_poll(void)
 		prop_send_by_name("num_nodes");
 	}
 
-	att_poll();
+
+	if (!vnode_poll_thread) {
+		if (pthread_create(&vnode_poll_thread, NULL, (void *)&vnode_poll_thread_fun, NULL)) {
+            		pthread_cancel(vnode_poll_thread);
+		}
+	}
 
 	return;
 }

@@ -45,6 +45,8 @@
 
 #define ATT_POC_ASSOCLIST		"/tmp/assoclist.txt"
 
+int att_poll_period_min;
+
 char command[COMMAND_LEN];
 char data[DATA_SIZE];
 /*
@@ -97,7 +99,7 @@ static struct nd_prop_info prop_info_array[] = {
  */
 struct att_poc_node_data {
 	uint16_t node_id;
-	uint16_t att_poll_period_sec;
+	uint16_t att_poll_period_min;
 
 	bool Active;
 	char MACAddress[ATT_POC_ADDR_LEN];
@@ -246,6 +248,10 @@ void att_node_left(const char *addr)
         node_left(att_node);
 }
 
+void att_set_poll_period(int att_poll_period)
+{
+	att_poll_period_min = att_poll_period;
+}
 
 
 void att_poll(void)
@@ -257,6 +263,7 @@ void att_poll(void)
 	int i = 0;
 	int is_node_exists = 0;
 	char *att_macaddr = NULL;
+	int mac[MAC_ADDR_LEN] = {'\0'};
 
 	sprintf(command, ATT_POC_GET_MACADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
@@ -267,6 +274,12 @@ void att_poll(void)
 		log_info("####Assoc node mac######: %s ##########", line);
 
 		is_node_exists = 0;
+
+		if (sscanf(line, "%02X:%02X:%02X:%02X:%02X:%02X", &mac[0], &mac[1], &mac[2], 
+					&mac[3], &mac[4], &mac[5]) != MAC_ADDR_LEN) {
+			continue;
+		}
+
 
 		for (i = 0; i < ARRAY_LEN(att_poc_node_list); i++) {
                 	if (!att_poc_node_list[i].node_id) {
@@ -295,6 +308,8 @@ void att_poll(void)
                 }
                 att_macaddr = att_poc_node_list[i].MACAddress;
 
+		log_info("#####Node mac in list : %s ###", att_macaddr);
+
 		snprintf(command, sizeof(command), ATT_POC_GET_ACTIVESTATUS, att_macaddr);
                 exec_systemcmd(command, data, DATA_SIZE);
                 att_set_node_data(att_macaddr, ATT_POC_ACTIVE, data);
@@ -302,27 +317,42 @@ void att_poll(void)
 		int sta_active = (int)atol(data);
                 if (!sta_active) {
 			att_node_left(att_macaddr);
-			att_poc_node_list[i].att_poll_period_sec = 0;
+			memset(&att_poc_node_list[i], 0 , sizeof(struct att_poc_node_data));
+			//att_poc_node_list[i].att_poll_period_min = 0;
 			log_debug("Removing the node: %s", att_macaddr);
                         continue;
 		}
 
 
-		if (att_poc_node_list[i].att_poll_period_sec >= ATT_POLL_PERIOD_SEC || att_poc_node_list[i].att_poll_period_sec == 0) {
+		snprintf(command, sizeof(command), ATT_POC_GET_RSSI, att_macaddr);
+                exec_systemcmd(command, data, DATA_SIZE);
 
-			snprintf(command, sizeof(command), ATT_POC_GET_RSSI, att_macaddr);
-                	exec_systemcmd(command, data, DATA_SIZE);
-                	att_set_node_data(att_macaddr, ATT_POC_RSSI, data);
-
-                	snprintf(command, sizeof(command), ATT_POC_GET_NOISE, att_macaddr);
-                	exec_systemcmd(command, data, DATA_SIZE);
-                	att_set_node_data(att_macaddr, ATT_POC_NOISE, data);
-
-			att_poc_node_list[i].att_poll_period_sec = 0;
-
+		if (att_check_data_deviation(att_macaddr, ATT_POC_RSSI, data)) {
+			att_set_node_data(att_macaddr, ATT_POC_RSSI, data);
 		}
 
-		att_poc_node_list[i].att_poll_period_sec += 1;
+		snprintf(command, sizeof(command), ATT_POC_GET_NOISE, att_macaddr);
+                exec_systemcmd(command, data, DATA_SIZE);
+
+		if (att_check_data_deviation(att_macaddr, ATT_POC_NOISE, data)) {
+			att_set_node_data(att_macaddr, ATT_POC_NOISE, data);
+                }
+
+
+		if (att_poc_node_list[i].att_poll_period_min >= att_poll_period_min || att_poc_node_list[i].att_poll_period_min == 0) {
+
+			snprintf(command, sizeof(command), ATT_POC_GET_RSSI, att_macaddr);
+			exec_systemcmd(command, data, DATA_SIZE);
+			att_set_node_data(att_macaddr, ATT_POC_RSSI, data);
+
+			snprintf(command, sizeof(command), ATT_POC_GET_NOISE, att_macaddr);
+			exec_systemcmd(command, data, DATA_SIZE);
+			att_set_node_data(att_macaddr, ATT_POC_NOISE, data);
+
+			att_poc_node_list[i].att_poll_period_min = 0;
+		}
+
+		att_poc_node_list[i].att_poll_period_min += 1;
 
                 snprintf(command, sizeof(command), ATT_POC_GET_STATION_TYPE, att_macaddr);
                 exec_systemcmd(command, data, DATA_SIZE);
@@ -860,6 +890,49 @@ void att_update_int_prop(uint16_t node_id, char *name, int value)
 }
 
 
+
+int att_check_data_deviation(char *macaddr, char *name, char *value)
+{
+	struct att_poc_node_data *data;
+        int tmp;
+	int deviation = 0;
+
+        data = att_get_node_data_by_mac(macaddr);
+
+        if (data == NULL) {
+                log_debug("Cannot get node %s data", macaddr);
+                return 0;
+        }
+
+	if (!strcmp(name, ATT_POC_RSSI)) {
+
+                tmp = atoi(value);
+
+		deviation = abs(abs(tmp) - abs(data->RSSI));
+
+		if ( deviation >= ATT_DATA_DEVIATION_DB) {
+			return 1;
+		} else {
+			return 0;
+		}
+
+        } else if (!strcmp(name, ATT_POC_NOISE)) {
+
+                tmp = atoi(value);
+
+                deviation = abs(abs(tmp) - abs(data->Noise));
+
+                if ( deviation >= ATT_DATA_DEVIATION_DB) {
+                        return 1;
+                } else {
+                        return 0;
+                }
+	}
+
+	return 0;
+}
+
+
 /*
  * Set AT&T node data
  */
@@ -900,7 +973,7 @@ int att_set_node_data(char *macaddr, char *name, char *value)
                 tmp = atoi(value);
 
                 if (tmp == data->RSSI) {
-                        return 0;
+			return 0;
                 }
 
                 data->RSSI = tmp;
