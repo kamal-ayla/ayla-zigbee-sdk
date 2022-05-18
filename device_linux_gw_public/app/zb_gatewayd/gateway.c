@@ -1375,6 +1375,7 @@ int appd_init(void)
 	 * Initialize generic node management and register callbacks.
 	 */
 	node_mgmt_init(app_get_timers());
+
 	node_set_cloud_callbacks(&cloud_callbacks);
 	appd_node_network_callback_init();
 
@@ -1403,6 +1404,8 @@ int appd_start(void)
 		log_err("zb_start returned error");
 		return -1;
 	}
+
+	node_mgmt_clear_vnodes(VNODE_OEM_MODEL, &att_node_left_handler);
 
 	return 0;
 }
