@@ -32,7 +32,7 @@
 #include "att_interface_node.h"
 
 
-#define NODE_OEM_MODEL    "linuxevb"
+#define NODE_OEM_MODEL  VNODE_OEM_MODEL
 
 
 /* Fixed subdevice names, General device info props */
@@ -225,7 +225,17 @@ int exec_systemcmd(char *cmd, char *retBuf, int retBufSize)
         return 0;
 }
 
+void att_node_left_handler(const char *macaddr)
+{
+	snprintf(command, sizeof(command), ATT_POC_GET_ACTIVESTATUS, macaddr);
+	exec_systemcmd(command, data, DATA_SIZE);
 
+        int sta_active = (int)atol(data);
+        if (!sta_active) {
+		att_node_left(macaddr);
+		log_debug("######### Removed the node: %s #########", macaddr);
+	}
+}
 
 
 void att_node_left(const char *addr)

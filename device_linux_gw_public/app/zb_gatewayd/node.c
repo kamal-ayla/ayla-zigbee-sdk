@@ -1295,6 +1295,30 @@ void node_mgmt_factory_reset(void)
 	node_sync_all();
 }
 
+
+/*
+ * Clear vt node management state from memory.
+ */
+void node_mgmt_clear_vnodes(char *oem_model, void (*node_rm_func)(const char *))
+{
+        struct node_entry *entry;
+        struct hashmap_iter *iter;
+	struct node *node;
+	
+        /* Mark all nodes for removal */
+        for (iter = hashmap_iter(&mgmt_state.nodes); iter;
+            iter = hashmap_iter_next(&mgmt_state.nodes, iter)) {
+                entry = node_entry_hashmap_iter_get_data(iter);
+		node = &entry->node;
+		log_debug("############## %s: is Removing the disassociated Wifi nodes ###########", node->addr);
+		if (!strcmp(node->oem_model, oem_model)) {
+			node_rm_func(node->addr);
+		}
+        }
+        /* Immediately step management state machine to expedite removal */
+        node_sync_all();
+}
+
 /*
  * Immediately run the node management state machine for all nodes in
  * case any actions are pending.  This should be used to speed retries,

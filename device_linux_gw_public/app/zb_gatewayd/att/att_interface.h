@@ -10,6 +10,8 @@
 #ifndef __ATT_INTERFACE_H__
 #define __ATT_INTERFACE_H__
 
+#define VNODE_OEM_MODEL 	       "linuxevb"
+
 #define ATT_POC_ACTIVE                 "Active"
 #define ATT_POC_MACADDRESS             "MACAddress"
 #define ATT_POC_RSSI	       	       "RSSI"
@@ -89,6 +91,8 @@ uint16_t att_get_node_index_by_mac(const char *mac);
 uint16_t att_get_available_node_id(void);
 
 void att_set_poll_period(int period);
+
+void att_node_left_handler(const char *macaddr);
 
 int exec_systemcmd(char *cmd, char *retBuf, int retBufSize);
 #endif /* __ATT_INTERFACE_H__ */

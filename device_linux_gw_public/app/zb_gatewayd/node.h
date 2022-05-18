@@ -371,4 +371,9 @@ int node_prop_send_all_set(struct node *node, int dir);
  */
 enum node_state node_get_state(struct node *node);
 
+
+/*
+ * Clear vt node management state from memory.
+ */
+void node_mgmt_clear_vnodes(char *oem_model, void (*node_rm_func)(const char *));
 #endif /* __NODE_H__ */
