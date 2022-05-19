@@ -62,6 +62,7 @@ const char *appd_template_version = "zigbee_gateway_demo_v2.2";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
+static struct timer ngrok_data_update_timer;
 static unsigned int zb_join_enable;
 static unsigned int zb_change_channel;
 static u8 zb_join_status;
@@ -70,10 +71,12 @@ static char zb_bind_cmd[PROP_STRING_LEN + 1];
 static char zb_bind_result[PROP_STRING_LEN + 1];
 static unsigned int num_nodes;
 
+
 /* system info*/
+#define UPTIME_LEN						50
 static u8  get_sysinfo_status;
 static unsigned int controller_status;
-static char up_time[50];
+static char up_time[UPTIME_LEN];
 #define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
 
@@ -107,6 +110,24 @@ static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
 #define WIFI_GET_STA_ASSOCIATED_SSID    "get_stainfo.sh -sta_ssid"
 #define WIFI_GET_STA_ASSOCIATED_BSSID   "get_stainfo.sh -sta_bssid"
 
+/* ngrok properties */
+#define AUTH_COMMAND_LEN			80
+#define NGROK_STATUS_LEN			30
+#define SET_AUTHTOKEN_LEN			55
+static char auth_command[AUTH_COMMAND_LEN];
+static u8 ngrok_enable;
+static int ngrok_port;
+static char ngrok_status[NGROK_STATUS_LEN];
+static char ngrok_hostname[NGROK_STATUS_LEN];
+static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
+#define GET_AUTHTOKEN					"ngrok-cli -get_authtoken"
+#define IS_NGROK_INSTALLED				"which ngrok; echo $?"
+#define GET_NGROK_START					"ngrok-cli -start"
+#define GET_NGROK_STOP					"ngrok-cli -stop"
+#define GET_NGROK_STATUS				"ngrok-cli -status"
+#define GET_NGROK_HOST_NAME				"ngrok-cli -host_name"
+#define GET_NGROK_PORT_NUM				"ngrok-cli -port_num"
+#define SET_NGROK_AUTHTOKEN				"ngrok-cli -set_authtoken %s"
 
 
 /* Node property batch list */
@@ -834,6 +855,183 @@ static enum err_t appd_uptime_send(struct prop *prop, int req_id,
 	pclose(fp);
 	return prop_arg_send(prop, req_id, opts);
 }
+/*
+ *To check whether ngrok is installed in device.
+ */
+
+static int appd_is_ngrok_installed(void)
+{
+	FILE *fp;
+	int status = 0;
+
+	fp = popen(IS_NGROK_INSTALLED,"r");
+	if (fp == NULL) {
+		log_err("Failed to get ngrok installed status");
+	} else {
+		fscanf(fp, "%d", &status);
+		pclose(fp);
+	}
+
+	return status;
+}
+
+/*
+ *To get the authtoken.
+ */
+static int appd_ngrok_send_authtoken(void)
+{
+	FILE *fp;
+	char get_authtoken[SET_AUTHTOKEN_LEN];
+
+	fp = popen(GET_AUTHTOKEN,"r");
+	if(fp == NULL || appd_is_ngrok_installed()) {
+		log_err("Failed to get authtoken");
+		strcpy(ngrok_set_authtoken, "0");
+	} else {
+		fscanf(fp, "%[^\n]", get_authtoken);
+		strcpy(ngrok_set_authtoken,get_authtoken);
+	}
+
+	prop_send_by_name("ngrok_set_authtoken");
+	return 0;
+}
+
+
+
+/*
+ *To get the ngrok info
+ */
+static int appd_ngrok_enable(struct prop *prop, const void *val,
+        size_t len, const struct op_args *args)
+{
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+		log_err("prop_arg_set returned error");
+		return -1;
+	}
+
+	if (ngrok_enable == 1) {
+		system(GET_NGROK_START);
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
+	} else if (ngrok_enable == 0) {
+		system(GET_NGROK_STOP);
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
+	} else {
+		log_debug("get ngrok_info failed");
+	}
+	return 0;
+}
+
+/*
+ *Ngrok data update timer
+ */
+
+static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
+{
+	timer_cancel(app_get_timers(), timer_ngrok_update);
+
+	log_debug("Updating the Ngrok data");
+	prop_send_by_name("ngrok_status");
+	prop_send_by_name("ngrok_hostname");
+	prop_send_by_name("ngrok_port");
+	appd_ngrok_send_authtoken();
+}
+
+/*
+ *To get the Ngrok Hostname.
+ */
+static enum err_t appd_ngrok_hostname_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	FILE *fp;
+
+	fp = popen(GET_NGROK_HOST_NAME,"r");
+	if (fp == NULL || appd_is_ngrok_installed()) {
+		log_err("Get ngrok hostname failed");
+		strcpy(ngrok_hostname, "0");
+	} else {
+		fscanf(fp, "%[^\n]", ngrok_hostname);
+		pclose(fp);
+	}
+
+	return prop_arg_send(prop, req_id, opts);
+
+}
+
+/*
+ *To get the Ngrok Port.
+ */
+static enum err_t appd_ngrok_port_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	FILE *fp;
+
+	fp = popen(GET_NGROK_PORT_NUM,"r");
+	if (fp == NULL || appd_is_ngrok_installed()) {
+		log_err("Get ngrok port failed");
+		ngrok_port = 0;
+		ngrok_enable = 0;
+		prop_send_by_name("ngrok_enable");
+	} else {
+		fscanf(fp, "%d", &ngrok_port);
+		if (ngrok_port == 0) {
+			ngrok_enable = 0;
+			prop_send_by_name("ngrok_enable");
+		}
+		pclose(fp);
+	}
+	return prop_arg_send(prop, req_id, opts);
+
+}
+
+/*
+ *To get the Ngrok Status.
+ */
+static enum err_t appd_ngrok_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	FILE *fp;
+
+	fp = popen(GET_NGROK_STATUS,"r");
+	if (fp == NULL || appd_is_ngrok_installed()) {
+		log_err("Get ngrok status failed");
+		strcpy(ngrok_status , "ngrok not installed");
+	} else {
+		fscanf(fp, "%[^\n]", ngrok_status);
+		pclose(fp);
+	}
+	return prop_arg_send(prop, req_id, opts);
+
+}
+
+/*
+ *Set ngrok authtoken from cloud.
+ */
+static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
+				size_t len, const struct op_args *args)
+{
+	FILE *fp;
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+		log_err("prop_arg_set returned error");
+		return -1;
+	}
+
+	if(strlen(ngrok_set_authtoken) >= 10) {
+		snprintf(auth_command, sizeof(auth_command), SET_NGROK_AUTHTOKEN,
+				ngrok_set_authtoken);
+
+		fp = popen(auth_command, "r");
+		if (fp == NULL) {
+			log_err("set ngrok authtoken failed");
+			exit(1);
+		}
+		pclose(fp);
+	} else {
+		log_err("invalid authtoken");
+	}
+	return 0;
+}
 
 /*
  * Set Wifi sta_info update period
@@ -1154,14 +1352,13 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &up_time,
 		.len = sizeof(up_time),
 	},
-	{
-                .name = "set_wifi_stainfo_update_min",
-                .type = PROP_INTEGER,
-                .set = appd_get_wifi_sta_info_update,
-                .send = prop_arg_send,
-                .arg = &wifi_sta_info_update,
-                .len = sizeof(wifi_sta_info_update),
-        },
+	{	.name = "set_wifi_stainfo_update_min",
+		.type = PROP_INTEGER,
+		.set = appd_get_wifi_sta_info_update,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_info_update,
+		.len = sizeof(wifi_sta_info_update),
+	},
 	/*wifi Station  properties*/
 	{
 		.name = "wifi_sta_channel",
@@ -1197,7 +1394,46 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
 		.arg = &wifi_sta_associated_SSID,
 		.len = sizeof(wifi_sta_associated_SSID),
+	},
+		/*  ngrok properties */
+	{
+		.name = "ngrok_enable",
+		.type = PROP_BOOLEAN,
+		.set = appd_ngrok_enable,
+		.send = prop_arg_send,
+		.arg = &ngrok_enable,
+		.len = sizeof(ngrok_enable),
+	},
+	{
+		.name = "ngrok_status",
+		.type = PROP_STRING,
+		.send = appd_ngrok_status_send,
+		.arg = &ngrok_status,
+		.len = sizeof(ngrok_status),
+	},
+	{
+		.name = "ngrok_hostname",
+		.type = PROP_STRING,
+		.send = appd_ngrok_hostname_send,
+		.arg = &ngrok_hostname,
+		.len = sizeof(ngrok_hostname),
+	},
+	{
+		.name = "ngrok_port",
+		.type = PROP_INTEGER,
+		.send = appd_ngrok_port_send,
+		.arg = &ngrok_port,
+		.len = sizeof(ngrok_port),
+	},
+	{
+		.name = "ngrok_set_authtoken",
+		.type = PROP_STRING,
+		.set = appd_ngrok_set_authtoken,
+		.send = prop_arg_send,
+		.arg = &ngrok_set_authtoken,
+		.len = sizeof(ngrok_set_authtoken),
 	}
+
 };
 
 
@@ -1380,6 +1616,7 @@ int appd_init(void)
 	appd_node_network_callback_init();
 
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
+	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 
 	return 0;
 }
