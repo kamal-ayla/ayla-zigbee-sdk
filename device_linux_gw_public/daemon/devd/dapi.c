@@ -757,14 +757,8 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
 	printf("%s\n", homeware_version_extract);
 
    char ayla_new_version_homeware[100];
-
-   strcpy(ayla_new_version_homeware, product);
-   strcat(ayla_new_version_homeware, "_");
-   strcat(ayla_new_version_homeware, homeware_version_extract);
-   strcat(ayla_new_version_homeware, "/");
-
-   strcat(ayla_new_version_homeware, version);
-   printf("%s\n", ayla_new_version_homeware);
+   strcpy(ayla_new_version_homeware, homeware_version_extract);
+   printf("Homeware version is :%s\n", ayla_new_version_homeware);
    /****************************************************************************************/
 	json_t *root;
 	json_t *update;

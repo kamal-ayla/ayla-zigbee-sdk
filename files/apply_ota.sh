@@ -26,7 +26,7 @@ logger "==========================ota============================"
 
 cleanup() {
         rm -rf $AYLA_OTA_DIR
-echo "clean"
+logger "clean"
 }
 
 exit_success() {
@@ -41,18 +41,23 @@ exit_success_upgrade() {
 }
 
 exit_failure() {
-        echo "$cmdname:  ERROR $*"
+        logger "$cmdname:  ERROR $*"
         logger "Install failed $image_src_file \"$*\" @ $(date)" >> $AYLA_OTA_LOG
         cleanup
         exit 1
 }
 
+log_failure() {
+        logger "$cmdname:  ERROR $*"
+        cleanup
+        exit 1
+}
 
 image_path="$1"
 
 # Verify image path parameter
 if [ -z $image_path ]; then
-        echo "Usage: $cmdname <image path>"
+        logger "Usage: $cmdname <image path>"
         exit 1
 fi
 if [ ! -f $image_path ]; then
@@ -66,18 +71,13 @@ mkdir -p $AYLA_OTA_INSTALL_DIR
 ls $AYLA_OTA_BUILD_DIR  >> /data/ota_log
 ls $AYLA_OTA_INSTALL_DIR  >> /data/ota_log
 
-echo "$cmdname: unpacking OTA $image_path to $AYLA_OTA_BUILD_DIR"
-#tar -xf $image_path -C $AYLA_OTA_BUILD_DIR
-#if [ $? -ne 0 ]; then
-#        exit_failure "unpacking failed"
-#fi
+logger "$cmdname: unpacking OTA $image_path to $AYLA_OTA_BUILD_DIR"
 
-if [ -n "$(find "$image_path" -prune -size +5000000c)" ]; then
-    printf '%s is larger than 5 MB\n' "$image_path"
+if [ -n "$(find "$image_path" -prune -size +15000000c)" ]; then
+    printf '%s is larger than 15 MB\n' "$image_path"
 	mv $image_path $AYLA_OTA_BUILD_DIR/ayla_ota.rbi
 else
-    echo "fine"
-	#mv $image_path $AYLA_OTA_BUILD_DIR/ayla_ota.ipk
+    logger "fine"
 	tar -xf $image_path -C $AYLA_OTA_BUILD_DIR
 	if [ $? -ne 0 ]; then
 		exit_failure "unpacking failed"
@@ -99,32 +99,25 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.ipk 2> /dev/null | wc -l) != "0" ]; then
 	if [ $(ls $AYLA_OTA_BUILD_DIR/ayla*.ipk 2> /dev/null | wc -l) == "1" ]; then
 		opkg install --nodeps  $AYLA_OTA_BUILD_DIR/ayla*.ipk  >> /data/ota_log
 		if [ $? -ne 0 ]; then
-        	exit_failure "ayla ipk install failed"
+        	log_failure "ayla ipk install failed"
    		fi	
 	sleep 10
    	exit_success_upgrade
 	fi
 
-   mkdir /www/docroot/js/ViaAyla/
-   mv $AYLA_OTA_BUILD_DIR/*.ipk /www/docroot/js/ViaAyla/
-   cd /www/docroot/js/ViaAyla/
+   cd $AYLA_OTA_BUILD_DIR
    FILES=*.ipk
-   #echo "$cmdname: install  OTA source"
-   #opkg install  --force-reinstall --nodeps  $AYLA_OTA_BUILD_DIR/*  >> /data/ota_logaa
+   logger "$cmdname: install  OTA source"
    for f in $FILES
    do
-   lcm install -e native -u http://127.0.0.1/js/ViaAyla/$f > OutputInstall
+   logger "inside lcm for/do -----------$f"
+   opkg install --force-reinstall $AYLA_OTA_BUILD_DIR/$f > OutputInstall
    if [ $? -ne 0 ]; then
-        exit_failure "source build failed"
+        log_failure "Installation failed for $f"
    fi
-   var=`head -1 OutputInstall | awk '{print $2}'`;lcm list ID=$var > list
-   grep SourceName list > listSource
-   var=`head -1 "listSource" | awk '{print $2}'`; echo $var
-   $(grep init.d /usr/lib/opkg/info/$var.list) enable
-   var=`head -1 OutputInstall | awk '{print $2}'`;lcm start ID=$var;rm OutputInstall
    done
    sleep 10
-   rm -rf /www/docroot/js/ViaAyla/*
+   rm -rf $AYLA_OTA_DIR
    exit_success
 fi
 
