@@ -30,6 +30,8 @@
 #include <ayla/build.h>
 #include <ayla/utypes.h>
 #include <ayla/http.h>
+#include "libtransformer.h"
+#include <inttypes.h>
 #include <ayla/json_parser.h>
 
 #include "opkg.h"
@@ -58,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.2";
+const char *appd_template_version = "zigbee_gateway_demo_v2.3";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -76,9 +78,15 @@ static unsigned int num_nodes;
 #define UPTIME_LEN						50
 static u8  get_sysinfo_status;
 static unsigned int controller_status;
+static char ram_usage[100];
+static char cpu_usage[5];
 static char up_time[UPTIME_LEN];
 #define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
+#define GET_RAM_FREE "transformer-cli get sys.mem.RAMFree | grep -o '[0-9]*'"
+#define GET_RAM_USED "transformer-cli get sys.mem.RAMUsed | grep -o '[0-9]*'"
+#define GET_RAM_TOTAL "transformer-cli get sys.mem.RAMTotal | grep -o '[0-9]*'"
+#define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
 
 #define WIFI_STA_ADDR_LEN               50
 extern char command[COMMAND_LEN];
@@ -168,9 +176,6 @@ static enum err_t appd_send_version(struct prop *prop, int req_id,
    		strcpy(ayla_new_appd_version,pkg->name);
    		strcat(ayla_new_appd_version, " - ");
    		strcat(ayla_new_appd_version, v);
-		strcat(ayla_new_appd_version, "/");
-
-		strcat(ayla_new_appd_version, appd_version);
 		log_debug("*******************************%s\n", ayla_new_appd_version);
 		free(v);
 		opkg_free();
@@ -810,6 +815,8 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
 	if (get_sysinfo_status) {
 			prop_send_by_name("controller_status");
 			prop_send_by_name("up_time");
+			prop_send_by_name("ram_usage");
+			prop_send_by_name("cpu_usage");
 			log_debug("get sysinfo success");
 	}
 
@@ -1216,6 +1223,92 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 	return 0;
 }
 
+/*
+ *To get the device cpu_usage.
+ */
+static enum err_t appd_cpu_usage_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	FILE *fp;
+	static unsigned int cpusage;
+	char buffer[5];
+	fp = popen(GET_CURRENT_CPU_USAGE,"r");
+	if (fp == NULL) {
+		log_err("Ram usage get failed");
+		exit(1);
+	}
+	fscanf(fp, "%d", &cpusage);
+	pclose(fp);
+	sprintf(buffer,"%d",cpusage);
+	strcpy(cpu_usage,buffer);
+	strcat(cpu_usage,"%");
+	log_debug(" cpu_usage is :%s\n", cpu_usage);
+	return prop_arg_send(prop, req_id, opts);
+}
+
+
+/*
+ *To get the device ram_usage.
+ */
+static enum err_t appd_ram_usage_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+
+	FILE *fp;
+	static unsigned int ram_mb, ram_kb;
+	char buffer[10];
+	fp = popen(GET_RAM_FREE,"r");
+	if (fp == NULL) {
+		log_err("Ram usage get failed");
+		exit(1);
+	}
+	fscanf(fp, "%d", &ram_kb);
+	pclose(fp);
+	ram_mb = ram_kb / 1024;
+    
+    // Displaying output
+    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+    strcpy(ram_usage,"Free=");
+	sprintf(buffer,"%d",ram_mb);
+	strcat(ram_usage,buffer);
+	strcat(ram_usage,"MB");
+
+	fp = popen(GET_RAM_USED,"r");
+	if (fp == NULL) {
+		log_err("Ram usage get failed");
+		exit(1);
+	}
+	fscanf(fp, "%d", &ram_kb);
+	pclose(fp);
+	ram_mb = ram_kb / 1024;
+    
+    // Displaying output
+    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+    strcat(ram_usage," Used=");
+	sprintf(buffer,"%d",ram_mb);
+	strcat(ram_usage,buffer);
+	strcat(ram_usage,"MB");
+
+		fp = popen(GET_RAM_TOTAL,"r");
+	if (fp == NULL) {
+		log_err("Ram usage get failed");
+		exit(1);
+	}
+	fscanf(fp, "%d", &ram_kb);
+	pclose(fp);
+	ram_mb = ram_kb / 1024;
+    
+    // Displaying output
+    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+    strcat(ram_usage," Total=");
+	sprintf(buffer,"%d",ram_mb);
+	strcat(ram_usage,buffer);
+	strcat(ram_usage,"MB");
+    log_debug(" ram_usage is :%s\n", ram_usage);
+
+	return prop_arg_send(prop, req_id, opts);
+}
+
 
 /*
  * Bind a node with another node
@@ -1432,6 +1525,20 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
 		.arg = &ngrok_set_authtoken,
 		.len = sizeof(ngrok_set_authtoken),
+	},
+	{
+		.name = "ram_usage",
+		.type = PROP_STRING,
+		.send = appd_ram_usage_send,
+		.arg = &ram_usage,
+		.len = sizeof(ram_usage),
+	},
+	{
+		.name = "cpu_usage",
+		.type = PROP_STRING,
+		.send = appd_cpu_usage_send,
+		.arg = &cpu_usage,
+		.len = sizeof(cpu_usage),
 	}
 
 };
