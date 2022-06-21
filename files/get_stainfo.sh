@@ -133,6 +133,42 @@ get_sta_bssid()
 
 }
 
+get_wifi_BSSID_fronthaul_2G()
+{
+        front_2g=`ifconfig wl0 | awk '/HWaddr/ {print $5}'`
+        f=${#front_2g}
+        if [ $f == "17" ]; then
+                echo $front_2g
+        else
+                echo "N/A"
+        fi
+}
+
+
+
+get_wifi_BSSID_fronthaul_5G()
+{
+	front_5g=`ifconfig wl1 | awk '/HWaddr/ {print $5}'`
+	f=${#front_5g}
+	if [ $f == "17" ]; then
+		echo $front_5g
+	else
+		echo "N/A"
+	fi	
+}
+
+get_wifi_BSSID_backhaul()
+{
+        back=`ifconfig wl1_2 | awk '/HWaddr/ {print $5}'`
+        b=${#back}
+        if [ $b == "17" ]; then
+                echo $back
+        else
+                echo "N/A"
+        fi
+	
+}
+
 get_rssi()
 {
 	if [ -z $1 ]; then                         
@@ -296,10 +332,22 @@ case "$1" in
 		;;
 	-sta_bssid)
 		get_sta_bssid
-		;;
+		;;	
+        -sta_bssid_fronthaul_2G)
+                get_wifi_BSSID_fronthaul_2G
+                ;;
+        -sta_bssid_fronthaul_5G)
+                get_wifi_BSSID_fronthaul_5G
+                ;;
+		
+        -sta_bssid_backhaul)
+                get_wifi_BSSID_backhaul
+                ;;
+		
+		
 	*)
 		echo "Usage: get_devinfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul]"
 		exit 1
 		;;
 esac
