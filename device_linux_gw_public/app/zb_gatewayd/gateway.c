@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.3";
+const char *appd_template_version = "zigbee_gateway_demo_v2.4";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -104,6 +104,9 @@ static int wifi_sta_noise;
 static int wifi_sta_RSSI;
 static char wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN];
 static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
+static char gw_wifi_BSSID_fronthaul_5G[WIFI_STA_ADDR_LEN];
+static char gw_wifi_BSSID_fronthaul_2G[WIFI_STA_ADDR_LEN];
+static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 
 
 #define WIFI_STA_RSSI			"wifi_sta_RSSI"
@@ -111,12 +114,18 @@ static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
 #define WIFI_STA_CHANNEL		"wifi_sta_channel"
 #define WIFI_STA_ASSOCIATED_SSID	"wifi_sta_associated_SSID"
 #define WIFI_STA_ASSOCIATED_BSSID	"wifi_sta_associated_BSSID"
+#define GW_WIFI_BSSID_FRONTHAUL_5G      "gw_wifi_BSSID_fronthaul_5G"
+#define GW_WIFI_BSSID_FRONTHAUL_2G      "gw_wifi_BSSID_fronthaul_2G"
+#define GW_WIFI_BSSID_BACKHAUL       "gw_wifi_BSSID_backhaul"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
 #define WIFI_GET_STA_CHANNEL            "get_stainfo.sh -sta_channel"
 #define WIFI_GET_STA_ASSOCIATED_SSID    "get_stainfo.sh -sta_ssid"
 #define WIFI_GET_STA_ASSOCIATED_BSSID   "get_stainfo.sh -sta_bssid"
+#define GW_WIFI_GET_BSSID_FRONTHAUL_5G         "get_stainfo.sh -sta_bssid_fronthaul_5G"
+#define GW_WIFI_GET_BSSID_FRONTHAUL_2G         "get_stainfo.sh -sta_bssid_fronthaul_2G"
+#define GW_WIFI_GET_BSSID_BACKHAUL          "get_stainfo.sh -sta_bssid_backhaul"
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -1122,6 +1131,18 @@ void appd_wifi_sta_poll()
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_BSSID);
 	exec_systemcmd(command, data, DATA_SIZE);
 	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_BSSID, data);
+	
+	sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_5G);
+	exec_systemcmd(command, data, DATA_SIZE);
+	appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_5G, data);
+
+        sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_2G);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_2G, data);
+
+	sprintf(command, GW_WIFI_GET_BSSID_BACKHAUL);
+	exec_systemcmd(command, data, DATA_SIZE);
+	appd_send_wifi_sta_data(GW_WIFI_BSSID_BACKHAUL, data);
 }
 
 
@@ -1218,7 +1239,34 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN - 1] = '\0'; 
 
 		prop_send_by_name(name);
-	}
+	} else if (!strcmp(name, GW_WIFI_BSSID_FRONTHAUL_5G)) {
+
+                if (!strcmp(value, gw_wifi_BSSID_fronthaul_5G)) {
+                        return 0;
+                }
+                strncpy(gw_wifi_BSSID_fronthaul_5G, value, WIFI_STA_ADDR_LEN);
+                gw_wifi_BSSID_fronthaul_5G[WIFI_STA_ADDR_LEN - 1] = '\0'; 
+
+		prop_send_by_name(name);
+	} else if (!strcmp(name, GW_WIFI_BSSID_FRONTHAUL_2G)) {
+
+                if (!strcmp(value, gw_wifi_BSSID_fronthaul_2G)) {
+                        return 0;
+                }
+                strncpy(gw_wifi_BSSID_fronthaul_2G, value, WIFI_STA_ADDR_LEN);
+                gw_wifi_BSSID_fronthaul_2G[WIFI_STA_ADDR_LEN - 1] = '\0'; 
+
+		prop_send_by_name(name);		
+	} else if (!strcmp(name, GW_WIFI_BSSID_BACKHAUL)) {
+
+                if (!strcmp(value, gw_wifi_BSSID_backhaul)) {
+                        return 0;
+                }
+                strncpy(gw_wifi_BSSID_backhaul, value, WIFI_STA_ADDR_LEN);
+                gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN - 1] = '\0'; 
+
+		prop_send_by_name(name);
+	}	
 
 	return 0;
 }
@@ -1487,6 +1535,30 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
 		.arg = &wifi_sta_associated_SSID,
 		.len = sizeof(wifi_sta_associated_SSID),
+	},
+	
+	{
+		.name = "gw_wifi_BSSID_fronthaul_5G",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &gw_wifi_BSSID_fronthaul_5G,
+		.len = sizeof(gw_wifi_BSSID_fronthaul_5G),
+	},
+	
+	{
+		.name = "gw_wifi_BSSID_fronthaul_2G",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &gw_wifi_BSSID_fronthaul_2G,
+		.len = sizeof(gw_wifi_BSSID_fronthaul_2G),
+	},	
+	
+	{
+		.name = "gw_wifi_BSSID_backhaul",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &gw_wifi_BSSID_backhaul,
+		.len = sizeof(gw_wifi_BSSID_backhaul),
 	},
 		/*  ngrok properties */
 	{
