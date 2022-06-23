@@ -238,6 +238,27 @@ struct zdo_bind_resp {
 	uint8_t status;
 };
 
+/*
+ * ZCL manufacturer message struct
+ */
+struct zcl_manuft_msg {
+	struct zcl_frm_ctrl ctrl;
+	uint16_t manufacturer_code;
+	uint8_t seq_no;
+	uint8_t cmd_id;
+	uint8_t msg[0];
+};
+
+/*
+ * ZCL manufacturer cluster read attribute response message struct
+ */
+struct zcl_manuft_read_resp {
+	uint16_t attr_id;
+	uint8_t status;
+	uint8_t data_type;
+	uint8_t value[0];
+};
+
 #pragma pack()
 
 
@@ -1093,12 +1114,54 @@ static bool zbc_illum_measurement_cluster_msg_handle(uint16_t source,
 }
 
 /*
+ * Handle manufacturer specific cluster message
+ */
+static bool zbc_manufacturer_specific_cluster_msg_handle(uint16_t source,
+			uint8_t frame_type, uint8_t cmd_id,
+			uint8_t *msg, uint16_t msgLen)
+{
+	struct zcl_manuft_read_resp *manuft;
+
+	log_debug("\r\nzbc_manufacturer_specific_cluster_msg_handle ######################## \r\n");
+	if (frame_type == ZCL_GLOBAL_COMMAND) {
+		switch (cmd_id) {
+		case ZCL_REPORT_ATTRIBUTES_COMMAND_ID:
+			log_debug("received manufacturer specific"
+				" report attribute");
+			appd_update_decimal_prop(source, ZB_LOCAL_HUMIDITY,
+			    (*(uint16_t *)(msg + 3) / (double)100.00));
+			break;
+		case ZCL_READ_ATTRIBUTES_RESPONSE_COMMAND_ID:
+		manuft = (struct zcl_manuft_read_resp *)msg;
+		if (manuft->status == 0x00) {
+			log_debug("received manufacturer specific"
+				" read attribute resp");
+			appd_update_decimal_prop(source, ZB_LOCAL_HUMIDITY,
+			    (*(uint16_t *)(msg + 4) / (double)100.00));
+		} else {
+			log_debug("received manufacturer specific"
+			    " read attribute %d resp status %d",
+			    manuft->attr_id, manuft->status);
+		}
+			break;
+		default:
+			log_debug("Received invalid global response 0x%02X"
+				" from source 0x%04X", cmd_id, source);
+			break;
+		}
+	}
+
+	return true;
+}
+
+/*
  * Handle HA profile message
  */
 static bool zbc_ha_profile_msg_handle(uint16_t source, uint16_t clusterId,
 				uint8_t *message, uint16_t msgLen)
 {
 	struct zcl_msg *zcl;
+	struct zcl_manuft_msg *manuft;
 	bool ret = false;
 
 	appd_update_as_online_status(source);
@@ -1155,7 +1218,24 @@ static bool zbc_ha_profile_msg_handle(uint16_t source, uint16_t clusterId,
 		ret = zbc_illum_measurement_cluster_msg_handle(source,
 		    zcl->ctrl.frame_type, zcl->cmd_id, zcl->msg, msgLen - 3);
 		break;
-
+	case 0xFC45:
+		log_debug("%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+		    message[0], message[1], message[2], message[3], message[4],
+		    message[5], message[6], message[7], message[8], message[9]);
+		if (zcl->ctrl.manf_specific) {
+			manuft = (struct zcl_manuft_msg *)message;
+			log_debug("frame_type %d cmd_id %d",
+			    manuft->ctrl.frame_type, manuft->cmd_id);
+			ret = zbc_manufacturer_specific_cluster_msg_handle(source,
+			    manuft->ctrl.frame_type, manuft->cmd_id,
+			    manuft->msg, msgLen - 5);
+		} else {
+			log_debug("frame_type %d cmd_id %d, msgLen %d",
+				zcl->ctrl.frame_type, zcl->cmd_id, msgLen);
+			ret = zbc_manufacturer_specific_cluster_msg_handle(source,
+			    zcl->ctrl.frame_type, zcl->cmd_id, zcl->msg, msgLen - 3);
+		}
+		break;
 	default:
 		log_debug("Received clusterId=0x%04X message"
 		    " from source=0x%04X", clusterId, source);
