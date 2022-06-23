@@ -463,7 +463,7 @@ static const struct node_prop_def zb_template_temphumi_light[] = {
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
-static const struct node_prop_def zb_template_measure_temphumi[] = {
+static const struct node_prop_def zb_template_measure_temphumi_2[] = {
 	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
 	{ ZB_MEASURE_HUMIDITY,	    PROP_BOOLEAN,	PROP_TO_DEVICE	 },
 	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
@@ -475,6 +475,20 @@ static const struct node_prop_def zb_template_measure_temphumi[] = {
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
+*/
+
+static const struct node_prop_def zb_template_measure_temphumi[] = {
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+};
+
 
 /* IAS Zone prop define */
 
@@ -733,12 +747,12 @@ static struct nd_prop_info prop_info_array[] = {
 		.prop_def = zb_template_temphumi,
 		.def_size = ARRAY_LEN(zb_template_temphumi)
 	},
-		{
+	{
 		.device_id = ZB_DEVICE_ID_TEMPHUMI,
 		.model_id = ZB_MODEL_ID_CENTRALITE_TEMPHUMI,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_TEMPHUMI_MEASURE,
-		.template_version = "2.0",
+		.template_version = "1.0",
 		.prop_def = zb_template_measure_temphumi,
 		.def_size = ARRAY_LEN(zb_template_measure_temphumi)
 	},
@@ -2134,6 +2148,10 @@ static void appd_set_node_alias(struct zb_node_info *info)
 			"TH-EM",
 			"temphumi"
 		},
+			{
+			"3310-G",
+			"temphumi"
+		},
 	};
 	struct dev_id_2_name dev_name[] = {
 		{
@@ -2251,7 +2269,12 @@ void appd_device_specific_complete_handler(uint16_t node_id,
 		ZCL_ON_OFF_CLUSTER_ID, 1);
 	} else if (!strcmp(info->alias, "temphumi")) {
 		appd_node_bind_control(node_id,
-		ZCL_TEMP_MEASUREMENT_CLUSTER_ID, 1);
+			ZCL_TEMP_MEASUREMENT_CLUSTER_ID, 1);
+		if (!strcmp(info->model_id, ZB_MODEL_ID_CENTRALITE_TEMPHUMI)){
+			log_debug("************ appd_device_specific_complete_handler  bind fc45 for humidity");
+			appd_node_bind_control(node_id,
+			0xFC45, 1);
+		}
 	} else {
 		log_debug("no device specific handlers found");
 	}
