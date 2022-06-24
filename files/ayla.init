@@ -9,13 +9,13 @@ if [ -e /etc/config/devd.conf ];
 then 
     echo "The file Exists"
 else
-    echo "The file is not present"
+    echo "The file (devd.conf) is not present"
 	if [[ -f /etc/config/*.xml  && -f /etc/config/oem_info ]];then
 		/usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
     		cp /etc/ayla/*.conf /etc/config/devd.conf
-		rm /etc/config/oem_info
+		rm /etc/config/oem_info /etc/ayla/*.conf
 	else
-    		echo "All required files are not present\n"
+    		echo "All required files (<dsn>.xml or oem_info) are not present\n"
 	fi
 fi
 
