@@ -2,7 +2,7 @@
 
 
 get_assoclist() {
-	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
+	interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
 	cat /dev/null > /tmp/assoclist.txt
 
         for interface in $interfaces                        
@@ -22,7 +22,7 @@ get_sta_associated_ap()
                 return                                                                     
         fi
 
-	interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
+	interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
 
         for interface in $interfaces
         do
@@ -42,7 +42,7 @@ get_sta_associated_ap()
 get_sta_interface()
 {
 
-		interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
+		interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
 		for interface in $interfaces
 		do
 		MODE=`uci get wireless.${interface}.mode`
@@ -346,7 +346,7 @@ case "$1" in
 		
 		
 	*)
-		echo "Usage: get_devinfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
+		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
 |-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul]"
 		exit 1
 		;;

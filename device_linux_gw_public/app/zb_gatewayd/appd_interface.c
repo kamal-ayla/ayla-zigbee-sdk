@@ -475,7 +475,6 @@ static const struct node_prop_def zb_template_measure_temphumi_2[] = {
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
-*/
 
 static const struct node_prop_def zb_template_measure_temphumi[] = {
 	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
