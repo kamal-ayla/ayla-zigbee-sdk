@@ -71,7 +71,7 @@ struct nd_prop_info{
 };
 
 /* AT&T node prop define */
-static const struct node_prop_def const att_poc_props[] = {
+static const struct node_prop_def att_poc_props[] = {
 	{ ATT_POC_ACTIVE,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
 	{ ATT_POC_MACADDRESS,		PROP_STRING,	PROP_FROM_DEVICE },
         { ATT_POC_RSSI,      		PROP_INTEGER,   PROP_FROM_DEVICE },

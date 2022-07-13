@@ -312,7 +312,7 @@ static const struct node_prop_def zb_template_motion[] = {
 	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
-/* Motion / Light detector prop define */
+/* Motion / Light detector prop define *//*
 static const struct node_prop_def zb_template_motion_1_1[] = {
 	{ ZB_STATUS_PROP_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
 	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
@@ -323,7 +323,7 @@ static const struct node_prop_def zb_template_motion_1_1[] = {
 	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
-};
+};*/ //temporary change to ignore the warning
 
 /* Motion / Tamper detector prop define */
 static const struct node_prop_def zb_template_motion_1_2[] = {
@@ -450,7 +450,7 @@ static const struct node_prop_def zb_template_temphumi[] = {
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
-
+/*
 static const struct node_prop_def zb_template_temphumi_light[] = {
 	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
 	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
@@ -475,6 +475,7 @@ static const struct node_prop_def zb_template_measure_temphumi_2[] = {
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
+*/ //temporary change to ignore the warning
 
 static const struct node_prop_def zb_template_measure_temphumi[] = {
 	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
