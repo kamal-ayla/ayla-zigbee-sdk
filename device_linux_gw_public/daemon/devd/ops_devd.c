@@ -41,7 +41,7 @@ enum ops_devd_state {
 	[ODS_NOP] = "nop",			\
 	[ODS_OTA_FETCH] = "ota_url_fetch",	\
 }
-const char const *ops_devd_ops[] = ODS_OP_NAMES;
+const char *ops_devd_ops[] = ODS_OP_NAMES;
 
 /*
  * Operations to be executed

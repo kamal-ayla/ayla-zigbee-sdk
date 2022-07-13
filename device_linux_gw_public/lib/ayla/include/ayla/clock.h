@@ -79,7 +79,7 @@ struct clock_info {
  * convert time to "MM/DD/YYYY hh:mm:ss" format
  */
 void clock_fmt(char *buf, size_t len, u32 time);
-u32 clock_local(const u32 const *utc);
+u32 clock_local(const u32 *utc);
 int clock_set_time(time_t, enum clock_src);
 int clock_set_source(enum clock_src src);
 int clock_is_leap(u32 year);

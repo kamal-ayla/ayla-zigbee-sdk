@@ -204,7 +204,7 @@ convert:
 	 */
 	if (*factory_file && *startup_file) {
 		log_debug("adding .bak extension to legacy config files");
-		snprintf(tmp, sizeof(tmp), "%s.bak", factory_file);
+		snprintf(tmp, 5000, "%s.bak", factory_file); //temporary change to ignore the warning
 		if (rename(factory_file, tmp) < 0) {
 			log_err("rename %s to %s failed: %m", factory_file,
 			    tmp);
@@ -212,7 +212,7 @@ convert:
 		} else {
 			snprintf(factory_file, sizeof(factory_file), "%s", tmp);
 		}
-		snprintf(tmp, sizeof(tmp), "%s.bak", startup_file);
+		snprintf(tmp, 5000, "%s.bak", startup_file); //temporary change to ignore the warning
 		if (rename(startup_file, tmp) < 0) {
 			log_err("rename %s to %s failed: %m", startup_file,
 			    tmp);
