@@ -1323,7 +1323,7 @@ struct node *node_joined(const char *addr, const char *model,
 	node = node_lookup(addr);
 	if (node) {
 		log_debug("%s: is already being tracked", node->addr);
-		snprintf(node->oem_model, sizeof(node->oem_model), "%s", model);
+		//snprintf(node->oem_model, sizeof(node->oem_model), "%s", model);
 		node->interface = interface;
 		node->power = power;
 		node_info_changed(node, version);
