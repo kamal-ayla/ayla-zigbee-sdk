@@ -1,17 +1,33 @@
 #!/bin/sh
 
-
 get_assoclist() {
-	interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
-	cat /dev/null > /tmp/assoclist.txt
 
-        for interface in $interfaces                        
-        do
-		MODE=`uci get wireless.${interface}.mode`
-		if [ $MODE == "ap" ]; then
-			wl -i ${interface} assoclist | cut -d " " -f2 >> /tmp/assoclist.txt
-		fi
-	done		
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+	
+	if [ $product  == $prod_type_gcnt ]; then
+		interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
+		cat /dev/null > /tmp/assoclist.txt
+
+			for interface in $interfaces                        
+			do
+			MODE=`uci get wireless.${interface}.mode`
+			if [ $MODE == "ap" ]; then
+				wl -i ${interface} assoclist | cut -d " " -f2 >> /tmp/assoclist.txt
+			fi
+		done
+	fi
+
+	if [ $product  == $prod_type_gdnt ]; then
+		interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
+		cat /dev/null > /tmp/assoclist.txt
+
+			for interface in $interfaces                        
+			do
+				wl -i ${interface} assoclist | cut -d " " -f2 >> /tmp/assoclist.txt
+		done
+	fi	
 }
 
 get_sta_associated_ap()
@@ -21,38 +37,58 @@ get_sta_associated_ap()
                 echo "0"                                                                   
                 return                                                                     
         fi
+		
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+	
+	if [ $product  == $prod_type_gcnt ]; then
+		interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
+			for interface in $interfaces
+			do
+	                MODE=`uci get wireless.${interface}.mode`
+	                if [ $MODE == "ap" ]; then
+							wl -i ${interface} assoclist | cut -d " " -f2 | grep -qx $1
+				if [ $? -eq 0 ]; then
+					echo $interface
+					return
+				fi
+	                fi
+			done
 
-	interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
+		echo "0"
+	fi
 
-        for interface in $interfaces
-        do
-                MODE=`uci get wireless.${interface}.mode`
-                if [ $MODE == "ap" ]; then
-                        wl -i ${interface} assoclist | cut -d " " -f2 | grep -qx $1
-			if [ $? -eq 0 ]; then
-				echo $interface
-				return
-			fi
-                fi
-        done
+	if [ $product  == $prod_type_gdnt ]; then
+		interfaces=`iw dev | grep Interface | cut -f 2 -s -d" " | grep wl.*`
 
-	echo "0"
+			for interface in $interfaces
+			do
+				wl -i ${interface} assoclist | cut -d " " -f2 | grep -qx $1
+				if [ $? -eq 0 ]; then
+					echo $interface
+					return
+				fi
+			done
+
+		echo "0"
+	fi	
 }
 
 get_sta_interface()
 {
 
-		interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
-		for interface in $interfaces
-		do
-		MODE=`uci get wireless.${interface}.mode`
-		if [ $MODE == "sta" ]; then
-			echo $interface
-		return
+	interfaces=`uci show wireless | grep "wireless.wl*" | cut -d "." -f2 | cut -d "=" -f1| uniq`
+	for interface in $interfaces
+	do
+	MODE=`uci get wireless.${interface}.mode`
+	if [ $MODE == "sta" ]; then
+		echo $interface
+	return
 
-		fi
-		done
-		echo "0"
+	fi
+	done
+	echo "0"
 }
 
 
@@ -135,6 +171,11 @@ get_sta_bssid()
 
 get_wifi_BSSID_fronthaul_2G()
 {
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+	
+	if [ $product  == $prod_type_gcnt ]; then
         front_2g=`ifconfig wl0 | awk '/HWaddr/ {print $5}'`
         f=${#front_2g}
         if [ $f == "17" ]; then
@@ -142,31 +183,76 @@ get_wifi_BSSID_fronthaul_2G()
         else
                 echo "N/A"
         fi
+	fi
+
+	if [ $product  == $prod_type_gdnt ]; then
+		front_2g=`wb_cli -s info | grep "Fronthaul" | grep 2G | awk '{print $2}' | sed -e $'s/,/\\\n/g'`		
+        f=${#front_2g}
+        if [ $f == "17" ]; then
+                echo $front_2g
+        else
+                echo "N/A"
+        fi
+	fi	
 }
 
 
 
 get_wifi_BSSID_fronthaul_5G()
 {
-	front_5g=`ifconfig wl1 | awk '/HWaddr/ {print $5}'`
-	f=${#front_5g}
-	if [ $f == "17" ]; then
-		echo $front_5g
-	else
-		echo "N/A"
+
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+	
+	if [ $product  == $prod_type_gcnt ]; then	
+		front_5g=`ifconfig wl1 | awk '/HWaddr/ {print $5}'`
+		f=${#front_5g}
+		if [ $f == "17" ]; then
+			echo $front_5g
+		else
+			echo "N/A"
+		fi
+	fi
+
+	if [ $product  == $prod_type_gdnt ]; then	
+		front_5g=`wb_cli -s info | grep "Fronthaul" | grep 5G | awk '{print $2}' | sed -e $'s/,/\\\n/g'`	
+		f=${#front_5g}
+		if [ $f == "17" ]; then
+			echo $front_5g
+		else
+			echo "N/A"
+		fi
 	fi	
 }
 
 get_wifi_BSSID_backhaul()
 {
-        back=`ifconfig wl1_2 | awk '/HWaddr/ {print $5}'`
-        b=${#back}
-        if [ $b == "17" ]; then
-                echo $back
-        else
-                echo "N/A"
-        fi
-	
+
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+
+	if [ $product  == $prod_type_gdnt ]; then
+#		back=`ifconfig wl0.1 | awk '/HWaddr/ {print $5}'`
+		back=`wb_cli -s info | grep "Backhaul" | awk '{print $2}' | sed -e $'s/,/\\\n/g'`
+		b=${#back}
+		if [ $b == "17" ]; then
+				echo $back
+		else
+				echo "N/A"
+		fi
+	fi
+
+	if [ $product  == $prod_type_gcnt ]; then
+		back=`ifconfig wl1_2 | awk '/HWaddr/ {print $5}'`
+		b=${#back}
+		if [ $b == "17" ]; then
+				echo $back
+		else
+				echo "N/A"
+		fi
+	fi
 }
 
 get_rssi()
@@ -253,31 +339,74 @@ get_active()
 
 get_stationtype()
 {
-	if [ -z $1 ]; then                                                                 
-                echo "0"                                                                   
-                return                                                                     
+
+	prod_type_gdnt=gdnt-r_extender
+	prod_type_gcnt=gcnt-5_extender_orion
+	product=`uci get version.@version[0].product`
+
+        if [ -z $1 ]; then
+                echo "0"
+                return
         fi
 
-	ap_interface=`get_sta_associated_ap $1`                                    
-        if [ $ap_interface == "0" ]; then                                              
-                echo "0"                                        
-        else  
-		RADIO=`uci get wireless.${ap_interface}.device`
-		TYPE=`uci get wireless.${ap_interface}.fronthaul`
-		if [ $TYPE == "1" ]; then
-			echo -en "Fronthaul"
-		else
-			echo -en "Backhaul"
+        ap_interface=`get_sta_associated_ap $1`
+        if [ $ap_interface == "0" ]; then
+                echo "0"
+        else
+		ap_interface="${ap_interface//./_}"
+                RADIO=`uci get wireless.${ap_interface}.device`
+                TYPE=`uci get wireless.${ap_interface}.fronthaul`
+                if [ $TYPE == "1" ]; then
+                        echo -en "Fronthaul"
+                else
+                        echo -en "Backhaul"
+                fi
+		if [ $product  == $prod_type_gcnt ]; then
+			if [ "$RADIO" == "radio_2G" ]; then
+	                        echo -en "_2G"
+			elif [ "$RADIO" == "radio_5G" ]; then
+        	                echo -en "_5G"
+			else
+                        	echo -en "_"
+			fi
 		fi
+		if [ $product  == $prod_type_gdnt ]; then
+			if [ "$RADIO" == "radio0" ]; then
+                        	echo -en "_2G"
+			elif [ "$RADIO" == "radio1" ]; then
+                        	echo -en "_5G"
+			else
+                        	echo -en "_"
+			fi
+		fi				
+        fi
 
-		if [ "$RADIO" == "radio_2G" ]; then
-			echo -en "_2G"
-		elif [ "$RADIO" == "radio_5G" ]; then
-			echo -en "_5G"
-		else
-			echo -en "_"
-		fi
-	fi
+
+#	if [ -z $1 ]; then                                                                 
+#                echo "0"                                                                   
+#                return                                                                     
+#        fi
+
+#	ap_interface=`get_sta_associated_ap $1`                                    
+#        if [ $ap_interface == "0" ]; then                                              
+#                echo "0"                                        
+#        else  
+#		RADIO=`uci get wireless.${ap_interface}.device`
+#		TYPE=`uci get wireless.${ap_interface}.fronthaul`
+#		if [ $TYPE == "1" ]; then
+#			echo -en "Fronthaul"
+#		else
+#			echo -en "Backhaul"
+#		fi
+
+#		if [ "$RADIO" == "radio_2G" ]; then
+#			echo -en "_2G"
+#		elif [ "$RADIO" == "radio_5G" ]; then
+#			echo -en "_5G"
+#		else
+#			echo -en "_"
+#		fi
+#	fi
 
 }
 
