@@ -32,7 +32,8 @@
 
 #include \
     "app/framework/plugin/network-creator-security/network-creator-security.h"
-
+#include \
+    "app/framework/plugin/network-creator/network-creator.h"
 #include \
     "stack/include/zigbee-device-stack.h"
 

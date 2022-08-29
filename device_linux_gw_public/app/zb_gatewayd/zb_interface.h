@@ -196,6 +196,8 @@ void zb_exit(void);
  */
 void zb_poll(void);
 
+
+int zb_network_form(void);
 /*
  * Permit node join network
  */
