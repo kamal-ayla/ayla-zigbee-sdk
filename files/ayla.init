@@ -4,19 +4,45 @@ START=99
 STOP=91
 USE_PROCD=1
 
+tree=$1
+prod=production
+#sh /bin/devd_config.sh
 
-if [ -e /etc/config/devd.conf ]; 
-then 
+if [ -e /etc/config/devd.conf ];
+then
     echo "The file Exists"
+        if [ -z "$1" ]
+        then
+                echo "No Argument passed !!!"
+        else
+                if [ $tree  == $prod ];
+                then
+                        echo "production"
+                        sh /bin/decision_tree.sh -production
+                else
+                        echo "developer"
+                        sh /bin/decision_tree.sh -developer
+                fi
+        fi
+
 else
     echo "The file (devd.conf) is not present"
-	if [[ -f /etc/config/*.xml  && -f /etc/config/oem_info ]];then
-		/usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
-    		cp /etc/ayla/*.conf /etc/config/devd.conf
-		rm /etc/config/oem_info /etc/ayla/*.conf
-	else
-    		echo "All required files (<dsn>.xml or oem_info) are not present\n"
-	fi
+        if [[ -f /etc/config/*.xml  && -f /etc/config/oem_info ]];then
+                /usr/bin/config_gen -n -d /etc/config/*.xml -i /etc/config/oem_info
+                cp /etc/ayla/*.conf /etc/config/devd.conf
+                rm /etc/config/oem_info /etc/ayla/*.conf
+        else
+                echo "All required files (<dsn>.xml or oem_info) are not present\n"
+                echo "To check the passing Arument : $tree"
+                if [ $tree  == $prod ];
+                then
+                        echo "production"
+                        sh /bin/decision_tree.sh -production
+                else
+                        echo "developer"
+                        sh /bin/decision_tree.sh -developer
+                fi
+        fi
 fi
 
 # Lists of supported JSON requests
@@ -47,6 +73,12 @@ start_service() {
         echo "install"
     fi
 
+    if [[ "$prod_id" == "GDNT-R" ]] 
+    then
+        modprobe silabs-cp210x.ko
+        echo "install cpdriver for GDNT-R"
+    fi
+
     echo "start"
 
     local devPid=$(pgrep -f devd)
@@ -62,10 +94,10 @@ start_service() {
     procd_set_param command /usr/bin/devd --debug -t -c /etc/config/devd.conf
     procd_set_param pidfile /var/run/devd.pid
     procd_close_instance
-	
+
     for file in $JSON_URIS
     do
-	echo "creating stub: $server_root/$file"
+        echo "creating stub: $server_root/$file"
         touch "$server_root/$file"
     done
 
@@ -86,8 +118,8 @@ stop_service() {
     if [ ${#acgiPid} -gt 0 ]; then
        echo "Stopping spawn-fcgi"
        kill $acgiPid
-       sleep 2 
-    fi    
+       sleep 2
+    fi
 
     local devPid=$(pgrep -f devd)
     if [ ${#devPid} -gt 0 ]; then
