@@ -47,14 +47,14 @@
 #define BAUD_RATE 115200
 #define TRACE_ALL (TRACE_FRAMES_BASIC | TRACE_FRAMES_VERBOSE \
 			| TRACE_EVENTS | TRACE_EZSP | TRACE_EZSP_VERBOSE)
-#define SERIAL_PATH "/dev/ttyUSB2"
+#define SERIAL_PATH "/dev/ttyUSB1"
 
 
 #define COMMAND_ID_MASK  0x0000000F
 #define MOVE_MODE_MASK   0x000000F0
 #define LEVEL_RATE_MASK  0x0000FF00
 #define TRANS_TIME_MASK  0xFFFF0000
-
+char serial_path[15];
 
 
 /* when this is set to true it means the NCP has reported a serious error
@@ -828,12 +828,30 @@ static int zb_ember_stack_init(void)
 		ashWriteConfig(traceFlags, TRACE_EVENTS | TRACE_EZSP);
 	}
 
+	FILE *fp;
+	static char boardid[15];
+	fp = popen("cat /proc/nvram/boardid","r");
+	if (fp == NULL) {
+		log_err("Get dboardid failed");
+		exit(1);
+	}
+	fscanf(fp, "%[^\n]", boardid);
+	pclose(fp);
+	log_debug("************-------------------*******************%s\n", boardid);
+
+	if (!strcmp(boardid, "GDNT-R")){
+		strcpy(serial_path,"/dev/ttyUSB2");
+		log_debug("************-------------------*******************%s\n", serial_path);
+	}
+	else{
+		strcpy(serial_path,"/dev/ttyUSB1");
+	}
 	/* Set serial port path */
-	if (access(SERIAL_PATH, F_OK) < 0) {
-		log_err("serial port %s unavailable: %m", SERIAL_PATH);
+	if (access(serial_path, F_OK) < 0) {
+		log_err("serial port %s unavailable: %m", serial_path);
 		return -1;
 	}
-	strncpy(ashHostConfig.serialPort, SERIAL_PATH, ASH_PORT_LEN-1);
+	strncpy(ashHostConfig.serialPort, serial_path, ASH_PORT_LEN-1);
 	ashHostConfig.serialPort[ASH_PORT_LEN-1] = '\0';
 	log_debug("serial parameters init complete");
 
@@ -1163,6 +1181,24 @@ void zb_poll(void)
 		the default network index again. */
 		emAfAssertNetworkIndexStackIsEmpty();
 	} while (!ashOkToSleep());
+}
+
+/*
+ * Form network
+ */
+int zb_network_form(void)
+{
+	EmberStatus status;
+	//EmberPanId panId;
+	status = emberAfPluginNetworkCreatorNetworkForm(true,0x0114,4,25);
+
+	if (status != EMBER_SUCCESS) {
+		log_err("emberAfPluginNetworkCreatorNetworkForm returned 0x%x", status);
+		return -1;
+	} else {
+		log_debug("emberAfPluginNetworkCreatorNetworkForm success");
+	}
+	return 0;
 }
 
 /*

@@ -740,6 +740,8 @@ static void appd_zb_permit_join_timeout(struct timer *timer)
 static int appd_gw_join_enable_set(struct prop *prop, const void *val,
 	size_t len, const struct op_args *args)
 {
+	log_debug("**********************************appd_gw_join_enable_set******************************************");
+
 	/* Cancel last join timer */
 	timer_cancel(app_get_timers(), &zb_permit_join_timer);
 
@@ -752,7 +754,21 @@ static int appd_gw_join_enable_set(struct prop *prop, const void *val,
 		log_debug("exceeded range, change to join enable forever");
 		zb_join_enable = 255;
 	}
+	/*Form network if not already*/
+	if(zb_network_up == 0){
+		log_debug("**********************************appd_gw_join_enable_set zb_network_up is 0******************************************");
+		if (zb_network_form() < 0) {
+		log_debug(" zb_network_form failed");
+		return -1;
+		} else {
+		log_debug("zb_network_form success");
+	}
 
+	}
+	if(zb_network_up == 1){
+		log_debug("**********************************appd_gw_join_enable_set zb_network_up is 1******************************************");
+
+	}
 	/* Permit nodes to join network */
 	if (zb_permit_join(zb_join_enable, false) < 0) {
 		log_debug("enabled permit join for %u seconds failed",
