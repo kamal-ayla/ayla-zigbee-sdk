@@ -78,15 +78,20 @@ static unsigned int num_nodes;
 #define UPTIME_LEN						50
 static u8  get_sysinfo_status;
 static unsigned int controller_status;
+static char board_model[100];
 static char ram_usage[100];
 static char cpu_usage[5];
 static char up_time[UPTIME_LEN];
-#define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
+//#define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
+#define GET_MESH_CONTROLLER_STATUS_GCNT "uci get multiap.controller.enabled"
+#define GET_MESH_CONTROLLER_STATUS_GDNT "uci get mesh_broker.mesh_common.controller_enabled"
+#define BOARD_TYPE   "uci get version.@version[0].product"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
 #define GET_RAM_FREE "transformer-cli get sys.mem.RAMFree | grep -o '[0-9]*'"
 #define GET_RAM_USED "transformer-cli get sys.mem.RAMUsed | grep -o '[0-9]*'"
 #define GET_RAM_TOTAL "transformer-cli get sys.mem.RAMTotal | grep -o '[0-9]*'"
 #define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
+#define GET_AYLA_VERSION "opkg list | grep ayla"
 
 #define WIFI_STA_ADDR_LEN               50
 extern char command[COMMAND_LEN];
@@ -126,6 +131,7 @@ static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 #define GW_WIFI_GET_BSSID_FRONTHAUL_5G         "get_stainfo.sh -sta_bssid_fronthaul_5G"
 #define GW_WIFI_GET_BSSID_FRONTHAUL_2G         "get_stainfo.sh -sta_bssid_fronthaul_2G"
 #define GW_WIFI_GET_BSSID_BACKHAUL          "get_stainfo.sh -sta_bssid_backhaul"
+//#define GET_MESH_CONTROLLER_STATUS       "get_stainfo.sh -sta_controller_status"
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -156,16 +162,16 @@ static struct gw_node_prop_batch_list *node_batched_dps;
 static enum err_t appd_send_version(struct prop *prop, int req_id,
 	const struct op_options *opts)
 {
+#if 0	
 /**********************************************/
 	pkg_t *pkg;
 	setenv("OFFLINE_ROOT", "/", 0);
-		log_debug(" after setenv \n");
+		log_debug(" after setenv\n");
 	if (opkg_new()) {
 		log_debug("opkg_new() failed.\n");
 		print_error_list();
 		return 1;
 	}
-
 	pkg = opkg_find_package("ayla-zigbee-sdk", NULL, NULL, NULL);
 	char *v;
 		if (pkg) {
@@ -189,7 +195,19 @@ static enum err_t appd_send_version(struct prop *prop, int req_id,
 		free(v);
 		opkg_free();
 
-	   
+#endif
+
+        FILE *fp;
+        char ayla_new_appd_version[100];
+        fp = popen(GET_AYLA_VERSION,"r");
+        if (fp == NULL) {
+                log_err("Ayla version get failed");
+                exit(1);
+        }
+        fscanf(fp, "%[^\n]", ayla_new_appd_version);
+        pclose(fp);
+        log_debug("*******************************%s\n", ayla_new_appd_version);
+
 /**********************************************/
 	//return prop_val_send(prop, req_id, appd_version, 0, NULL);//David's code
 	return prop_val_send(prop, req_id, ayla_new_appd_version, 0, NULL); //Added by Saritha for showing HW version on Dashboard	
@@ -827,7 +845,7 @@ static int appd_gw_change_channel_set(struct prop *prop, const void *val,
 }
 
 /*
- *To get the sysinfo
+ *To get the sysinfo:
  */
 static int appd_sysinfo_set(struct prop *prop, const void *val,
         size_t len, const struct op_args *args)
@@ -843,6 +861,7 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
 			prop_send_by_name("ram_usage");
 			prop_send_by_name("cpu_usage");
 			log_debug("get sysinfo success");
+			log_debug("[Srinivas Test]: get_sysinfo_status controller status : %d",controller_status);
 	}
 
 	get_sysinfo_status = 0;
@@ -858,14 +877,51 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
                   const struct op_options *opts)
 {
 	FILE *fp;
+	FILE *fp1;
+	FILE *fp2;
+	log_debug("[Srinivas Test]: appd_controller_status_send");
 
-	fp = popen(GET_MESH_CONTROLLER_STATUS,"r");
-	if (fp == NULL) {
-		log_err("Mesh controller status get failed");
-		exit(1);
+        fp1 = popen(BOARD_TYPE,"r");
+        if (fp1 == NULL) {
+                log_err("Board Type Command failed");
+                exit(1);
+        }
+        fscanf(fp1, "%s", board_model);
+	pclose(fp1);
+	log_debug("[Srinivas Test]: Board Model : %s",board_model);
+
+
+	if ( strcmp (board_model, "gcnt-5_extender_orion") == 0 ){
+
+		log_debug("[Srinivas Test]: gcnt-5_extender_orion");
+
+		fp = popen(GET_MESH_CONTROLLER_STATUS_GCNT,"r");
+		if (fp == NULL) {
+			log_err("Mesh controller status get failed");
+			exit(1);
+		}
+		fscanf(fp, "%d", &controller_status);
+		pclose(fp);
+		log_debug("[Srinivas Test]: gcnt-5_extender_orion controller status : %d",controller_status);
 	}
-	fscanf(fp, "%d", &controller_status);
-	pclose(fp);
+
+	if ( strcmp (board_model, "gdnt-r_extender") == 0 ){
+
+		log_debug("[Srinivas Test]: gdnt-r_extender");
+              fp2 = popen(GET_MESH_CONTROLLER_STATUS_GDNT,"r");
+              if (fp2 == NULL) {
+                      log_err("Mesh controller status get failed");
+                       exit(1);
+              }
+              fscanf(fp2, "%d", &controller_status);
+	      if ( controller_status > 1 ){
+		      controller_status = 1;
+	      }
+	      pclose(fp2);
+	      log_debug("[Srinivas Test]: gdnt-r_extender controller status : %d",controller_status);
+        }
+
+	
 	return prop_arg_send(prop, req_id, opts);
 
 }
