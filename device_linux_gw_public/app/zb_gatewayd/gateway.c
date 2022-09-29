@@ -861,7 +861,6 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
 			prop_send_by_name("ram_usage");
 			prop_send_by_name("cpu_usage");
 			log_debug("get sysinfo success");
-			log_debug("[Srinivas Test]: get_sysinfo_status controller status : %d",controller_status);
 	}
 
 	get_sysinfo_status = 0;
@@ -879,7 +878,6 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
 	FILE *fp;
 	FILE *fp1;
 	FILE *fp2;
-	log_debug("[Srinivas Test]: appd_controller_status_send");
 
         fp1 = popen(BOARD_TYPE,"r");
         if (fp1 == NULL) {
@@ -888,12 +886,10 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
         }
         fscanf(fp1, "%s", board_model);
 	pclose(fp1);
-	log_debug("[Srinivas Test]: Board Model : %s",board_model);
 
 
 	if ( strcmp (board_model, "gcnt-5_extender_orion") == 0 ){
 
-		log_debug("[Srinivas Test]: gcnt-5_extender_orion");
 
 		fp = popen(GET_MESH_CONTROLLER_STATUS_GCNT,"r");
 		if (fp == NULL) {
@@ -902,12 +898,10 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
 		}
 		fscanf(fp, "%d", &controller_status);
 		pclose(fp);
-		log_debug("[Srinivas Test]: gcnt-5_extender_orion controller status : %d",controller_status);
 	}
 
 	if ( strcmp (board_model, "gdnt-r_extender") == 0 ){
 
-		log_debug("[Srinivas Test]: gdnt-r_extender");
               fp2 = popen(GET_MESH_CONTROLLER_STATUS_GDNT,"r");
               if (fp2 == NULL) {
                       log_err("Mesh controller status get failed");
@@ -918,7 +912,6 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
 		      controller_status = 1;
 	      }
 	      pclose(fp2);
-	      log_debug("[Srinivas Test]: gdnt-r_extender controller status : %d",controller_status);
         }
 
 	
