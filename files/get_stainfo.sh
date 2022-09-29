@@ -216,7 +216,8 @@ get_wifi_BSSID_fronthaul_5G()
 	fi
 
 	if [ $product  == $prod_type_gdnt ]; then	
-		front_5g=`wb_cli -s info | grep "Fronthaul" | grep 5G | awk '{print $2}' | sed -e $'s/,/\\\n/g'`	
+#		front_5g=`wb_cli -s info | grep "Fronthaul" | grep 5G | awk '{print $2}' | sed -e $'s/,/\\\n/g'`
+		front_5g=`ifconfig wl0 | awk '/HWaddr/ {print $5}'`
 		f=${#front_5g}
 		if [ $f == "17" ]; then
 			echo $front_5g
@@ -371,9 +372,9 @@ get_stationtype()
 			fi
 		fi
 		if [ $product  == $prod_type_gdnt ]; then
-			if [ "$RADIO" == "radio0" ]; then
+			if [ "$RADIO" == "radio1" ]; then
                         	echo -en "_2G"
-			elif [ "$RADIO" == "radio1" ]; then
+			elif [ "$RADIO" == "radio0" ]; then
                         	echo -en "_5G"
 			else
                         	echo -en "_"
