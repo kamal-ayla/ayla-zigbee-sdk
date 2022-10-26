@@ -752,13 +752,17 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
         }
     }
     tf_free_ctx(ctx1);
+    
+    char ayla_new_version_homeware[100];
+    char *homeware_version_extract=NULL;
+    char *version=NULL;
 
- 	char *homeware_version_extract = strtok(homeware_version, "-");
-	printf("%s\n", homeware_version_extract);
+    homeware_version_extract=strtok(homeware_version, "-");
+    version=strtok(NULL, "-");
+    sprintf(ayla_new_version_homeware,"%s-%s",homeware_version_extract,version);
 
-   char ayla_new_version_homeware[100];
-   strcpy(ayla_new_version_homeware, homeware_version_extract);
-   printf("Homeware version is :%s\n", ayla_new_version_homeware);
+    log_debug("ayla_new_version_homeware : %s\n",ayla_new_version_homeware);
+    printf("Homeware version is :%s\n", ayla_new_version_homeware);
    /****************************************************************************************/
 	json_t *root;
 	json_t *update;
