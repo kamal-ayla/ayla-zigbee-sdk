@@ -1,0 +1,3 @@
+REVIEWBOARD_URL = 'https://codereview.rennes.eu.thmulti.com/'
+REPOSITORY = 'openwrt:pkg:ayla-zigbee-sdk'
+ENABLE_PROXY = False
