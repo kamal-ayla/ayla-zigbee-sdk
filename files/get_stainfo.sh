@@ -416,6 +416,40 @@ get_parentnode()
 	cat /etc/config/devd.conf | grep dsn | awk '{print $2}' | sed 's/[",]//g'
 }
 
+get_deviceMac()
+{
+
+        prod_type_gdnt=gdnt-r_extender
+        product=`uci get version.@version[0].product`
+
+        if [ $product  == $prod_type_gdnt ]; then
+
+                status=`uci get mesh_broker.mesh_common.controller_enabled`
+
+                if [ $status != 0 ];then
+                        controller=`uci get mesh_broker.mesh_common.controller_almac`
+                        echo $controller
+                else
+                        agent=`uci get mesh_broker.mesh_common.agent_almac`
+                        echo $agent
+
+                fi
+        fi
+}
+
+get_parent_mac()
+{	
+	status=`ubus call mesh_broker.agent.device_info get | awk '/"BackhaulMACAddress"/ {print $2}' | sed 's/"//g' | sed 's/,//g'`
+
+	echo $status
+}
+
+get_bh_type()
+{
+	status=`ubus call mesh_broker.agent.device_info get | awk '/"BackhaulLinkType"/ {print $2}' | sed 's/"//g' | sed 's/,//g'`
+
+	echo $status
+}
 
 Macaddr=$2
 
@@ -473,11 +507,19 @@ case "$1" in
         -sta_bssid_backhaul)
                 get_wifi_BSSID_backhaul
                 ;;
-		
+        -sta_device_mac)
+                get_deviceMac
+                ;;		
+        -sta_parent_mac)
+                get_parent_mac
+                ;;
+        -sta_bh_type)
+                get_bh_type
+                ;;
 		
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_parent_mac|-sta_bh_type]"
 		exit 1
 		;;
 esac

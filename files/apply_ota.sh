@@ -102,7 +102,7 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.ipk 2> /dev/null | wc -l) != "0" ]; then
         	log_failure "ayla ipk install failed"
    		fi	
 	sleep 10
-   	exit_success_upgrade
+#   	exit_success_upgrade
 	fi
 
    cd $AYLA_OTA_BUILD_DIR

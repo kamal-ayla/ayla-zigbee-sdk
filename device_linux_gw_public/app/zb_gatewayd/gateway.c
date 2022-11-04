@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.4";
+const char *appd_template_version = "zigbee_gateway_demo_v2.6";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -112,6 +112,9 @@ static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
 static char gw_wifi_BSSID_fronthaul_5G[WIFI_STA_ADDR_LEN];
 static char gw_wifi_BSSID_fronthaul_2G[WIFI_STA_ADDR_LEN];
 static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
+static char device_mac_address[WIFI_STA_ADDR_LEN];
+static char em_parent_mac_address[WIFI_STA_ADDR_LEN];
+static char em_bh_type[WIFI_STA_ADDR_LEN];
 
 
 #define WIFI_STA_RSSI			"wifi_sta_RSSI"
@@ -122,6 +125,9 @@ static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 #define GW_WIFI_BSSID_FRONTHAUL_5G      "gw_wifi_BSSID_fronthaul_5G"
 #define GW_WIFI_BSSID_FRONTHAUL_2G      "gw_wifi_BSSID_fronthaul_2G"
 #define GW_WIFI_BSSID_BACKHAUL       "gw_wifi_BSSID_backhaul"
+#define DEVICE_MAC_ADDRESS		"device_mac_address"
+#define EM_PARENT_MAC_ADDRESS           "em_parent_mac_address"
+#define EM_BH_TYPE		        "em_bh_type"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
@@ -132,6 +138,9 @@ static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 #define GW_WIFI_GET_BSSID_FRONTHAUL_2G         "get_stainfo.sh -sta_bssid_fronthaul_2G"
 #define GW_WIFI_GET_BSSID_BACKHAUL          "get_stainfo.sh -sta_bssid_backhaul"
 //#define GET_MESH_CONTROLLER_STATUS       "get_stainfo.sh -sta_controller_status"
+#define GET_DEVICE_MAC_ADDRESS		   "get_stainfo.sh -sta_device_mac"
+#define GET_EM_PARENT_MAC_ADDRESS          "get_stainfo.sh -sta_parent_mac"
+#define GET_EM_BH_TYPE             	   "get_stainfo.sh -sta_bh_type"
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -1208,6 +1217,18 @@ void appd_wifi_sta_poll()
 	sprintf(command, GW_WIFI_GET_BSSID_BACKHAUL);
 	exec_systemcmd(command, data, DATA_SIZE);
 	appd_send_wifi_sta_data(GW_WIFI_BSSID_BACKHAUL, data);
+
+	sprintf(command, GET_DEVICE_MAC_ADDRESS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(DEVICE_MAC_ADDRESS, data);
+
+        sprintf(command, GET_EM_PARENT_MAC_ADDRESS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(EM_PARENT_MAC_ADDRESS, data);
+
+        sprintf(command, GET_EM_BH_TYPE);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(EM_BH_TYPE, data);	
 }
 
 
@@ -1331,7 +1352,35 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN - 1] = '\0'; 
 
 		prop_send_by_name(name);
-	}	
+	} else if (!strcmp(name, DEVICE_MAC_ADDRESS)) {
+
+                if (!strcmp(value, device_mac_address)) {
+                        return 0;
+                }
+                strncpy(device_mac_address, value, WIFI_STA_ADDR_LEN);
+               	device_mac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+                prop_send_by_name(name);
+        }else if (!strcmp(name, EM_PARENT_MAC_ADDRESS)) {
+
+                if (!strcmp(value, em_parent_mac_address)) {
+                        return 0;
+                }
+                strncpy(em_parent_mac_address, value, WIFI_STA_ADDR_LEN);
+                em_parent_mac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+                prop_send_by_name(name);
+	}else if (!strcmp(name, EM_BH_TYPE)) {
+
+                if (!strcmp(value, em_bh_type)) {
+                        return 0;
+                }
+                strncpy(em_bh_type, value, WIFI_STA_ADDR_LEN);
+                em_bh_type[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+                prop_send_by_name(name);
+	}
+	
 
 	return 0;
 }
@@ -1625,6 +1674,30 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &gw_wifi_BSSID_backhaul,
 		.len = sizeof(gw_wifi_BSSID_backhaul),
 	},
+
+        {
+                .name = "device_mac_address",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &device_mac_address,
+                .len = sizeof(device_mac_address),
+        },
+
+        {
+                .name ="em_parent_mac_address",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &em_parent_mac_address,
+                .len = sizeof(em_parent_mac_address),
+        },
+
+        {
+                .name = "em_bh_type",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &em_bh_type,
+                .len = sizeof(em_bh_type),
+        },	
 		/*  ngrok properties */
 	{
 		.name = "ngrok_enable",

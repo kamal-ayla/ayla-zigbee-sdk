@@ -33,7 +33,7 @@
 #include "appd_interface_node.h"
 
 
-#define NODE_OEM_MODEL    "LANHost"
+#define NODE_OEM_MODEL    "UNKNOWN"
 
 
 /* Fixed subdevice names, General device info props */
