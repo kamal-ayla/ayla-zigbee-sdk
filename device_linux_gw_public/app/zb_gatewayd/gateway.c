@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
-
+#include <ctype.h>
 #include <ayla/log.h>
 #include <ayla/assert.h>
 #include <ayla/build.h>
@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.6";
+const char *appd_template_version = "zigbee_gateway_demo_v2.7";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -114,7 +114,7 @@ static char gw_wifi_BSSID_fronthaul_2G[WIFI_STA_ADDR_LEN];
 static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 static char device_mac_address[WIFI_STA_ADDR_LEN];
 static char em_parent_mac_address[WIFI_STA_ADDR_LEN];
-static char em_bh_type[WIFI_STA_ADDR_LEN];
+static char em_backhaul_type[WIFI_STA_ADDR_LEN];
 
 
 #define WIFI_STA_RSSI			"wifi_sta_RSSI"
@@ -127,7 +127,7 @@ static char em_bh_type[WIFI_STA_ADDR_LEN];
 #define GW_WIFI_BSSID_BACKHAUL       "gw_wifi_BSSID_backhaul"
 #define DEVICE_MAC_ADDRESS		"device_mac_address"
 #define EM_PARENT_MAC_ADDRESS           "em_parent_mac_address"
-#define EM_BH_TYPE		        "em_bh_type"
+#define EM_BACKHAUL_TYPE		        "em_backhaul_type"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
@@ -140,7 +140,7 @@ static char em_bh_type[WIFI_STA_ADDR_LEN];
 //#define GET_MESH_CONTROLLER_STATUS       "get_stainfo.sh -sta_controller_status"
 #define GET_DEVICE_MAC_ADDRESS		   "get_stainfo.sh -sta_device_mac"
 #define GET_EM_PARENT_MAC_ADDRESS          "get_stainfo.sh -sta_parent_mac"
-#define GET_EM_BH_TYPE             	   "get_stainfo.sh -sta_bh_type"
+#define GET_EM_BACKHAUL_TYPE             	   "get_stainfo.sh -sta_bh_type"
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -161,9 +161,33 @@ static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 #define GET_NGROK_PORT_NUM				"ngrok-cli -port_num"
 #define SET_NGROK_AUTHTOKEN				"ngrok-cli -set_authtoken %s"
 
+/* Firmware properties **/
+#define RADIO_FW_LEN                                    50
+static char radio1_fw_version[RADIO_FW_LEN];
+static char radio2_fw_version[RADIO_FW_LEN];
+static char radio0_fw_version[RADIO_FW_LEN];
+
+#define GET_RADIO_BLE_FW                "cat /etc/config/radio_fw_version.conf  | awk '/\"radio1\"/ {print $2}' | tr -d '\"' | tr -d \",\""
+#define GET_RADIO_ZIGBEE_FW             "cat /etc/config/radio_fw_version.conf  | awk '/\"radio2\"/ {print $2}' | tr -d '\"' | tr -d \",\""
+#define GET_RADIO_ZWAVE_FW              "cat /etc/config/radio_fw_version.conf  | awk '/\"radio0\"/ {print $2}' | tr -d '\"' | tr -d \",\""
+
 
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
+
+/* data convert to the UPPER CASE */
+void uppercase_convert(char str[])
+{
+    int i;
+    for(i=0; str[i]!='\0'; i++)
+    {
+        if(str[i]>='a' && str[i]<='z')
+        {
+            str[i] = toupper(str[i]);
+        }
+    }
+    strcpy(data,str);
+}
 
 /*
  * Send the appd software version.
@@ -869,6 +893,9 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
 			prop_send_by_name("up_time");
 			prop_send_by_name("ram_usage");
 			prop_send_by_name("cpu_usage");
+                        prop_send_by_name("radio1_fw_version");
+                        prop_send_by_name("radio2_fw_version");
+                        prop_send_by_name("radio0_fw_version");
 			log_debug("get sysinfo success");
 	}
 
@@ -1200,35 +1227,43 @@ void appd_wifi_sta_poll()
 
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_SSID);
 	exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
 	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_SSID, data);
 
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_BSSID);
 	exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
 	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_BSSID, data);
 	
 	sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_5G);
 	exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
 	appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_5G, data);
 
         sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_2G);
         exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
         appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_2G, data);
 
 	sprintf(command, GW_WIFI_GET_BSSID_BACKHAUL);
 	exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
 	appd_send_wifi_sta_data(GW_WIFI_BSSID_BACKHAUL, data);
 
 	sprintf(command, GET_DEVICE_MAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
         appd_send_wifi_sta_data(DEVICE_MAC_ADDRESS, data);
 
         sprintf(command, GET_EM_PARENT_MAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
+	uppercase_convert(data);
         appd_send_wifi_sta_data(EM_PARENT_MAC_ADDRESS, data);
 
-        sprintf(command, GET_EM_BH_TYPE);
+        sprintf(command, GET_EM_BACKHAUL_TYPE);
         exec_systemcmd(command, data, DATA_SIZE);
-        appd_send_wifi_sta_data(EM_BH_TYPE, data);	
+	uppercase_convert(data);
+        appd_send_wifi_sta_data(EM_BACKHAUL_TYPE, data);	
 }
 
 
@@ -1370,19 +1405,79 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 em_parent_mac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
 
                 prop_send_by_name(name);
-	}else if (!strcmp(name, EM_BH_TYPE)) {
+	}else if (!strcmp(name, EM_BACKHAUL_TYPE)) {
 
-                if (!strcmp(value, em_bh_type)) {
+                if (!strcmp(value, em_backhaul_type)) {
                         return 0;
                 }
-                strncpy(em_bh_type, value, WIFI_STA_ADDR_LEN);
-                em_bh_type[WIFI_STA_ADDR_LEN - 1] = '\0';
+                strncpy(em_backhaul_type, value, WIFI_STA_ADDR_LEN);
+                em_backhaul_type[WIFI_STA_ADDR_LEN - 1] = '\0';
 
                 prop_send_by_name(name);
 	}
 	
 
 	return 0;
+}
+
+/*
+ *  *To get the Radio BLE FW.
+ *   */
+static enum err_t appd_ble_fw(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+        FILE *fp;
+        char ble_fw[50];
+        fp = popen(GET_RADIO_BLE_FW,"r");
+        if (fp == NULL) {
+                log_err("Radio FW list get failed");
+                exit(1);
+        }
+        fscanf(fp, "%s", ble_fw);
+        pclose(fp);
+        strcpy(radio1_fw_version,ble_fw);
+        log_debug("Radio1 FW version: %s",radio1_fw_version);
+        return prop_arg_send(prop, req_id, opts);
+}
+
+/*
+ *  *To get the Radio ZIGBEE FW.
+ *   */
+static enum err_t appd_zigbee_fw(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+        FILE *fp;
+        char zigbee_fw[50];
+        fp = popen(GET_RADIO_ZIGBEE_FW,"r");
+        if (fp == NULL) {
+                log_err("Radio zigbee FW list get failed");
+                exit(1);
+        }
+        fscanf(fp, "%s", zigbee_fw);
+        pclose(fp);
+        strcpy(radio2_fw_version,zigbee_fw);
+        log_debug("Radio2 FW version: %s",radio2_fw_version);
+        return prop_arg_send(prop, req_id, opts);
+}
+
+/*
+ *  *To get the Radio ZWAVE FW.
+ *   */
+static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+        FILE *fp;
+        char zwave_fw[50];
+        fp = popen(GET_RADIO_ZWAVE_FW,"r");
+        if (fp == NULL) {
+                log_err("Radio Zwave FW list get failed");
+                exit(1);
+        }
+        fscanf(fp, "%s", zwave_fw);
+        pclose(fp);
+        strcpy(radio0_fw_version,zwave_fw);
+        log_debug("Radio0 FW version: %s",radio0_fw_version);
+        return prop_arg_send(prop, req_id, opts);
 }
 
 /*
@@ -1692,11 +1787,11 @@ static struct prop appd_gw_prop_table[] = {
         },
 
         {
-                .name = "em_bh_type",
+                .name = "em_backhaul_type",
                 .type = PROP_STRING,
                 .send = prop_arg_send,
-                .arg = &em_bh_type,
-                .len = sizeof(em_bh_type),
+                .arg = &em_backhaul_type,
+                .len = sizeof(em_backhaul_type),
         },	
 		/*  ngrok properties */
 	{
@@ -1749,7 +1844,32 @@ static struct prop appd_gw_prop_table[] = {
 		.send = appd_cpu_usage_send,
 		.arg = &cpu_usage,
 		.len = sizeof(cpu_usage),
-	}
+	},
+        /* Radio information */
+        {
+                .name = "radio1_fw_version",
+                .type = PROP_STRING,
+                .send = appd_ble_fw,
+                .arg = &radio1_fw_version,
+                .len = sizeof(radio1_fw_version),
+        },
+
+        {
+                .name = "radio2_fw_version",
+                .type = PROP_STRING,
+                .send = appd_zigbee_fw,
+                .arg = &radio2_fw_version,
+                .len = sizeof(radio2_fw_version),
+        },
+
+        {
+                .name = "radio0_fw_version",
+                .type = PROP_STRING,
+                .send = appd_zwave_fw,
+                .arg = &radio0_fw_version,
+                .len = sizeof(radio0_fw_version),
+        }
+	
 
 };
 

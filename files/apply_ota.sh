@@ -121,4 +121,56 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.ipk 2> /dev/null | wc -l) != "0" ]; then
    exit_success
 fi
 
+if [ $(ls $AYLA_OTA_BUILD_DIR/*.gbl 2> /dev/null | wc -l) != "0" ]; then
+	if [ $(ls $AYLA_OTA_BUILD_DIR/radio1_*.gbl 2> /dev/null | wc -l) == "1" ]; then
+		cp210x_gpio_activation_libusb --reset 2 --btlact 3
+		stty -F /dev/ttyUSB1 115200 cs8 -cstopb -parenb -crtscts -ixoff
+		echo -e "\n" > /dev/ttyUSB1
+		echo -e "1" > /dev/ttyUSB1
+		sx $AYLA_OTA_BUILD_DIR/radio1_*.gbl </dev/ttyUSB1> /dev/ttyUSB1
+		if [ $? -eq 0 ]; then
+			sed -i "s/"\"radio1\":.*"/"\"radio1\":' '$(ls $AYLA_OTA_BUILD_DIR/radio1_*.gbl | awk -F 'radio1_|.gbl' '{print "\""$2"\","}')"/g" /etc/config/radio_fw_version.conf
+			logger "Radio1 Transfer Complete"
+		else
+			logger "Radio1 Transfer Incomplete"
+		fi
+		echo -e "\n" > /dev/ttyUSB1
+		echo -e "2" > /dev/ttyUSB1
+		sleep 5
+	fi
+	if [ $(ls $AYLA_OTA_BUILD_DIR/radio2_*.gbl 2> /dev/null | wc -l) == "1" ]; then
+		cp210x_gpio_activation_libusb --reset 0 --btlact 1
+		stty -F /dev/ttyUSB2 115200 cs8 -cstopb -parenb -crtscts -ixoff
+		echo -e "\n" > /dev/ttyUSB2
+		echo -e "1" > /dev/ttyUSB2
+		sx $AYLA_OTA_BUILD_DIR/radio2_*.gbl </dev/ttyUSB2> /dev/ttyUSB2
+		if [ $? -eq 0 ]; then
+			sed -i "s/"\"radio2\":.*"/"\"radio2\":' '$(ls $AYLA_OTA_BUILD_DIR/radio2_*.gbl | awk -F 'radio2_|.gbl' '{print "\""$2"\""}')"/g" /etc/config/radio_fw_version.conf	
+			logger "Radio2 Transfer Complete"
+		else
+			logger "Radio2 Transfer Incomplete"
+		fi
+		echo -e "\n" > /dev/ttyUSB2
+		echo -e "2" > /dev/ttyUSB2
+		sleep 5
+	fi
+	if [ $(ls $AYLA_OTA_BUILD_DIR/radio0_*.gbl 2> /dev/null | wc -l) == "1" ]; then
+		cp210x_gpio_activation_libusb --reset 4 --btlact 5
+		stty -F /dev/ttyUSB0 115200 cs8 -cstopb -parenb -crtscts -ixoff
+		echo -e "\n" > /dev/ttyUSB0
+		echo -e "1" > /dev/ttyUSB0
+		sx $AYLA_OTA_BUILD_DIR/radio0_*.gbl </dev/ttyUSB0> /dev/ttyUSB0
+		if [ $? -eq 0 ]; then
+			sed -i "s/"\"radio0\":.*"/"\"radio0\":' '$(ls $AYLA_OTA_BUILD_DIR/radio0_*.gbl | awk -F 'radio0_|.gbl' '{print "\""$2"\","}')"/g" /etc/config/radio_fw_version.conf
+			logger "Radio0 Transfer Complete"
+		else
+			logger "Radio0 Transfer Incomplete"
+		fi
+		echo -e "\n" > /dev/ttyUSB0
+		echo -e "2" > /dev/ttyUSB0
+		sleep 5
+	fi
 
+   rm -rf $AYLA_OTA_DIR
+   exit_success
+fi

@@ -418,28 +418,14 @@ get_parentnode()
 
 get_deviceMac()
 {
+   agent=`uci get mesh_broker.mesh_common.agent_almac`
+   echo $agent
 
-        prod_type_gdnt=gdnt-r_extender
-        product=`uci get version.@version[0].product`
-
-        if [ $product  == $prod_type_gdnt ]; then
-
-                status=`uci get mesh_broker.mesh_common.controller_enabled`
-
-                if [ $status != 0 ];then
-                        controller=`uci get mesh_broker.mesh_common.controller_almac`
-                        echo $controller
-                else
-                        agent=`uci get mesh_broker.mesh_common.agent_almac`
-                        echo $agent
-
-                fi
-        fi
 }
 
 get_parent_mac()
 {	
-	status=`ubus call mesh_broker.agent.device_info get | awk '/"BackhaulMACAddress"/ {print $2}' | sed 's/"//g' | sed 's/,//g'`
+	status=`ubus call mesh_broker.agent.device_info get | awk '/"X_TCH_ParentAPDevice"/ {print $2}' | sed 's/"//g' | sed 's/,//g'`
 
 	echo $status
 }
