@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.7";
+const char *appd_template_version = "zigbee_gateway_demo_v2.8";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -115,6 +115,8 @@ static char gw_wifi_BSSID_backhaul[WIFI_STA_ADDR_LEN];
 static char device_mac_address[WIFI_STA_ADDR_LEN];
 static char em_parent_mac_address[WIFI_STA_ADDR_LEN];
 static char em_backhaul_type[WIFI_STA_ADDR_LEN];
+static char gw_agent_almac_address[WIFI_STA_ADDR_LEN];
+static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 
 
 #define WIFI_STA_RSSI			"wifi_sta_RSSI"
@@ -124,23 +126,27 @@ static char em_backhaul_type[WIFI_STA_ADDR_LEN];
 #define WIFI_STA_ASSOCIATED_BSSID	"wifi_sta_associated_BSSID"
 #define GW_WIFI_BSSID_FRONTHAUL_5G      "gw_wifi_BSSID_fronthaul_5G"
 #define GW_WIFI_BSSID_FRONTHAUL_2G      "gw_wifi_BSSID_fronthaul_2G"
-#define GW_WIFI_BSSID_BACKHAUL       "gw_wifi_BSSID_backhaul"
+#define GW_WIFI_BSSID_BACKHAUL          "gw_wifi_BSSID_backhaul"
 #define DEVICE_MAC_ADDRESS		"device_mac_address"
 #define EM_PARENT_MAC_ADDRESS           "em_parent_mac_address"
-#define EM_BACKHAUL_TYPE		        "em_backhaul_type"
+#define EM_BACKHAUL_TYPE		"em_backhaul_type"
+#define GW_AGENT_ALMAC_ADDRESS          "gw_agent_almac_address"
+#define GW_CTRL_ALMAC_ADDRESS           "gw_ctrl_almac_address"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
 #define WIFI_GET_STA_CHANNEL            "get_stainfo.sh -sta_channel"
 #define WIFI_GET_STA_ASSOCIATED_SSID    "get_stainfo.sh -sta_ssid"
 #define WIFI_GET_STA_ASSOCIATED_BSSID   "get_stainfo.sh -sta_bssid"
-#define GW_WIFI_GET_BSSID_FRONTHAUL_5G         "get_stainfo.sh -sta_bssid_fronthaul_5G"
-#define GW_WIFI_GET_BSSID_FRONTHAUL_2G         "get_stainfo.sh -sta_bssid_fronthaul_2G"
-#define GW_WIFI_GET_BSSID_BACKHAUL          "get_stainfo.sh -sta_bssid_backhaul"
-//#define GET_MESH_CONTROLLER_STATUS       "get_stainfo.sh -sta_controller_status"
-#define GET_DEVICE_MAC_ADDRESS		   "get_stainfo.sh -sta_device_mac"
-#define GET_EM_PARENT_MAC_ADDRESS          "get_stainfo.sh -sta_parent_mac"
-#define GET_EM_BACKHAUL_TYPE             	   "get_stainfo.sh -sta_bh_type"
+#define GW_WIFI_GET_BSSID_FRONTHAUL_5G  "get_stainfo.sh -sta_bssid_fronthaul_5G"
+#define GW_WIFI_GET_BSSID_FRONTHAUL_2G  "get_stainfo.sh -sta_bssid_fronthaul_2G"
+#define GW_WIFI_GET_BSSID_BACKHAUL      "get_stainfo.sh -sta_bssid_backhaul"
+//#define GET_MESH_CONTROLLER_STATUS    "get_stainfo.sh -sta_controller_status"
+#define GET_DEVICE_MAC_ADDRESS		"get_stainfo.sh -sta_device_mac"
+#define GET_EM_PARENT_MAC_ADDRESS       "get_stainfo.sh -sta_parent_mac"
+#define GET_EM_BACKHAUL_TYPE            "get_stainfo.sh -sta_bh_type"
+#define GET_GW_AGENT_ALMAC_ADDRESS      "get_stainfo.sh -sta_agent_almac"
+#define GET_GW_CTRL_ALMAC_ADDRESS       "get_stainfo.sh -sta_controller_almac"
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -1264,6 +1270,17 @@ void appd_wifi_sta_poll()
         exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
         appd_send_wifi_sta_data(EM_BACKHAUL_TYPE, data);	
+
+        sprintf(command, GET_GW_AGENT_ALMAC_ADDRESS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        uppercase_convert(data);
+        appd_send_wifi_sta_data(GW_AGENT_ALMAC_ADDRESS, data);
+
+        sprintf(command, GET_GW_CTRL_ALMAC_ADDRESS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        uppercase_convert(data);
+        appd_send_wifi_sta_data(GW_CTRL_ALMAC_ADDRESS, data);
+
 }
 
 
@@ -1414,7 +1431,27 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 em_backhaul_type[WIFI_STA_ADDR_LEN - 1] = '\0';
 
                 prop_send_by_name(name);
-	}
+	}else if (!strcmp(name, GW_AGENT_ALMAC_ADDRESS)) {
+
+                if (!strcmp(value, gw_agent_almac_address)) {
+                        return 0;
+                }
+                strncpy(gw_agent_almac_address, value, WIFI_STA_ADDR_LEN);
+                gw_agent_almac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+                prop_send_by_name(name);
+        }else if (!strcmp(name, GW_CTRL_ALMAC_ADDRESS)) {
+
+                if (!strcmp(value, gw_ctrl_almac_address)) {
+                        return 0;
+                }
+                strncpy(gw_ctrl_almac_address, value, WIFI_STA_ADDR_LEN);
+                gw_ctrl_almac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
+
+                prop_send_by_name(name);
+        }
+
+
 	
 
 	return 0;
@@ -1793,6 +1830,23 @@ static struct prop appd_gw_prop_table[] = {
                 .arg = &em_backhaul_type,
                 .len = sizeof(em_backhaul_type),
         },	
+
+        {
+                .name = "gw_agent_almac_address",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_agent_almac_address,
+                .len = sizeof(gw_agent_almac_address),
+        },
+
+        {
+                .name = "gw_ctrl_almac_address",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_ctrl_almac_address,
+                .len = sizeof(gw_ctrl_almac_address),
+        },
+
 		/*  ngrok properties */
 	{
 		.name = "ngrok_enable",

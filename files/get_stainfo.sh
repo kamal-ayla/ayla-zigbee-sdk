@@ -423,6 +423,21 @@ get_deviceMac()
 
 }
 
+get_agent_almac()
+{
+   agent=`uci get mesh_broker.mesh_common.agent_almac`
+   echo $agent
+
+}
+
+get_controller_almac()
+{
+   controller=`uci get mesh_broker.mesh_common.controller_almac`
+   echo $controller
+
+}
+
+
 get_parent_mac()
 {	
 	status=`ubus call mesh_broker.agent.device_info get | awk '/"X_TCH_ParentAPDevice"/ {print $2}' | sed 's/"//g' | sed 's/,//g'`
@@ -495,7 +510,13 @@ case "$1" in
                 ;;
         -sta_device_mac)
                 get_deviceMac
-                ;;		
+                ;;
+        -sta_agent_almac)
+		get_agent_almac
+                ;;
+        -sta_controller_almac)
+                get_controller_almac
+                ;;	
         -sta_parent_mac)
                 get_parent_mac
                 ;;
@@ -505,7 +526,7 @@ case "$1" in
 		
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_parent_mac|-sta_bh_type]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type]"
 		exit 1
 		;;
 esac
