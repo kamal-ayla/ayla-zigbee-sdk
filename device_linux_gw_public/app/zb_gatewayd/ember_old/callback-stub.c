@@ -6,11 +6,7 @@
 // will be used in the case where user defined implementations
 // of the callbacks have not been provided.
 #include "app/framework/include/af.h"
-#include EMBER_AF_API_NETWORK_STEERING
-#include PLATFORM_HEADER
-#include "app/framework/plugin/ota-server-policy/ota-server-policy.h"
-#include "app/framework/include/af.h"
-#include "app/util/ezsp/ezsp-enum.h"
+#include "app/framework/util/util.h"    // emberAfGetPageFrom8bitEncodedChanPg()
 
 
 
@@ -120,6 +116,17 @@ void emberAfGroupsClusterClearGroupTableCallback(uint8_t endpoint)
 {
 }
 
+/** @brief Clear Report Table
+ *
+ * This function is called by the framework when the application should clear
+ * the report table.
+ *
+ */
+EmberStatus emberAfClearReportTableCallback(void)
+{
+  return EMBER_LIBRARY_NOT_PRESENT;
+}
+
 /** @brief Scenes Cluster ClearSceneTable
  *
  * This function is called by the framework when the application should clear
@@ -158,6 +165,43 @@ bool emberAfKeyEstablishmentClusterClientCommandReceivedCallback(EmberAfClusterC
 void emberAfClusterInitCallback(uint8_t endpoint,
                                 EmberAfClusterId clusterId)
 {
+}
+
+/** @brief Cluster Security Custom
+ *
+ * This callback is fired when determining if APS encryption is required for a
+ * cluster outside of the specification's required clusters.  In other words,
+ * for the Smart Energy profile this would be a cluster beyond the list that
+ * normally requires APS encryption.
+ *
+ * @param profileId The profile ID  Ver.: always
+ * @param clusterId The cluster ID  Ver.: always
+ * @param incoming Whether this is an incoming or outgoing message.  Ver.:
+ * always
+ * @param commandId The ZCL command ID being sent/received.  Ver.: always
+ */
+bool emberAfClusterSecurityCustomCallback(EmberAfProfileId profileId,
+                                          EmberAfClusterId clusterId,
+                                          bool incoming,
+                                          uint8_t commandId)
+{
+  // By default, assume APS encryption is not required.
+  return false;
+}
+
+/** @brief Configure Reporting Command
+ *
+ * This function is called by the application framework when a Configure
+ * Reporting command is received from an external device.  The Configure
+ * Reporting command contains a series of attribute reporting configuration
+ * records.  The application should return true if the message was processed or
+ * false if it was not.
+ *
+ * @param cmd   Ver.: always
+ */
+bool emberAfConfigureReportingCommandCallback(const EmberAfClusterCommand *cmd)
+{
+  return false;
 }
 
 /** @brief Configure Reporting Response
@@ -379,9 +423,9 @@ EmberAfStatus emberAfExternalAttributeReadCallback(uint8_t endpoint,
  * useful for host micros which need to store attributes in persistent memory.
  * Because each host micro (used with an Ember NCP) has its own type of
  * persistent memory storage, the Application Framework does not include the
- * ability to mark attributes as stored in flash the way that it does for an SoC
- * architecture. On a host micro, any attributes that need to be stored in
- * persistent memory should be marked as external and accessed through the
+ * ability to mark attributes as stored in flash the way that it does for Ember
+ * SoCs like the EM35x. On a host micro, any attributes that need to be stored
+ * in persistent memory should be marked as external and accessed through the
  * external read and write callbacks. Any host code associated with the
  * persistent storage should be implemented within this callback.
         All of
@@ -417,60 +461,6 @@ EmberAfStatus emberAfExternalAttributeWriteCallback(uint8_t endpoint,
                                                     uint8_t *buffer)
 {
   return EMBER_ZCL_STATUS_FAILURE;
-}
-
-/** @brief Find Unused Pan Id And Form
- *
- * This function is called by the framework to search for an unused PAN id and
- * form a new network.  The application should return EMBER_SUCCESS if the
- * operation was initiated successfully.
- *
- */
-EmberStatus emberAfFindUnusedPanIdAndFormCallback(void)
-{
-  return EMBER_LIBRARY_NOT_PRESENT;
-}
-
-/** @brief Generates random data for the specified size
- *
- * This function is called when the Host needs to generate random data.
- *
- * @param result: key pointer to be filled with random data Ver.: always
- * @param result: size of the array to be filled with random data Ver.: always
- */
-EmberStatus emberAfGenerateRandomData(uint8_t* result, uint8_t size)
-{
-  return EMBER_LIBRARY_NOT_PRESENT;
-}
-
-/** @brief Generates a random key
- *
- * This function is called when the Host needs to generate a random key.
- *
- * @param result: key pointer to be filled with random data Ver.: always
- */
-EmberStatus emberAfGenerateRandomKey(EmberKeyData* result)
-{
-  uint16_t data;
-  uint8_t* keyPtr = emberKeyContents(result);
-  uint8_t i;
-
-  // Since our EZSP command only generates a random 16-bit number,
-  // we must call it repeatedly to get a 128-bit random number.
-
-  for ( i = 0; i < 8; i++ ) {
-    EmberStatus status = ezspGetRandomNumber(&data);
-
-    if ( status != EMBER_SUCCESS ) {
-      return status;
-    }
-
-    keyPtr[0] = LOW_BYTE(data);
-    keyPtr[1] = HIGH_BYTE(data);
-    keyPtr += 2;
-  }
-
-  return EMBER_SUCCESS;
 }
 
 /** @brief Get Current App Tasks
@@ -645,19 +635,6 @@ bool emberAfGetEndpointInfoCallback(uint8_t endpoint,
   return false;
 }
 
-/** @brief Get Form And Join Extended Pan Id
- *
- * This callback is called by the framework to get the extended PAN ID used by
- * the current network for forming and joining.  The extended PAN ID used for
- * forming and joining is not necessarily the same extended PAN ID actually in
- * use on the network.
- *
- * @param resultLocation   Ver.: always
- */
-void emberAfGetFormAndJoinExtendedPanIdCallback(uint8_t *resultLocation)
-{
-}
-
 /** @brief Get Long Poll Interval Ms
  *
  * This function is only useful to end devices.  This function will return the
@@ -767,12 +744,18 @@ void emberAfHalButtonIsrCallback(uint8_t button,
 
 /** @brief Incoming Packet Filter
  *
- * NOTE: REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN. This is called by the
- * Packet Handoff plugin when the stack receives a packet from one of the
- * protocol layers specified in ::EmberZigbeePacketType. The packetType argument
- * is one of the values of the ::EmberZigbeePacketType enum. If the stack
- * receives an 802.15.4 MAC beacon, it will call this function with the
- * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON. The
+ * ** REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN **
+
+        This is called by
+ * the Packet Handoff plugin when the stack receives a packet from one of the
+ * protocol layers specified in ::EmberZigbeePacketType.
+
+        The packetType
+ * argument is one of the values of the ::EmberZigbeePacketType enum. If the
+ * stack receives an 802.15.4 MAC beacon, it will call this function with the
+ * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON.
+
+        The
  * implementation of this callback may alter the data contained in packetData,
  * modify options and flags in the auxillary data, or consume the packet itself,
  * either sending the message, or discarding it as it sees fit.
@@ -870,23 +853,6 @@ bool emberAfInterPanKeyEstablishmentCallback(EmberAfKeyEstablishmentNotifyMessag
   return true;
 }
 
-/** @brief Interpan Send Message
- *
- * This function will send a raw MAC message with interpan frame format using
- * the passed parameters.
- *
- * @param header Interpan header info  Ver.: always
- * @param messageLength The length of the message received or to send  Ver.:
- * always
- * @param message The message data received or to send.  Ver.: always
- */
-EmberStatus emberAfInterpanSendMessageCallback(EmberAfInterpanHeader* header,
-                                               uint16_t messageLength,
-                                               uint8_t* message)
-{
-  return EMBER_LIBRARY_NOT_PRESENT;
-}
-
 /** @brief Key Establishment
  *
  * A callback by the key-establishment code to indicate an event has occurred. 
@@ -907,6 +873,20 @@ bool emberAfKeyEstablishmentCallback(EmberAfKeyEstablishmentNotifyMessage status
                                      uint8_t delayInSeconds)
 {
   return true;
+}
+
+/** @brief On/off Cluster Level Control Effect
+ *
+ * This is called by the framework when the on/off cluster initiates a command
+ * that must effect a level control change. The implementation assumes that the
+ * client will handle any effect on the On/Off Cluster.
+ *
+ * @param endpoint   Ver.: always
+ * @param newValue   Ver.: always
+ */
+void emberAfOnOffClusterLevelControlEffectCallback(uint8_t endpoint,
+                                                   bool newValue)
+{
 }
 
 /** @brief Main Init
@@ -952,18 +932,7 @@ void emberAfMainTickCallback(void)
  */
 EmberAfStatus emberAfScenesClusterMakeInvalidCallback(uint8_t endpoint)
 {
-  return EMBER_ZCL_STATUS_UNSUP_COMMAND;
-}
-
-/** @brief Mark Buffers
- *
- * This function is called when the garbage collector runs.  Any buffers held by
- * the application must be marked.
- *
- */
-void emberAfMarkBuffersCallback(void)
-{
-  //emMarkBuffer(&bufferUsed);
+  return EMBER_ZCL_STATUS_UNSUP_CLUSTER_COMMAND;
 }
 
 /** @brief Message Sent
@@ -984,7 +953,7 @@ void emberAfMarkBuffersCallback(void)
  * @param message   Ver.: always
  * @param status   Ver.: always
  */
-bool emberAfMessageSentCallback(EmberOutgoingMessageType type,
+bool emberAfMessageSentCallback_RedefinedByAppd(EmberOutgoingMessageType type,
                                 uint16_t indexOrDestination,
                                 EmberApsFrame* apsFrame,
                                 uint16_t msgLen,
@@ -1009,7 +978,7 @@ bool emberAfMessageSentCallback(EmberOutgoingMessageType type,
  *
  * @param memoryAllocation   Ver.: always
  */
-void emberAfNcpInitCallback(bool memoryAllocation)
+void emberAfNcpInitCallback_RedefinedByAppd(bool memoryAllocation)
 {
 }
 
@@ -1202,6 +1171,207 @@ void emberAfOtaClientVersionInfoCallback(EmberAfOtaImageId* currentImageInfo,
 */
 }
 
+/** @brief Ota Page Request Server Policy
+ *
+ * This callback is called by the OTA server page request code when it wants to
+ * determine if it is allowed for an OTA client to make a page request.  It is
+ * only called if page request support has been enabled on the server.  It
+ * should return EMBER_ZCL_STATUS_SUCCESS if it allows the page request, and
+ * EMBER_ZCL_STATUS_UNSUP_CLUSTER_COMMAND if it does not want to allow it.
+ *
+ */
+uint8_t emberAfOtaPageRequestServerPolicyCallback(void)
+{
+  return EMBER_ZCL_STATUS_SUCCESS;
+}
+
+/** @brief Ota Server Block Size
+ *
+ * This function provides a way for the server to adjust the block size of its
+ * response to an Image block request by a client.
+ *
+ * @param clientNodeId The node Id of OTA client making an image block request. 
+ * Ver.: always
+ */
+uint8_t emberAfOtaServerBlockSizeCallback(EmberNodeId clientNodeId)
+{
+  // This function provides a way for the server to potentially
+  // adjust the block size based on the client who is requesting.
+  // In other words if we are using source routing we will limit
+  // data returned by enough to put a source route into the message.
+
+  // Image Block Response Message Format
+  // Status Code: 1-byte
+  // Manuf Code:  2-bytes
+  // Image Type:  2-bytes
+  // File Ver:    4-bytes
+  // File Offset: 4-bytes
+  // Data Size:   1-byte
+  // Data:        variable
+  const uint8_t IMAGE_BLOCK_RESPONSE_OVERHEAD = (EMBER_AF_ZCL_OVERHEAD + 14);
+
+  EmberApsFrame apsFrame;
+  uint8_t maxSize;
+  apsFrame.options = EMBER_APS_OPTION_NONE;
+
+  if (emberAfIsCurrentSecurityProfileSmartEnergy()) {
+    apsFrame.options |= EMBER_APS_OPTION_ENCRYPTION;
+  }
+
+  maxSize = emberAfMaximumApsPayloadLength(EMBER_OUTGOING_DIRECT,
+                                           clientNodeId,
+                                           &apsFrame);
+  maxSize -= IMAGE_BLOCK_RESPONSE_OVERHEAD;
+  return maxSize;
+}
+
+/** @brief Ota Server Incoming Message Raw
+ *
+ * This callback is for processing incoming messages for the Over-the-air
+ * bootload cluster server.  ZCL will not process the message and instead hand
+ * the raw over the air data to the callback for its own processing.
+ *
+ * @param message A pointer to the structure containing the message buffer and
+ * other information about it.  Ver.: always
+ */
+bool emberAfOtaServerIncomingMessageRawCallback(EmberAfClusterCommand *message)
+{
+  return false;
+}
+
+/** @brief Ota Server Query
+ *
+ * This callback is fired when the OTA server receives a query request by the
+ * client.  The callback lets the server application indicate to the client what
+ * the 'next' version of software is for the device, or if there is not one
+ * available.
+ *
+ * @param currentImageId This is the current software image that the client
+ * hase.  Ver.: always
+ * @param hardwareVersion If this value is non-NULL, it indicates the hardware
+ * version of the client device.  If NULL, the client did not specify a hardware
+ * version.  Ver.: always
+ * @param nextUpgradeImageId This is a pointer to a data structure containing
+ * the 'next' software version for the client to download.  Ver.: always
+ */
+uint8_t emberAfOtaServerQueryCallback(const EmberAfOtaImageId* currentImageId,
+                                      uint16_t* hardwareVersion,
+                                      EmberAfOtaImageId* nextUpgradeImageId)
+{
+  // If a new software image is available, this function should return EMBER_ZCL_STATUS_SUCCESS
+  // and populate the 'nextUpgradeImageId' structure with the appropriate values.
+  // If no new software image is available (i.e. the client should not download a firmware image)
+  // then the server should return EMBER_ZCL_STATUS_NO_IMAGE_AVAILABLE.
+  return EMBER_ZCL_STATUS_NO_IMAGE_AVAILABLE;
+}
+
+/** @brief Ota Server Send Image Notify
+ *
+ * This callback is an indication to the OTA server that it should send out
+ * notification about an OTA file that is available for download.
+ *
+ * @param dest The destination of the image notify message.  May be a broadcast
+ * address.  Ver.: always
+ * @param endpoint The destination endpoint of the image notify message.  May be
+ * a broadcast endpoint.  Ver.: always
+ * @param payloadType The type of data the image notify message will contain.  0
+ * = no data.  1 = Manufacturer ID.  2 = Manufacturer ID and the image type ID. 
+ * 3 = Manufacturer ID, image type ID, and firmware version.  Ver.: always
+ * @param queryJitter The percentage of nodes that should respond to this
+ * message, from 1-100.  On receipt of this message, each recipient will
+ * randomly choose a percentage and only query the server if their percentage is
+ * below this value.  Ver.: always
+ * @param id The image information that will be put in the message.  The data
+ * within this struct that will be appended to the message is determined by the
+ * previous 'payloadType' argument.  Ver.: always
+ */
+bool emberAfOtaServerSendImageNotifyCallback(EmberNodeId dest,
+                                             uint8_t endpoint,
+                                             uint8_t payloadType,
+                                             uint8_t queryJitter,
+                                             const EmberAfOtaImageId* id)
+{
+  return false;
+}
+
+/** @brief Ota Server Upgrade End Request
+ *
+ * This function is called when the OTA server receives a request an upgrade end
+ * request.  If the request indicated a successful download by the client, the
+ * server must tell the client when and if to upgrade to the downloaded image.
+ *
+ * @param source The node ID of the device that sent the upgrade end request. 
+ * Ver.: always
+ * @param status This is the ZCL status sent by the client indicating the result
+ * of its attempt to download the new upgrade image.  If the status is not
+ * EMBER_ZCL_STATUS_SUCCESS then this callback is merely informative and no
+ * response mesasge will be generated by the server.  Ver.: always
+ * @param returnValue If the server returns true indicating that the client
+ * should apply the upgrade, this time value indicates when in the future the
+ * client should apply the upgrade.  Ver.: always
+ * @param imageId This variable indicates the software version that the client
+ * successfully downloaded and is asking to upgrade to.  Ver.: always
+ */
+bool emberAfOtaServerUpgradeEndRequestCallback(EmberNodeId source,
+                                               uint8_t status,
+                                               uint32_t* returnValue,
+                                               const EmberAfOtaImageId* imageId)
+{
+  // If the status value is not EMBER_ZCL_STATUS_SUCCESS, then this callback is
+  // merely informative and no response message will be generated by the server.
+  // If the server wants the client to NOT apply the upgrade, then it should
+  // return false.
+  // If the server wants the client to apply the upgrade, it should return true
+  // and set the 'returnValue' parameter to when it wants the client to
+  // apply the upgrade.  There are three possible values:
+  //   0               =  Apply the upgrade now
+  //   0xFFFFFFFF      =  Don't apply yet, ask again later.
+  //   (anything-else) =  Apply the upgrade X minutes from now.
+  *returnValue = 0;
+  return true;
+}
+
+/** @brief Ota Storage Check Temp Data
+ *
+ * This callback will validate temporary data in the storage device to determine
+ * whether it is a complete file, a partially downloaded file, or there is no
+ * file present.  When a complete or partial file is found it will return
+ * EMBER_AF_OTA_STORAGE_SUCCESS or EMBER_AF_OTA_STORAGE_PARTIAL_FILE_FOUND,
+ * respectively.  In that case, the currentOffset, totalImageSize, and
+ * newFileInfo will be populated with data.  When EMBER_AF_OTA_STORAGE_ERROR is
+ * returned, no temporary data is present.
+ *
+ * @param currentOffset A pointer to a value that will be written with the
+ * offset within the total file size that has been successfully stored in the
+ * storage device.  This will indicate how much data has been currently
+ * dowloaded.  Ver.: always
+ * @param totalImageSize A pointer to a value that will be written with the
+ * total image size of the OTA file when a download has completed.  This does
+ * not indicate how much data has actually been downloaded currently.  Ver.:
+ * always
+ * @param newFileInfo This is the image id of the temporary file data stored in
+ * the storage device.  Ver.: always
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageCheckTempDataCallback(uint32_t* currentOffset,
+                                                               uint32_t* totalImageSize,
+                                                               EmberAfOtaImageId* newFileInfo)
+{
+  // If the image data cannot be successfully verified, an error should be returned.
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
+/** @brief Ota Storage Clear Temp Data
+ *
+ * This function clears any existing temp data that was downloaed.  It is used
+ * immediately prior to downloading a raw image over the air.
+ *
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageClearTempDataCallback(void)
+{
+  // If the image data cannot be stored, an error should be returned.
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
 /** @brief Ota Storage Close
  *
  * This callback shuts down the ZigBee Over-the-air storage module.
@@ -1252,6 +1422,19 @@ EmberAfOtaStorageStatus emberAfOtaStorageDriverInvalidateImageCallback(void)
 {
   // The storage driver and the rest of the OTA bootload code will not function correctly unless it is implemnted.
   // Please implement me.
+  assert(false);
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
+/** @brief Ota Storage Driver Prepare To Resume Download
+ *
+ * This callback allows the underlying storage driver to prepare to resume the
+ * OTA file download.  For example, the driver may exceute a page erase to
+ * insure the next page is ready to be written to.
+ *
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageDriverPrepareToResumeDownloadCallback(void)
+{
   assert(false);
   return EMBER_AF_OTA_STORAGE_ERROR;
 }
@@ -1315,17 +1498,188 @@ bool emberAfOtaStorageDriverWriteCallback(const uint8_t* dataToWrite,
   return false;
 }
 
+/** @brief Ota Storage Finish Download
+ *
+ * This function indicates to the storage module that the download has finished.
+ *
+ * @param offset The final offset of the downloaded file (i.e. the total size) 
+ * Ver.: always
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageFinishDownloadCallback(uint32_t offset)
+{
+  return EMBER_AF_OTA_STORAGE_SUCCESS;
+}
+
+/** @brief Ota Storage Get Count
+ *
+ * This callback returns the total number of ZigBee Over-the-air upgrade images
+ * stored in the storage module.
+ *
+ */
+uint8_t emberAfOtaStorageGetCountCallback(void)
+{
+  return 0;
+}
+
+/** @brief Ota Storage Get Full Header
+ *
+ * This callback populates the EmberAfOtaHeader structure pointed to by the
+ * returnData with data about the OTA file stored in the storage module.
+ *
+ * @param id This is a pointer to the image id for the OTA file to retrieve
+ * information about.  Ver.: always
+ * @param returnData This is a pointer to the location of the structure that
+ * will be populated with data.  Ver.: always
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageGetFullHeaderCallback(const EmberAfOtaImageId* id,
+                                                               EmberAfOtaHeader* returnData)
+{
+  // If the requested image cannot be found, then an error shouldb e returned.
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
+/** @brief Ota Storage Get Total Image Size
+ *
+ * This function returns the total size of the ZigBee Over-the-air file with the
+ * passed parameters.  If no file is found with those parameters, 0 is returned.
+ *
+ * @param id A pointer to the image identifier for the OTA file to retrieve
+ * information for.  Ver.: always
+ */
+uint32_t emberAfOtaStorageGetTotalImageSizeCallback(const EmberAfOtaImageId* id)
+{
+  // On failure this should return an image size of zero.
+  return 0;
+}
+
+/** @brief Ota Storage Init
+ *
+ * This callback initializes the ZigBee Over-the-air storage module.
+ *
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageInitCallback(void)
+{
+  return EMBER_AF_OTA_STORAGE_SUCCESS;
+}
+
+/** @brief Ota Storage Iterator First
+ *
+ * This callback lets you walk through the list of all OTA files by jumping to
+ * the first file in the list maintained by the storage module.  If there is no
+ * file then emberAfOtaInvalidImageId is returned.
+ *
+ */
+EmberAfOtaImageId emberAfOtaStorageIteratorFirstCallback(void)
+{
+  // It is expected that the storage module maintain its own internal iterator that the 'first' and 'next' functions will manipulate.
+
+  // If there are no images at all, this function should return the invalid image id.
+  return emberAfInvalidImageId;
+}
+
+/** @brief Ota Storage Iterator Next
+ *
+ * This callback lets you walk through the list of all OTA files by jumping to
+ * the next file in the list maintained by the storage module.  If there is no
+ * next file then emberAfOtaInvalidImageId is returned.
+ *
+ */
+EmberAfOtaImageId emberAfOtaStorageIteratorNextCallback(void)
+{
+  // It is expected that the storage module maintain its own internal iterator that the 'first' and 'next' functions will manipulate.
+
+  // If there are no more images, this function should return the invalid image id.
+  return emberAfInvalidImageId;
+}
+
+/** @brief Ota Storage Read Image Data
+ *
+ * This callback reads data from the specified OTA file and returns that data to
+ * the caller.
+ *
+ * @param id This is a pointer to the image id for the OTA file to retrieve data
+ * from.  Ver.: always
+ * @param offset This is the offset relative to the start of the image where the
+ * data should be read from.  Ver.: always
+ * @param length This is the length of data that will be read.  Ver.: always
+ * @param returnData This is a pointer to where the data read out of the file
+ * will be written to  Ver.: always
+ * @param returnedLength This is a pointer to a variable where the actual length
+ * of data read will be written to.  A short read may occur if the end of file
+ * was reached.  Ver.: always
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageReadImageDataCallback(const EmberAfOtaImageId* id,
+                                                               uint32_t offset,
+                                                               uint32_t length,
+                                                               uint8_t* returnData,
+                                                               uint32_t* returnedLength)
+{
+  // If the requested image cannot be found, then an error should be returned.
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
+/** @brief Ota Storage Search
+ *
+ * This callback searches through the list of all images for one that matches
+ * the passed parameters.  On success an image identifier is returned with a
+ * matching image.  On failure emberAfInvalidImageId is returned.
+ *
+ * @param manufacturerId The ZigBee assigned identifier of the manufacturer
+ * contained in the OTA image being searched for.  Ver.: always
+ * @param imageTypeId The image type identifier contained in the OTA image being
+ * searched for.  Ver.: always
+ * @param hardwareVersion This is a pointer to the hardware version that will be
+ * used in the search.  If the pointer is NULL, hardware version will not be
+ * considered when searching for matching images.  If it points to a value, the
+ * search will only consider images where that value falls between the minimum
+ * and maxmimum hardware version specified in the OTA file.  If no hardware
+ * version is present in an OTA file but the other parameters match, the file
+ * will be considered a match  Ver.: always
+ */
+EmberAfOtaImageId emberAfOtaStorageSearchCallback(uint16_t manufacturerId,
+                                                  uint16_t imageTypeId,
+                                                  const uint16_t* hardwareVersion)
+{
+  // If no image is found that matches the search criteria, this function should return the invalid image id.
+  return emberAfInvalidImageId;
+}
+
+/** @brief Ota Storage Write Temp Data
+ *
+ * This function writes to the temporary data in the storage device at the
+ * specified offset.  It is used when downloading a raw image over the air.
+ *
+ * @param offset The location within the download image file where to write the
+ * data.  Ver.: always
+ * @param length The length of data to write.  Ver.: always
+ * @param data A pointer to the temporary data that will be written to the
+ * storage device.  Ver.: always
+ */
+EmberAfOtaStorageStatus emberAfOtaStorageWriteTempDataCallback(uint32_t offset,
+                                                               uint32_t length,
+                                                               const uint8_t* data)
+{
+  // If the image data cannot be stored, an error should be returned.
+  return EMBER_AF_OTA_STORAGE_ERROR;
+}
+
 /** @brief Outgoing Packet Filter
  *
- * NOTE: REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN. This is called by the
- * Packet Handoff plugin when the stack prepares to send a packet from one of
- * the protocol layers specified in ::EmberZigbeePacketType. The packetType
- * argument is one of the values of the ::EmberZigbeePacketType enum. If the
- * stack receives an 802.15.4 MAC beacon, it will call this function with the
- * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON. The
- * implementation of this callback may alter the data contained in packetData,
- * modify options and flags in the auxillary data, or consume the packet itself,
- * either sending the message, or discarding it as it sees fit.
+ * ** REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN **
+
+        This is called by
+ * the Packet Handoff plugin when the stack prepares to send a packet from one
+ * of the protocol layers specified in ::EmberZigbeePacketType.
+
+        The
+ * packetType argument is one of the values of the ::EmberZigbeePacketType enum.
+ * If the stack receives an 802.15.4 MAC beacon, it will call this function with
+ * the packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON.
+
+       
+ * The implementation of this callback may alter the data contained in
+ * packetData, modify options and flags in the auxillary data, or consume the
+ * packet itself, either sending the message, or discarding it as it sees fit.
  *
  * @param packetType the type of packet and associated protocol layer  Ver.:
  * always
@@ -1385,53 +1739,6 @@ bool emberAfPerformingKeyEstablishmentCallback(void)
   return false;
 }
 
-/** @brief Reset To Factory Defaults
- *
- * This function is called by the Basic server plugin when a request to reset
- * to factory defaults is received. The plugin will reset attributes managed by
- * the framework to their default values. The application should perform any
- * other necessary reset-related operations in this callback, including
- * resetting any externally-stored attributes.
- *
- * @param endpoint   Ver.: always
- */
-void emberAfPluginBasicResetToFactoryDefaultsCallback(uint8_t endpoint)
-{
-}
-
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the HSV values.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromHsvCallback(uint8_t endpoint)
-{
-}
-
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the color temperature.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromTempCallback(uint8_t endpoint)
-{
-}
-
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the color X and color Y values.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromXyCallback(uint8_t endpoint)
-{
-}
-
 /** @brief Broadcast Sent
  *
  * This function is called when a new MTORR broadcast has been successfully
@@ -1452,18 +1759,6 @@ void emberAfPluginCountersRolloverCallback(EmberCounterType type)
 {
 }
 
-/** @brief Client Complete
- *
- * This function is called by the EZ-Mode Commissioning plugin when client
- * commissioning completes.
- *
- * @param bindingIndex The binding index that was created or
- * ::EMBER_NULL_BINDING if an error occurred. Ver.: always
- */
-void emberAfPluginEzmodeCommissioningClientCompleteCallback(uint8_t bindingIndex)
-{
-}
-
 /** @brief Bad File Descriptor
  *
  * The indicated file descriptor has been detected to be bad; for example,
@@ -1476,6 +1771,39 @@ void emberAfPluginEzmodeCommissioningClientCompleteCallback(uint8_t bindingIndex
  */
 void emberAfPluginFileDescriptorDispatchBadFileDescriptorCallback(int fd)
 {
+}
+
+/** @brief Bind Target
+ *
+ * This callback with enable the user to programmatically decide if they want
+ * to bind with a potential target. The plugin will try to bind with this
+ * target if and only if the function returns true. By default, the callback
+ * tells the plugin to try to bind with the target. If the binding type is
+ * changed to ::EMBER_MULTICAST_BINDING, a multicast binding will be created.
+ *
+ * @param nodeId short ID of the potential target Ver.: always
+ * @param bindingEntry The binding entry for that target. Ver.: always
+ * @param groupName The name of the group if a multicast binding is created.
+ * Ver.: always
+ */
+bool emberAfPluginFindAndBindInitiatorBindTargetCallback(EmberNodeId nodeId,
+                                                         EmberBindingTableEntry *bindingEntry,
+                                                         uint8_t *groupName)
+{
+  return true;
+}
+
+/** @brief Complete
+ *
+ * This callback is fired by the initiator when the Find and Bind process is
+ * complete.
+ *
+ * @param status Status code describing the completion of the find and bind
+ * process Ver.: always
+ */
+void emberAfPluginFindAndBindInitiatorCompleteCallback(EmberStatus status)
+{
+  emberAfCorePrintln("Find and Bind Initiator: Complete: 0x%X", status);
 }
 
 /** @brief Select File Descriptors
@@ -1498,16 +1826,51 @@ int emberAfPluginGatewaySelectFileDescriptorsCallback(int*list,
   return 0;
 }
 
-/** @brief Level Control Cluster Server Post Init
+/** @brief Fragment Transmission Failed
  *
- * Following resolution of the Current Level at startup for this endpoint,
- * perform any additional initialization needed; e.g., synchronize hardware
- * state.
+ * This function is called by the Interpan plugin when a fragmented
+ * transmission has failed.
  *
- * @param endpoint Endpoint that is being initialized  Ver.: always
+ * @param interpanFragmentationStatus The status describing why transmission
+ * failed Ver.: always
+ * @param fragmentNum The fragment number that encountered the failure
+ * Ver.: always
  */
-void emberAfPluginLevelControlClusterServerPostInitCallback(uint8_t endpoint)
+void emberAfPluginInterpanFragmentTransmissionFailedCallback(uint8_t interpanFragmentationStatus,
+                                                             uint8_t fragmentNum)
 {
+}
+
+/** @brief Message Received Over Fragments
+ *
+ * This function is called by the Interpan plugin when a fully reconstructed
+ * message has been received over inter-PAN fragments, or IPMFs.
+ *
+ * @param header The inter-PAN header Ver.: always
+ * @param msgLen The message payload length Ver.: always
+ * @param message The message payload Ver.: always
+ */
+void emberAfPluginInterpanMessageReceivedOverFragmentsCallback(const EmberAfInterpanHeader *header,
+                                                               uint8_t msgLen,
+                                                               uint8_t *message)
+{
+}
+
+/** @brief Pre Message Received
+ *
+ * This function is called by the Interpan plugin when an interpan message is
+ * received but has not yet been handled by the plugin or the framework. The
+ * application should return true if the message was handled.
+ *
+ * @param header The inter-PAN header Ver.: always
+ * @param msgLen The message payload length Ver.: always
+ * @param message The message payload Ver.: always
+ */
+bool emberAfPluginInterpanPreMessageReceivedCallback(const EmberAfInterpanHeader *header,
+                                                     uint8_t msgLen,
+                                                     uint8_t *message)
+{
+  return false;
 }
 
 /** @brief Complete
@@ -1550,273 +1913,221 @@ int8_t emberAfPluginNetworkCreatorGetRadioPowerCallback(void)
 }
 
 
-/** @brief Complete
+/** @brief Finished
  *
- * This callback is fired when the Network Steering plugin is complete.
+ * This callback is fired when the network-find plugin is finished with the
+ * forming or joining process. The result of the operation will be returned in
+ * the status parameter.
  *
- * @param status On success this will be set to EMBER_SUCCESS to indicate a
- * network was joined successfully. On failure this will be the status code of
- * the last join or scan attempt. Ver.: always
- * @param totalBeacons The total number of 802.15.4 beacons that were heard,
- * including beacons from different devices with the same PAN ID. Ver.: always
- * @param joinAttempts The number of join attempts that were made to get onto
- * an open Zigbee network. Ver.: always
- * @param finalState The finishing state of the network steering process. From
- * this, one is able to tell on which channel mask and with which key the
- * process was complete. Ver.: always
+ * @param status   Ver.: always
  */
-void emberAfPluginNetworkSteeringCompleteCallback(EmberStatus status,
-                                                  uint8_t totalBeacons,
-                                                  uint8_t joinAttempts,
-                                                  uint8_t finalState)
+void emberAfPluginNetworkFindFinishedCallback(EmberStatus status)
 {
-  emberAfCorePrintln("Network Steering Completed: %p (0x%X)",
-                     (status == EMBER_SUCCESS ? "Join Success" : "FAILED"),
-                     status);
-  emberAfCorePrintln("Finishing state: 0x%X", finalState);
-  emberAfCorePrintln("Beacons heard: %d\nJoin Attempts: %d", totalBeacons, joinAttempts);
 }
 
-/** @brief Get Distributed Key
+/** @brief Get Enable Scanning All Channels
  *
- * This callback is fired when the Network Steering plugin needs to set the distributed
- * key. The application set the distributed key from Zigbee Alliance thru this callback
- * or the network steering will use the default test key.
- *
- * @param pointer to the distributed key struct
- * @return true if the key is loaded successfully, otherwise false.
- * level. Ver.: always
+ * Returns true is the fallback on scanning all channels is enabled,
+ * false if not.
  */
-bool emberAfPluginNetworkSteeringGetDistributedKeyCallback(EmberKeyData * key)
+bool emberAfPluginNetworkFindGetEnableScanningAllChannelsCallback(void)
 {
+#ifdef EMBER_AF_PLUGIN_NETWORK_FIND_ENABLE_ALL_CHANNELS
+  return true;
+#else
   return false;
+#endif
 }
 
-/** @brief Get Node Type
+/** @brief Get Energy Threshold For Channel
  *
- * This callback allows the application to set the node type that the network
- * steering process will use in joining a network.
+ * This callback is called during the energy scan when forming the network.
+ * Should the energy level exceed the value returned by this callback, the
+ * current channel will not be considered a suitable candidate for forming.
+ * Should none of the channels in the channel mask be considered suitable,
+ * the scan will fall back on all channels, including those not on the
+ * channel mask. The return value is RSSI, in dBm.
+ * This callback is called only when the fallback functionality is enabled.
  *
- * @param state The current ::EmberAfPluginNetworkSteeringJoiningState.
- *
- * @return An ::EmberNodeType value that the network steering process will
- * try to join a network as.
+ * @param pgChan   Ver.: always
  */
-EmberNodeType emberAfPluginNetworkSteeringGetNodeTypeCallback(EmberAfPluginNetworkSteeringJoiningState state)
+int8_t emberAfPluginNetworkFindGetEnergyThresholdForChannelCallback(uint8_t pgChan)
 {
-  return ((emAfCurrentZigbeeProNetwork->nodeType == EMBER_COORDINATOR)
-          ? EMBER_ROUTER
-          : emAfCurrentZigbeeProNetwork->nodeType);
+#if defined(EMBER_AF_PLUGIN_NETWORK_FIND_SUB_GHZ)
+  return emberAfGetPageFrom8bitEncodedChanPg(pgChan) == 0
+         ? EMBER_AF_PLUGIN_NETWORK_FIND_CUT_OFF_VALUE
+         : EMBER_AF_PLUGIN_NETWORK_FIND_SUB_GHZ_CUT_OFF_VALUE;
+#elif defined(EMBER_AF_PLUGIN_NETWORK_FIND)
+  return EMBER_AF_PLUGIN_NETWORK_FIND_CUT_OFF_VALUE;
+#else
+  return 127;   // Highest possible int8_t (the return type). The value does not matter anyway but we need to return _something_.
+#endif
 }
 
-/** @brief Get Power For Radio Channel
+/** @brief Get Radio Power For Channel
  *
- * This callback is fired when the Network Steering plugin needs to set the
- * power level. The application has the ability to change the max power level
- * used for this particular channel.
+ * This callback is called by the framework when it is setting the radio power
+ * during the discovery process. The framework will set the radio power
+ * depending on what is returned by this callback.
  *
- * @param channel The channel that the plugin is inquiring about the power
- * level. Ver.: always
+ * @param pgChan   Ver.: always
  */
-int8_t emberAfPluginNetworkSteeringGetPowerForRadioChannelCallback(uint8_t channel)
+int8_t emberAfPluginNetworkFindGetRadioPowerForChannelCallback(uint8_t pgChan)
 {
-  return emberAfMaxPowerLevel();
+  return EMBER_AF_PLUGIN_NETWORK_FIND_RADIO_TX_POWER;
 }
 
-/** @brief On/off Cluster Server Post Init
+/** @brief Join
  *
- * Following resolution of the On/Off state at startup for this endpoint, perform any
- * additional initialization needed; e.g., synchronize hardware state.
+ * This callback is called by the plugin when a joinable network has been
+ * found. If the application returns true, the plugin will attempt to join the
+ * network. Otherwise, the plugin will ignore the network and continue
+ * searching. Applications can use this callback to implement a network
+ * blacklist.
  *
- * @param endpoint Endpoint that is being initialized  Ver.: always
+ * @param networkFound   Ver.: always
+ * @param lqi   Ver.: always
+ * @param rssi   Ver.: always
  */
-void emberAfPluginOnOffClusterServerPostInitCallback(uint8_t endpoint)
+bool emberAfPluginNetworkFindJoinCallback(EmberZigbeeNetwork *networkFound,
+                                          uint8_t lqi,
+                                          int8_t rssi)
 {
-}
-
-/** @brief OTA Server Block Sent Callback
- *
- * This function will be called when a block is sent to a device.
- *
- * @param actualLength      Ver.: always
- * @param manufacturerId    Ver.: always
- * @param imageTypeId       Ver.: always
- * @param firmwareVersion   Ver.: always
- */
-void emberAfPluginOtaServerBlockSentCallback(uint8_t actualLength,
-                                             uint16_t manufacturerId,
-                                             uint16_t imageTypeId,
-                                             uint32_t firmwareVersion)
-{
-}
-
-
-/** @brief GetClientDelayUnits
- *
- * Called when the server receives an Image Block Request from a client that
- * supports rate limiting using the Minimum Block Period feature. This callback
- * gives the server a chance to decide which units the client uses for the
- * Minimum Block Period, seconds or milliseconds. The server can also return
- * OTA_SERVER_DISCOVER_CLIENT_DELAY_UNITS, which causes the plugin code to test
- * the client by sending it a preset delay value. The length of time the client
- * delays determines which units it uses. For more information on this feature,
- * please read the plugin option descriptions under the OTA Server plugin.
- *
- * @param clientNodeId     Ver.: always
- * @param clientEui64      Ver.: always
- *
- * For return values, see ota-server-policy.h. An unknown return value will
- * result in the same behavior as if OTA_SERVER_CLIENT_USES_MILLISECONDS had
- * been returned.
- */
-uint8_t emberAfPluginOtaServerPolicyGetClientDelayUnits(EmberNodeId clientNodeId,
-                                                        EmberEUI64 clientEui64)
-{
-  return OTA_SERVER_DISCOVER_CLIENT_DELAY_UNITS;
-}
-
-/** @brief OTA Server Update Complete Callback
- *
- * This function will be called when an OTA update has finished.
- *
- * @param manufacturerId  ManufacturerId.
- * @param imageTypeId  Image Type Id.
- * @param firmwareVersion  Firmware Version.
- * @param source  Source node id.
- * @param status  Status of update.
- */
-void emberAfPluginOtaServerUpdateCompleteCallback(uint16_t manufacturerId,
-                                                  uint16_t imageTypeId,
-                                                  uint32_t firmwareVersion,
-                                                  EmberNodeId source,
-                                                  uint8_t status)
-{
-}
-
-
-/** @brief UpdateStarted
- *
- * Called when an OTA upgrade starts.
- *
- * @param manufacturerId   Ver.: always
- * @param imageTypeId      Ver.: always
- * @param firmwareVersion  Ver.: always
- * @param maxDataSize      Ver.: always
- * @param offset           Ver.: always
- */
-void emberAfPluginOtaServerUpdateStartedCallback(uint16_t manufacturerId,
-                                                 uint16_t imageTypeId,
-                                                 uint32_t firmwareVersion,
-                                                 uint8_t maxDataSize,
-                                                 uint32_t offset)
-{
-}
-
-/** @brief Configured
- *
- * This callback is called by the Reporting plugin whenever a reporting entry
- * is configured, including when entries are deleted or updated. The
- * application can use this callback for scheduling readings or measurements
- * based on the minimum and maximum reporting interval for the entry. The
- * application should return EMBER_ZCL_STATUS_SUCCESS if it can support the
- * configuration or an error status otherwise. Note: attribute reporting is
- * required for many clusters and attributes, so rejecting a reporting
- * configuration may violate ZigBee specifications.
- *
- * @param entry   Ver.: always
- */
-EmberAfStatus emberAfPluginReportingConfiguredCallback(const EmberAfPluginReportingEntry *entry)
-{
-  return EMBER_ZCL_STATUS_SUCCESS;
-}
-
-/** @brief Configured
- *
- * This callback is called by the Reporting plugin to get the default reporting
- * configuration values from user if there is no default value available within
- * af generated default reporting configuration tabel. The application need to
- * write to the minInterval, maxInterval and reportable change in the passed
- * IO pointer in the arguement while handleing this callback, then application
- * shall return true if it has provided the default values or else false for
- * reporting plugin to further handleing.
- *
- * @param entry   Ver.: always
- */
-bool emberAfPluginReportingGetDefaultReportingConfigCallback(EmberAfPluginReportingEntry *entry)
-{
-  // Change the values as appropriate for the application.
-  entry->data.reported.minInterval = 1;
-  entry->data.reported.maxInterval = 0xFFFE;
-  entry->data.reported.reportableChange = 1;
-  entry->direction = EMBER_ZCL_REPORTING_DIRECTION_REPORTED;
   return true;
 }
 
-/** @brief Remove Mirror
+/** @brief Initial Security State
  *
- * This function is called by the Simple Metering client plugin whenever a
- * Remove Mirror command is received. The application should return the
- * endpoint on which the mirror has been removed. If the mirror could not be
- * removed, the application should return 0xFFFF.
+ * This function is called by the ZLL Commissioning Common plugin to determine the
+ * initial security state to be used by the device. The application must
+ * populate the ::EmberZllInitialSecurityState structure with a configuration
+ * appropriate for the network being formed, joined, or started. Once the
+ * device forms, joins, or starts a network, the same security configuration
+ * will remain in place until the device leaves the network.
  *
- * @param requestingDeviceIeeeAddress   Ver.: always
+ * @param securityState The security configuration to be populated by the
+ * application and ultimately set in the stack. Ver.: always
  */
-uint16_t emberAfPluginSimpleMeteringClientRemoveMirrorCallback(EmberEUI64 requestingDeviceIeeeAddress)
+void emberAfPluginZllCommissioningCommonInitialSecurityStateCallback(EmberZllInitialSecurityState *securityState)
 {
-  return 0xFFFF;
 }
 
-/** @brief Request Mirror
+/** @brief Reset To Factory New
  *
- * This function is called by the Simple Metering client plugin whenever a
- * Request Mirror command is received. The application should return the
- * endpoint to which the mirror has been assigned. If no mirror could be
- * assigned, the application should return 0xFFFF.
+ * This function is called by the ZLL Commissioning Common plugin when a request to
+ * reset to factory new is received. The plugin will leave the network, reset
+ * attributes managed by the framework to their default values, and clear the
+ * group and scene tables. The application should perform any other necessary
+ * reset-related operations in this callback, including resetting any
+ * externally-stored attributes.
  *
- * @param requestingDeviceIeeeAddress   Ver.: always
  */
-uint16_t emberAfPluginSimpleMeteringClientRequestMirrorCallback(EmberEUI64 requestingDeviceIeeeAddress)
+void emberAfPluginZllCommissioningCommonResetToFactoryNewCallback(void)
 {
-  return 0xFFFF;
 }
 
-
-/** @brief EZSP Error Handler
+/** @brief Touch Link Complete
  *
- * This callback is fired when the host process receives an error from the EZSP
- * link when talking to the NCP. The return boolean gives the user application
- * the option to reboot the NCP. If this function returns true, the NCP will be
- * rebooted and the connection between the host and NCP will drop. If not, the
- * NCP will continue operating.
+ * This function is called by the ZLL Commissioning Common plugin when touch linking
+ * completes.
  *
- * @param status The EzspStatus error code received.
- *
- * @return bool True to reset NCP, false not to.
- *
- * @note This callback is only fired on the host application. It has no use for
- * SoC or NCP applications.
+ * @param networkInfo The ZigBee and ZLL-specific information about the network
+ * and target. Ver.: always
+ * @param deviceInformationRecordCount The number of sub-device information
+ * records for the target. Ver.: always
+ * @param deviceInformationRecordList The list of sub-device information
+ * records for the target. Ver.: always
  */
-bool emberAfPluginZclFrameworkCoreEzspErrorCallback(EzspStatus status)
+void emberAfPluginZllCommissioningCommonTouchLinkCompleteCallback(const EmberZllNetwork *networkInfo,
+                                                                  uint8_t deviceInformationRecordCount,
+                                                                  const EmberZllDeviceInfoRecord *deviceInformationRecordList)
 {
-#if defined EZSP_HOST
-  if (status == EZSP_ERROR_OVERFLOW) {
-    emberAfCorePrintln("WARNING: the NCP has run out of buffers, causing "
-                       "general malfunction. Remediate network congestion, if "
-                       "present.");
-    emberAfCoreFlush();
-  }
+}
 
-  // Do not reset if this is a decryption failure, as we ignored the packet
-  // Do not reset for a callback overflow, as we don't want the device to reboot
-  // under stress
-  // For all other errors, we reset the NCP
-  if ((status != EZSP_ERROR_SECURITY_PARAMETERS_INVALID)
-      && (status != EZSP_ERROR_OVERFLOW)) {
-    return true;
-  }
-#endif // EZSP_HOST
-
+/** @brief Endpoint Information
+ *
+ * This function is called by the ZLL Commissining Server plugin to obtain
+ * information about the remote endpoints controlled by a specific endpoint on
+ * the local device. The application should populate the record with
+ * information about the remote endpoint and return true. If no information is
+ * available for the given endpoint and index, the application should return
+ * false.
+ *
+ * @param endpoint The local endpoint for which the remote endpoint information
+ * is requested. Ver.: always
+ * @param index The index of the remote endpoint information on the local
+ * endpoint. Ver.: always
+ * @param record The endpoint information record. Ver.: always
+ */
+bool emberAfPluginZllCommissioningServerEndpointInformationCallback(uint8_t endpoint,
+                                                                    uint8_t index,
+                                                                    EmberAfPluginZllCommissioningEndpointInformationRecord *record)
+{
   return false;
+}
+
+/** @brief Endpoint Information Count
+ *
+ * This function is called by the ZLL Commissining Server plugin to determine the
+ * number of remote endpoints controlled by a specific endpoint on the local
+ * device.
+ *
+ * @param endpoint The local endpoint for which the remote endpoint information
+ * count is requested. Ver.: always
+ */
+uint8_t emberAfPluginZllCommissioningServerEndpointInformationCountCallback(uint8_t endpoint)
+{
+  return 0x00;
+}
+
+/** @brief Group Identifier
+ *
+ * This function is called by the ZLL Commissining Server plugin to obtain
+ * information about the group identifiers in use by a specific endpoint on the
+ * device. The application should populate the record with information about
+ * the group identifier and return true. If no information is available for the
+ * given endpoint and index, the application should return false.
+ *
+ * @param endpoint The endpoint for which the group identifier is requested.
+ * Ver.: always
+ * @param index The index of the group on the endpoint. Ver.: always
+ * @param record The group information record. Ver.: always
+ */
+bool emberAfPluginZllCommissioningServerGroupIdentifierCallback(uint8_t endpoint,
+                                                                uint8_t index,
+                                                                EmberAfPluginZllCommissioningGroupInformationRecord *record)
+{
+  return false;
+}
+
+/** @brief Group Identifier Count
+ *
+ * This function is called by the ZLL Commissining Server plugin to determine the
+ * number of group identifiers in use by a specific endpoint on the device. The
+ * total number of group identifiers on the device, which are shared by all
+ * endpoints, is defined by ::EMBER_ZLL_GROUP_ADDRESSES.
+ *
+ * @param endpoint The endpoint for which the group identifier count is
+ * requested. Ver.: always
+ */
+uint8_t emberAfPluginZllCommissioningServerGroupIdentifierCountCallback(uint8_t endpoint)
+{
+  return 0x00;
+}
+
+/** @brief Identify
+ *
+ * This function is called by the ZLL Commissining Server plugin to notify the
+ * application that it should take an action to identify itself. This typically
+ * occurs when an Identify Request is received via inter-PAN messaging.
+ *
+ * @param durationS If the duration is zero, the device should exit identify
+ * mode. If the duration is 0xFFFF, the device should remain in identify mode
+ * for the default time. Otherwise, the duration specifies the length of time
+ * in seconds that the device should remain in identify mode. Ver.: always
+ */
+void emberAfPluginZllCommissioningServerIdentifyCallback(uint16_t durationS)
+{
 }
 
 /** @brief Post Attribute Change
@@ -1951,7 +2262,7 @@ bool emberAfPreCommandReceivedCallback(EmberAfClusterCommand* cmd)
  *
  * @param incomingMessage   Ver.: always
  */
-bool emberAfPreMessageReceivedCallback(EmberAfIncomingMessage* incomingMessage)
+bool emberAfPreMessageReceivedCallback_RedefinedByAppd(EmberAfIncomingMessage* incomingMessage)
 {
   return false;
 }
@@ -2024,6 +2335,19 @@ bool emberAfPreZDOMessageReceivedCallback(EmberNodeId emberNodeId,
 bool emberAfReadAttributesResponseCallback(EmberAfClusterId clusterId,
                                            uint8_t *buffer,
                                            uint16_t bufLen)
+{
+  return false;
+}
+
+/** @brief Read Reporting Configuration Command
+ *
+ * This function is called by the application framework when a Read Reporting
+ * Configuration command is received from an external device.  The application
+ * should return true if the message was processed or false if it was not.
+ *
+ * @param cmd   Ver.: always
+ */
+bool emberAfReadReportingConfigurationCommandCallback(const EmberAfClusterCommand *cmd)
 {
   return false;
 }
@@ -2172,15 +2496,28 @@ bool emberAfReportAttributesCallback(EmberAfClusterId clusterId,
   return false;
 }
 
-/** @brief Scan Error
+/** @brief Reporting Attribute Change
  *
- * This is called by the framework on behalf of the form-and-join library to
- * notify the application if an error occurs while scanning.  See form-and-join
- * documentation for more information.
+ * This function is called by the framework when an attribute managed by the
+ * framework changes.  The application should call this function when an
+ * externally-managed attribute changes.  The application should use the change
+ * notification to inform its reporting decisions.
  *
- * @param status The status of the scan.  Ver.: always
+ * @param endpoint   Ver.: always
+ * @param clusterId   Ver.: always
+ * @param attributeId   Ver.: always
+ * @param mask   Ver.: always
+ * @param manufacturerCode   Ver.: always
+ * @param type   Ver.: always
+ * @param data   Ver.: always
  */
-void emberAfScanErrorCallback(EmberStatus status)
+void emberAfReportingAttributeChangeCallback(uint8_t endpoint,
+                                             EmberAfClusterId clusterId,
+                                             EmberAfAttributeId attributeId,
+                                             uint8_t mask,
+                                             uint16_t manufacturerCode,
+                                             EmberAfAttributeType type,
+                                             uint8_t *data)
 {
 }
 
@@ -2237,19 +2574,6 @@ void emberAfSetDefaultPollControlCallback(EmberAfEventPollControl control)
  * @param control   Ver.: always
  */
 void emberAfSetDefaultSleepControlCallback(EmberAfEventSleepControl control)
-{
-}
-
-/** @brief Set Form And Join Extended Pan Id
- *
- * This callback is called by the framework to set the extended PAN ID used by
- * the current network for forming and joining.  The extended PAN ID used for
- * forming and joining is not necessarily the same extended PAN ID actually in
- * use on the network.
- *
- * @param extendedPanId   Ver.: always
- */
-void emberAfSetFormAndJoinExtendedPanIdCallback(const uint8_t *extendedPanId)
 {
 }
 
@@ -2320,6 +2644,22 @@ void emberAfSetTimeCallback(uint32_t utcTime)
 {
 }
 
+/** @brief On/off Cluster Set Value
+ *
+ * This function is called when the on/off value needs to be set, either through
+ * normal channels or as a result of a level change.
+ *
+ * @param endpoint   Ver.: always
+ * @param command   Ver.: always
+ * @param initiatedByLevelChange   Ver.: always
+ */
+EmberAfStatus emberAfOnOffClusterSetValueCallback(uint8_t endpoint,
+                                                  uint8_t command,
+                                                  bool initiatedByLevelChange)
+{
+  return EMBER_ZCL_STATUS_UNSUP_CLUSTER_COMMAND;
+}
+
 /** @brief Set Wake Timeout Bitmask
  *
  * This function is only useful to sleepy end devices.  This function will set
@@ -2369,7 +2709,7 @@ void emberAfSetWakeTimeoutQsCallback(uint16_t wakeTimeoutQs)
  *
  * @param status   Ver.: always
  */
-bool emberAfStackStatusCallback(EmberStatus status)
+bool emberAfStackStatusCallback_RedefinedByAppd(EmberStatus status)
 {
   return false;
 }
@@ -2383,18 +2723,6 @@ bool emberAfStackStatusCallback(EmberStatus status)
 bool emberAfStartMoveCallback(void)
 {
   return false;
-}
-
-/** @brief Start Search For Joinable Network
- *
- * This function is called by the framework to search for joinable networks and
- * join a network.  The application should return EMBER_SUCCESS if the operation
- * was initiated successfully.
- *
- */
-EmberStatus emberAfStartSearchForJoinableNetworkCallback(void)
-{
-  return EMBER_LIBRARY_NOT_PRESENT;
 }
 
 /** @brief Stop Move
@@ -2440,7 +2768,7 @@ EmberAfStatus emberAfScenesClusterStoreCurrentSceneCallback(uint8_t endpoint,
  * @param status   Ver.: always
  * @param decision   Ver.: always
  */
-void emberAfTrustCenterJoinCallback(EmberNodeId newNodeId,
+void emberAfTrustCenterJoinCallback_RedefinedByAppd(EmberNodeId newNodeId,
                                     EmberEUI64 newNodeEui64,
                                     EmberNodeId parentOfNewNode,
                                     EmberDeviceUpdate status,
@@ -2469,21 +2797,6 @@ void emberAfTrustCenterKeepaliveAbortCallback(void)
  * @param registrationComplete   Ver.: always
  */
 void emberAfTrustCenterKeepaliveUpdateCallback(bool registrationComplete)
-{
-}
-
-/** @brief Unused Pan Id Found
- *
- * This is called by the framework on behalf of the form-and-join library to
- * notify the application of the PAN id and channel found following a call to
- * ::emberScanForUnusedPanId().  See form-and-join documentation for more
- * information.
- *
- * @param panId   Ver.: always
- * @param channel   Ver.: always
- */
-void emberAfUnusedPanIdFoundCallback(EmberPanId panId,
-                                     uint8_t channel)
 {
 }
 

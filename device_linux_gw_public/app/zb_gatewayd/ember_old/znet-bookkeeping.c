@@ -25,7 +25,6 @@ void emberAfMainTickCallback(void);  // Global
 void emberAfTick(void);  // Global
 void emberAfPluginGatewayTickCallback(void);  // Plugin: gateway
 void emberAfPluginHeartbeatTickCallback(void);  // Plugin: heartbeat
-void emberAfOtaServerTick(void);  // Plugin: ota-server
 
 void emAfTick(void)
 {
@@ -33,17 +32,6 @@ void emAfTick(void)
   emberAfTick();  // Global
   emberAfPluginGatewayTickCallback();  // Plugin: gateway
   emberAfPluginHeartbeatTickCallback();  // Plugin: heartbeat
-  emberAfOtaServerTick();  // Plugin: ota-server
-}
-
-// Marker function declarations.
-void emberAfMarkBuffersCallback(void);  // Global
-void emberAfPluginNetworkSteeringMarker(void);  // Plugin: network-steering
-
-void emAfMarkBuffers(void)
-{
-  emberAfMarkBuffersCallback();  // Global
-  emberAfPluginNetworkSteeringMarker();  // Plugin: network-steering
 }
 
 void emAfResetAttributes(uint8_t endpointId)
@@ -66,24 +54,19 @@ bool emAfPreZDOMessageReceived(EmberNodeId emberNodeId,EmberApsFrame* apsFrame,u
   return emberAfPreZDOMessageReceivedCallback(emberNodeId, apsFrame, message, length);  // Global
 }
 
-// RetrieveAttributeAndCraftResponse function declarations.
-bool emAfPluginGreenPowerClientRetrieveAttributeAndCraftResponse(uint8_t endpoint, EmberAfClusterId clusterId, EmberAfAttributeId attrId, uint8_t mask, uint16_t maunfacturerCode, uint16_t readLength);  // Plugin: green-power-client
-
 bool emAfRetrieveAttributeAndCraftResponse(uint8_t endpoint, EmberAfClusterId clusterId, EmberAfAttributeId attrId, uint8_t mask, uint16_t maunfacturerCode, uint16_t readLength)
 {
-  return emAfPluginGreenPowerClientRetrieveAttributeAndCraftResponse(endpoint, clusterId, attrId, mask, maunfacturerCode, readLength);  // Plugin: green-power-client
+  return 0; // false
 }
 
 // ZigbeeKeyEstablishment function declarations.
 void emberAfZigbeeKeyEstablishmentCallback(EmberEUI64 partner, EmberKeyStatus status);  // Global
 void emberAfPluginNetworkCreatorSecurityZigbeeKeyEstablishmentCallback(EmberEUI64 partner, EmberKeyStatus status);  // Plugin: network-creator-security
-void emberAfPluginUpdateTcLinkKeyZigbeeKeyEstablishmentCallback(EmberEUI64 partner, EmberKeyStatus status);  // Plugin: update-tc-link-key
 
 void emAfZigbeeKeyEstablishment(EmberEUI64 partner, EmberKeyStatus status)
 {
   emberAfZigbeeKeyEstablishmentCallback(partner, status);  // Global
   emberAfPluginNetworkCreatorSecurityZigbeeKeyEstablishmentCallback(partner, status);  // Plugin: network-creator-security
-  emberAfPluginUpdateTcLinkKeyZigbeeKeyEstablishmentCallback(partner, status);  // Plugin: update-tc-link-key
 }
 
 // ReadAttributesResponse function declarations.

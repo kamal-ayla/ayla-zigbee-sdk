@@ -8,7 +8,7 @@
 
 
 // Attribute types for cluster: Basic
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_BASIC_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -39,7 +39,7 @@
 
 
 // Attribute types for cluster: Power Configuration
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_POWER_CONFIG_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -108,7 +108,7 @@
 
 
 // Attribute types for cluster: Device Temperature Configuration
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_DEVICE_TEMP_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -129,7 +129,7 @@
 
 
 // Attribute types for cluster: Identify
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_IDENTIFY_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -143,7 +143,7 @@
 
 
 // Attribute types for cluster: Groups
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_GROUPS_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -156,7 +156,7 @@
 
 
 // Attribute types for cluster: Scenes
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_SCENES_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -174,7 +174,7 @@
 
 
 // Attribute types for cluster: On/off
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_ON_OFF_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -195,7 +195,7 @@
 
 
 // Attribute types for cluster: On/off Switch Configuration
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_ON_OFF_SWITCH_CONFIG_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -209,7 +209,7 @@
 
 
 // Attribute types for cluster: Level Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_LEVEL_CONTROL_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -218,11 +218,6 @@
 // Server attributes
 #define ZCL_CURRENT_LEVEL_ATTRIBUTE_ID                                 0x0000 // Ver.: always
 #define ZCL_LEVEL_CONTROL_REMAINING_TIME_ATTRIBUTE_ID                  0x0001 // Ver.: always
-#define ZCL_LEVEL_CONTROL_MIN_LEVEL_ATTRIBUTE_ID                       0x0002 // Ver.: since zcl-7.0-07-5123-07
-#define ZCL_LEVEL_CONTROL_MAX_LEVEL_ATTRIBUTE_ID                       0x0003 // Ver.: since zcl-7.0-07-5123-07
-#define ZCL_LEVEL_CONTROL_CURRENT_FREQUENCY_ATTRIBUTE_ID               0x0004 // Ver.: since zcl-7.0-07-5123-07
-#define ZCL_LEVEL_CONTROL_MIN_FREQUENCY_ATTRIBUTE_ID                   0x0005 // Ver.: since zcl-7.0-07-5123-07
-#define ZCL_LEVEL_CONTROL_MAX_FREQUENCY_ATTRIBUTE_ID                   0x0006 // Ver.: since zcl-7.0-07-5123-07
 #define ZCL_OPTIONS_ATTRIBUTE_ID                                       0x000F // Ver.: since l&o-1.0-15-0014-04
 #define ZCL_ON_OFF_TRANSITION_TIME_ATTRIBUTE_ID                        0x0010 // Ver.: always
 #define ZCL_ON_LEVEL_ATTRIBUTE_ID                                      0x0011 // Ver.: always
@@ -235,7 +230,7 @@
 
 
 // Attribute types for cluster: Alarms
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_ALARM_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -248,7 +243,7 @@
 
 
 // Attribute types for cluster: Time
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_TIME_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -270,7 +265,7 @@
 
 
 // Attribute types for cluster: RSSI Location
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_RSSI_LOCATION_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -295,7 +290,7 @@
 
 
 // Attribute types for cluster: Binary Input (Basic)
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_BINARY_INPUT_BASIC_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -316,7 +311,7 @@
 
 
 // Attribute types for cluster: Commissioning
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_COMMISSIONING_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -352,7 +347,7 @@
 
 
 // Attribute types for cluster: Partition
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_PARTITION_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -374,7 +369,7 @@
 
 
 // Attribute types for cluster: Over the Air Bootloading
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_UPGRADE_SERVER_ID_ATTRIBUTE_ID                            0x0000 // Ver.: always
@@ -399,7 +394,7 @@
 
 
 // Attribute types for cluster: Power Profile
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_POWER_PROFILE_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -416,7 +411,7 @@
 
 
 // Attribute types for cluster: Appliance Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_APPLIANCE_CONTROL_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -431,7 +426,7 @@
 
 
 // Attribute types for cluster: Poll Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_POLL_CONTROL_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -498,7 +493,7 @@
 
 
 // Attribute types for cluster: Shade Configuration
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client attributes
 #define ZCL_SHADE_CONFIG_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -515,7 +510,7 @@
 
 
 // Attribute types for cluster: Door Lock
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client attributes
 #define ZCL_DOOR_LOCK_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -540,7 +535,6 @@
 #define ZCL_MIN_PIN_LENGTH_ATTRIBUTE_ID                            0x0018 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_MAX_RFID_CODE_LENGTH_ATTRIBUTE_ID                      0x0019 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_MIN_RFID_CODE_LENGTH_ATTRIBUTE_ID                      0x001A // Ver.: since ha-1.2-05-3520-29
-#define ZCL_NUM_BIOMETRIC_USERS_SUPPORTED_ATTRIBUTE_ID             0x001B // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
 #define ZCL_ENABLE_LOGGING_ATTRIBUTE_ID                            0x0020 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_LANGUAGE_ATTRIBUTE_ID                                  0x0021 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_LED_SETTINGS_ATTRIBUTE_ID                              0x0022 // Ver.: since ha-1.2-05-3520-29
@@ -566,14 +560,12 @@
 #define ZCL_KEYPAD_PROGRAMMING_EVENT_MASK_ATTRIBUTE_ID             0x0045 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_RF_PROGRAMMING_EVENT_MASK_ATTRIBUTE_ID                 0x0046 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_RFID_PROGRAMMING_EVENT_MASK_ATTRIBUTE_ID               0x0047 // Ver.: since ha-1.2-05-3520-29
-#define ZCL_BIOMETRIC_OPERATION_EVENT_MASK_ATTRIBUTE_ID            0x0048 // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_BIOMETRIC_PROGRAMMING_EVENT_MASK_ATTRIBUTE_ID          0x0049 // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
 #define ZCL_DOOR_LOCK_CLUSTER_CLUSTER_REVISION_SERVER_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
 #define ZCL_DOOR_LOCK_CLUSTER_REPORTING_STATUS_SERVER_ATTRIBUTE_ID 0xFFFE // Ver.: since zcl-6.0-15-02017-001
 
 
 // Attribute types for cluster: Window Covering
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client attributes
 #define ZCL_WINDOW_COVERING_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -605,7 +597,7 @@
 
 
 // Attribute types for cluster: Barrier Control
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client attributes
 #define ZCL_BARRIER_CONTROL_CLUSTER_CLUSTER_REVISION_CLIENT_ATTRIBUTE_ID 0xFFFD // Ver.: since zcl-6.0-15-02017-001
@@ -4236,7 +4228,7 @@
 
 
 // Attribute types for cluster: Key Establishment
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client attributes
 #define ZCL_KEY_ESTABLISHMENT_SUITE_CLIENT_ATTRIBUTE_ID                    0x0000 // Ver.: always

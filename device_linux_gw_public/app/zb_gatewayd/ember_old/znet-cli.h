@@ -458,11 +458,6 @@
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_NETWORK_NETWORK_INIT
 
-/** @brief <b>network isopen </b>
- *   - <i>Check if and for how long the network is open.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_NETWORK_NETWORK_ISOPEN
-
 /** @brief <b>network join [channel:1] [power:1] [panId:2] </b>
  *   - <i>Join an existing network on the given channel, power and panId.</i>
  *     - channel - INT8U - The channel on which to form the network
@@ -860,18 +855,6 @@
 
 /** @} */ // end group zdo
 
-/** @addtogroup basic Cluster Commands: Basic
- * @ingroup cli
- * This group describes the CLI commands for the Basic cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes for determining basic
- * information about a device, setting user device information such as location,
- * and enabling a device.</i>
- * 
- * @{
- */
-
-/** @} */ // end group basic
-
 /** @addtogroup color-control Cluster Commands: Color Control
  * @ingroup cli
  * This group describes the CLI commands for the Color Control cluster. Listed
@@ -883,28 +866,16 @@
 
 /** @} */ // end group color-control
 
-/** @addtogroup configuration-cluster Cluster Commands: Configuration Cluster
+/** @addtogroup ias-ace Cluster Commands: IAS ACE
  * @ingroup cli
- * This group describes the CLI commands for the Configuration Cluster cluster.
- * Listed below is a description of the cluster:<br><br><i> This cluster allows
- * for the OTA configuration of firmware
-	  parameters.</i>
+ * This group describes the CLI commands for the IAS ACE cluster. Listed below
+ * is a description of the cluster:<br><br><i> Attributes and commands for IAS
+ * Ancillary Control Equipment.</i>
  * 
  * @{
  */
 
-/** @} */ // end group configuration-cluster
-
-/** @addtogroup groups Cluster Commands: Groups
- * @ingroup cli
- * This group describes the CLI commands for the Groups cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for group
- * configuration and manipulation.</i>
- * 
- * @{
- */
-
-/** @} */ // end group groups
+/** @} */ // end group ias-ace
 
 /** @addtogroup ias-zone Cluster Commands: IAS Zone
  * @ingroup cli
@@ -941,64 +912,19 @@
 
 /** @} */ // end group identify
 
-/** @addtogroup level-control Cluster Commands: Level Control
+/** @addtogroup power-profile Cluster Commands: Power Profile
  * @ingroup cli
- * This group describes the CLI commands for the Level Control cluster. Listed
- * below is a description of the cluster:<br><br><i> Attributes and commands for
- * controlling devices that can be set to a level between fully 'On' and fully
- * 'Off.'</i>
+ * This group describes the CLI commands for the Power Profile cluster. Listed
+ * below is a description of the cluster:<br><br><i> This cluster provides an
+ * interface for transferring power profile information from a device (e.g.
+ * Whitegood) to a controller (e.g. the Home Gateway).  The Power Profile
+ * transferred can be solicited by client side (request command) or can be
+ * notified directly from the device (server side).</i>
  * 
  * @{
  */
 
-/** @} */ // end group level-control
-
-/** @addtogroup mfglib-cluster Cluster Commands: MFGLIB Cluster
- * @ingroup cli
- * This group describes the CLI commands for the MFGLIB Cluster cluster. Listed
- * below is a description of the cluster:<br><br><i> This cluster provides
- * commands to kick off MFGLIB actions 
-	  over the air.</i>
- * 
- * @{
- */
-
-/** @} */ // end group mfglib-cluster
-
-/** @addtogroup on-off Cluster Commands: On/off
- * @ingroup cli
- * This group describes the CLI commands for the On/off cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for
- * switching devices between 'On' and 'Off' states.</i>
- * 
- * @{
- */
-
-/** @} */ // end group on-off
-
-/** @addtogroup poll-control Cluster Commands: Poll Control
- * @ingroup cli
- * This group describes the CLI commands for the Poll Control cluster. Listed
- * below is a description of the cluster:<br><br><i> This cluster provides a
- * mechanism for the management of an end device's MAC Data Poll rate.  For the
- * purposes of this cluster, the term "poll" always refers to the sending of a
- * MAC Data Poll from the end device to the end device's parent.</i>
- * 
- * @{
- */
-
-/** @} */ // end group poll-control
-
-/** @addtogroup scenes Cluster Commands: Scenes
- * @ingroup cli
- * This group describes the CLI commands for the Scenes cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for scene
- * configuration and manipulation.</i>
- * 
- * @{
- */
-
-/** @} */ // end group scenes
+/** @} */ // end group power-profile
 
 /** @addtogroup simple-metering Cluster Commands: Simple Metering
  * @ingroup cli
@@ -1011,6 +937,17 @@
  */
 
 /** @} */ // end group simple-metering
+
+/** @addtogroup thermostat Cluster Commands: Thermostat
+ * @ingroup cli
+ * This group describes the CLI commands for the Thermostat cluster. Listed
+ * below is a description of the cluster:<br><br><i> An interface for
+ * configuring and controlling the functionality of a thermostat.</i>
+ * 
+ * @{
+ */
+
+/** @} */ // end group thermostat
 
 /** @addtogroup plugin-address-table Plugin Commands: Address Table
  * @ingroup cli
@@ -1147,30 +1084,72 @@
 
 /** @} */ // end group plugin-counters
 
-/** @addtogroup plugin-ezmode-commissioning Plugin Commands: EZ-Mode Commissioning
+/** @addtogroup plugin-device-database Plugin Commands: Device Database
  * @ingroup cli
- * The EZ-Mode Commissioning plugin contributes several commands to the
- * application framework's CLI.
+ * This plugin provides a set of CLI commands for printing and manipulating the
+ * device database.
  * 
  * @{
  */
 
-/** @brief <b>plugin ezmode-commissioning client [endpoint:1] [direction:1] [clusterIds:2] </b>
- *   - <i>Start EZ-Mode client commissioning.</i>
- *     - endpoint - INT8U - The local endpoint.
- *     - direction - INT8U - ::EMBER_AF_EZMODE_COMMISSIONING_SERVER_TO_CLIENT or ::EMBER_AF_EZMODE_COMMISSIONING_CLIENT_TO_SERVER.
- *     - clusterIds - INT16U - A list of cluster ids.
+/** @brief <b>plugin device-database device add-dummy [eui64:8] [endpoints:1] [clusters:2] </b>
+ *   - <i>Add a device with specified EUI64 and a sequential number of clusters and endpoints.</i>
+ *     - eui64 - IEEE_ADDRESS - The address of the dummy device to add.
+ *     - endpoints - INT8U - The number of dummy endpoints to add.
+ *     - clusters - INT16U - The number of dummy clusters to add.
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_EZMODE_COMMISSIONING_PLUGIN_EZMODE_COMMISSIONING_CLIENT
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_DEVICE_DATABASE_PLUGIN_DEVICE_DATABASE_DEVICE_ADD_DUMMY
 
-/** @brief <b>plugin ezmode-commissioning server [endpoint:1] [identifyTimeS:2] </b>
- *   - <i>Start EZ-Mode server commissioning.</i>
- *     - endpoint - INT8U - The local endpoint.
- *     - identifyTimeS - INT16U - The identify time in seconds.
+/** @brief <b>plugin device-database device erase [eui64:8] </b>
+ *   - <i>Erase the device with specified EUI64 from the database.</i>
+ *     - eui64 - IEEE_ADDRESS - The address of the device to erase from the database.
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_EZMODE_COMMISSIONING_PLUGIN_EZMODE_COMMISSIONING_SERVER
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_DEVICE_DATABASE_PLUGIN_DEVICE_DATABASE_DEVICE_ERASE
 
-/** @} */ // end group plugin-ezmode-commissioning
+/** @brief <b>plugin device-database device print [eui64:8] </b>
+ *   - <i>Print all the clusters and endpoints known about the specified device in the database.</i>
+ *     - eui64 - IEEE_ADDRESS - The address of the device to be looked up (little endian)
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_DEVICE_DATABASE_PLUGIN_DEVICE_DATABASE_DEVICE_PRINT
+
+/** @brief <b>plugin device-database print-all </b>
+ *   - <i>Print all devices in the database.</i>
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_DEVICE_DATABASE_PLUGIN_DEVICE_DATABASE_PRINT_ALL
+
+/** @} */ // end group plugin-device-database
+
+/** @addtogroup plugin-find-and-bind-initiator Plugin Commands: Find and Bind Initiator
+ * @ingroup cli
+ * Commands for the finding and binding initiator process from the Base Device
+ * Behavior spec.
+ * 
+ * @{
+ */
+
+/** @brief <b>plugin find-and-bind initiator [endpoint:1] </b>
+ *   - <i>Makes this node start the initiator part of the finding and binding process.</i>
+ *     - endpoint - INT8U - The endpoint on which to begin the Finding and Binding initiator process.
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_FIND_AND_BIND_INITIATOR_PLUGIN_FIND_AND_BIND_INITIATOR
+
+/** @} */ // end group plugin-find-and-bind-initiator
+
+/** @addtogroup plugin-find-and-bind-target Plugin Commands: Find and Bind Target
+ * @ingroup cli
+ * Commands for the finding and binding target process from the Base Device
+ * Behavior spec.
+ * 
+ * @{
+ */
+
+/** @brief <b>plugin find-and-bind target [endpoint:1] </b>
+ *   - <i>Makes this node start identifying as a target for binding with an initiator node.</i>
+ *     - endpoint - INT8U - The endpoint on which to begin the Finding and Binding target process.
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_FIND_AND_BIND_TARGET_PLUGIN_FIND_AND_BIND_TARGET
+
+/** @} */ // end group plugin-find-and-bind-target
 
 /** @addtogroup plugin-gateway Plugin Commands: Gateway Support
  * @ingroup cli
@@ -1186,78 +1165,6 @@
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GATEWAY_PLUGIN_GATEWAY_TIME_SYNC_LOCAL
 
 /** @} */ // end group plugin-gateway
-
-/** @addtogroup plugin-green-power-client Plugin Commands: Green Power Client
- * @ingroup cli
- * The Green Power Client plugin contributes CLI commands to the application
- * framework to be used for getting, setting, and displaying information
- * relevant to the Green Power Client cluster.
- * 
- * @{
- */
-
-/** @brief <b>plugin green-power-client add-group-sink [sourceID:4] [sinkGroup:2] </b>
- *   - <i>Add a groupcast sink for a given GPD</i>
- *     - sourceID - INT32U - GPD Source ID
- *     - sinkGroup - INT16U - Sink group
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_ADD_GROUP_SINK
-
-/** @brief <b>plugin green-power-client add-sink [sourceID:4] [sinkIeee:8] </b>
- *   - <i>Add a sink for a given GPD</i>
- *     - sourceID - INT32U - GPD Source ID
- *     - sinkIeee - IEEE_ADDRESS - Sink's IEEE address
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_ADD_SINK
-
-/** @brief <b>plugin green-power-client clear-proxy-table </b>
- *   - <i>clear the proxy table</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_CLEAR_PROXY_TABLE
-
-/** @brief <b>plugin green-power-client duplicate-filter-test [endpoint:1] [sourceId:4] [sequenceNumber:1] </b>
- *   - <i>This is used to instrument the current device receiving a message in order to test the duplicate message filtering functionality.</i>
- *     - endpoint - INT8U
- *     - sourceId - INT32U - source Id of the fake incoming message
- *     - sequenceNumber - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_DUPLICATE_FILTER_TEST
-
-/** @brief <b>plugin green-power-client print-proxy-table </b>
- *   - <i>Print the proxy table</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_PRINT_PROXY_TABLE
-
-/** @brief <b>plugin green-power-client rm-gpd [sourceID:4] </b>
- *   - <i>Remove a given GPD from the proxy table</i>
- *     - sourceID - INT32U - GPD Source ID
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_RM_GPD
-
-/** @brief <b>plugin green-power-client rm-sink [sourceID:4] [sinkIeee:8] </b>
- *   - <i>remove a sink for a given GPD.  If that's the last sink, remove the proxy table entry</i>
- *     - sourceID - INT32U - GPD Source ID
- *     - sinkIeee - IEEE_ADDRESS - Sink's IEEE address
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_RM_SINK
-
-/** @brief <b>plugin green-power-client set-key [index:1] [key:16] </b>
- *   - <i>This is used to set the key for a proxy table entry</i>
- *     - index - INT8U
- *     - key - SECURITY_KEY - source Id of the fake incoming message
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_SET_KEY
-
-/** @brief <b>plugin green-power-client set-proxy-entry [index:1] [sourceID:4] [sinkNodeId:2] [options:4] </b>
- *   - <i>Set a proxy table entry</i>
- *     - index - INT8U - index to proxy table
- *     - sourceID - INT32U - GPD Source ID
- *     - sinkNodeId - INT16U - Sink's node address
- *     - options - INT32U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_GREEN_POWER_CLIENT_PLUGIN_GREEN_POWER_CLIENT_SET_PROXY_ENTRY
-
-/** @} */ // end group plugin-green-power-client
 
 /** @addtogroup plugin-ias-zone-client Plugin Commands: IAS Zone Client
  * @ingroup cli
@@ -1293,6 +1200,41 @@
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_IDENTIFY_PLUGIN_IDENTIFY_PRINT
 
 /** @} */ // end group plugin-identify
+
+/** @addtogroup plugin-interpan Plugin Commands: Interpan
+ * @ingroup cli
+ * The Interpan commands provide commands to set global interpan state and test
+ * interpan fragmentation.
+ * 
+ * @{
+ */
+
+/** @brief <b>plugin interpan disable </b>
+ *   - <i>Disables inter-PAN globally.</i>
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_INTERPAN_PLUGIN_INTERPAN_DISABLE
+
+/** @brief <b>plugin interpan enable </b>
+ *   - <i>Enables inter-PAN globally.</i>
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_INTERPAN_PLUGIN_INTERPAN_ENABLE
+
+/** @brief <b>plugin interpan fragment-test [panId:2] [eui64:8] [clusterId:2] [msgLen:2] </b>
+ *   - <i>Sends a message of specified length of random values to target device over inter-PAN.</i>
+ *     - panId - INT16U - The PAN ID that the target is located on
+ *     - eui64 - IEEE_ADDRESS - The target's EUI64 (big endian)
+ *     - clusterId - INT16U - The cluster ID that the sample message should contain
+ *     - msgLen - INT16U - The length of the randomly-filled message to be sent across inter-PAN
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_INTERPAN_PLUGIN_INTERPAN_FRAGMENT_TEST
+
+/** @brief <b>plugin interpan set-msg-timeout [timeout:1] </b>
+ *   - <i>Sets the timeout for inter-PAN messages sent and received.</i>
+ *     - timeout - INT8U - Message timeout in seconds.
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_INTERPAN_PLUGIN_INTERPAN_SET_MSG_TIMEOUT
+
+/** @} */ // end group plugin-interpan
 
 /** @addtogroup plugin-network-creator Plugin Commands: Network Creator
  * @ingroup cli
@@ -1362,7 +1304,7 @@
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_CREATOR_SECURITY_PLUGIN_NETWORK_CREATOR_SECURITY_CLEAR_JOINING_LINK_KEYS
 
 /** @brief <b>plugin network-creator-security close-network </b>
- *   - <i>Close the network for joining. Rejoins are permitted.</i>
+ *   - <i>Close the network for joining.</i>
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_CREATOR_SECURITY_PLUGIN_NETWORK_CREATOR_SECURITY_CLOSE_NETWORK
 
@@ -1393,698 +1335,29 @@
 
 /** @} */ // end group plugin-network-creator-security
 
-/** @addtogroup plugin-network-steering Plugin Commands: Network Steering
+/** @addtogroup plugin-price-common Plugin Commands: Price Common
  * @ingroup cli
- * The Network Steering plugin commands are currently being used for the Profile
- * Interop event.
+ * Utility functions common to both Price Client / Server.
  * 
  * @{
  */
 
-/** @brief <b>plugin network-steering mask add [whichMask:1] [channel:1] </b>
- *   - <i>Adds a channel to either the primary or secondary channel mask of the network-steering plugin.</i>
- *     - whichMask - INT8U - The channel mask to add a channel to.
- *     - channel - INT8U - The channel to add to the mask.
+/** @brief <b>plugin price-common adj-st-t [startTimeUtc:4] [durationType:1] </b>
+ *   - <i>Calculates a new UTC start time value based on the duration type parameter.</i>
+ *     - startTimeUtc - INT32U
+ *     - durationType - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_MASK_ADD
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_PRICE_COMMON_PLUGIN_PRICE_COMMON_ADJ_ST_T
 
-/** @brief <b>plugin network-steering mask set [whichMask:1] [mask:4] </b>
- *   - <i>Set either the primary or secondary channel mask.</i>
- *     - whichMask - INT8U - The channel mask to subtract the channel from.
- *     - mask - INT32U - The value to set the channel mask to.
+/** @brief <b>plugin price-common cnvrt-durn-to-sec [startTimeUtc:4] [duration:4] [durationType:1] </b>
+ *   - <i>Converts the duration to a number of seconds based on the duration type parameter.</i>
+ *     - startTimeUtc - INT32U
+ *     - duration - INT32U
+ *     - durationType - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_MASK_SET
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_PRICE_COMMON_PLUGIN_PRICE_COMMON_CNVRT_DURN_TO_SEC
 
-/** @brief <b>plugin network-steering mask subtract [whichMask:1] [channel:1] </b>
- *   - <i>Subtracts a channel from either the primary or secondary channel mask of the network-steering plugin.</i>
- *     - whichMask - INT8U - The channel mask to subtract the channel from.
- *     - channel - INT8U - The channel to subtract the mask from.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_MASK_SUBTRACT
-
-/** @brief <b>plugin network-steering pre-configured-key-set [preconfiguredkey:-1] </b>
- *   - <i>Set the pre-configured key</i>
- *     - preconfiguredkey - OCTET_STRING - Set the preconfigured key so that the joining device can enter the network.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_PRE_CONFIGURED_KEY_SET
-
-/** @brief <b>plugin network-steering start [options:1] </b>
- *   - <i>Starts the network steering process.</i>
- *     - options - INT8U - A mask of options for indicating specific behavior within the network-steering process.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_START
-
-/** @brief <b>plugin network-steering status </b>
- *   - <i>Displays the current status of the network steering process.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_STATUS
-
-/** @brief <b>plugin network-steering stop </b>
- *   - <i>Stops the network steering process.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_NETWORK_STEERING_PLUGIN_NETWORK_STEERING_STOP
-
-/** @} */ // end group plugin-network-steering
-
-/** @addtogroup plugin-ota-server Plugin Commands: OTA Server
- * @ingroup cli
- * The OTA Server plugin provides Over-the-air commands for upgrading firmware
- * and downloading specific files on the server side.
- * 
- * @{
- */
-
-/** @brief <b>plugin ota-server load-file [fileName:-1] </b>
- *   - <i>Load file.</i>
- *     - fileName - OCTET_STRING - The file name.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_LOAD_FILE
-
-/** @brief <b>plugin ota-server notify [destination:2] [endpoint:1] [payloadType:1] [jitter:1] [manuf-id:2] [imageTypeId:2] [version:4] </b>
- *   - <i>Sends an OTA Image Notify message to the specified destination indicating a new version of an image is available for download.</i>
- *     - destination - INT16U - The node ID (can be a broadcast address) to which this OTA Notify message should be sent
- *     - endpoint - INT8U - Target endpoint for the OTA Notify message (only really meaningful for non-broadcast target destination).
- *     - payloadType - INT8U - Used to specify which parameters you want included in the OTA Notify cluster command payload (0 = jitter value only; 1 = jitter and manufacturer id; 2 = jitter, mfr id, and device id; 3 = jitter, mfr id, device id, and firmware version)
- *     - jitter - INT8U - Corresponds to QueryJitter parameter in the OTA Upgrade cluster specification. The parameter indicates whether the client receiving Image Notify Command should send in Query Next Image Request command or not.
- *     - manuf-id - INT16U - Manufacturer ID for the image being advertised (should match the mfr ID in the OTA file's header)
- *     - imageTypeId - INT16U - Image type ID for the image being advertised (should match the image type ID from the OTA file's header)
- *     - version - INT32U - Firmware version of the image being advertised (should match the version from the OTA file's header)
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_NOTIFY
-
-/** @brief <b>plugin ota-server policy block-request [policyValue:1] </b>
- *   - <i>Sets the policy used by the ota-server Policy Plugin when it receives an image block request.</i>
- *     - policyValue - INT8U - 0: Send block (default), 1: Delay download once for 2 minutes, 2: Always abort download after first block
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_BLOCK_REQUEST
-
-/** @brief <b>plugin ota-server policy client-delay-units [clientDelayUnits:1] </b>
- *   - <i>For testing, force the server to treat the Minimum Block Period in a certain unit (see ota-server-policy.h for values).</i>
- *     - clientDelayUnits - INT8U - The unit to treat the minimum block period field.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_CLIENT_DELAY_UNITS
-
-/** @brief <b>plugin ota-server policy image-req-min-period [period:2] </b>
- *   - <i></i>
- *     - period - INT16U - The minimum block period in milliseconds.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_IMAGE_REQ_MIN_PERIOD
-
-/** @brief <b>plugin ota-server policy page-req-miss [modulus:1] </b>
- *   - <i>Sets the modulus number of blocks to not respond to. This is used in testing to simulate a device that fails to receive certain blocks from an Image Page Request message.</i>
- *     - modulus - INT8U - The block modulus number to skip sending when responding to an Image Page Request. E.g. if 2, every other block will not be sent. 0 turns the feature off.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_PAGE_REQ_MISS
-
-/** @brief <b>plugin ota-server policy page-req-sup [pageRequestSupported:1] </b>
- *   - <i>Sets whether the Page Request feature is supported or not.</i>
- *     - pageRequestSupported - INT8U - 1 if Page Request is supported, 0 if unsupported
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_PAGE_REQ_SUP
-
-/** @brief <b>plugin ota-server policy print </b>
- *   - <i>Prints the polices used by the OTA Server Policy Plugin</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_PRINT
-
-/** @brief <b>plugin ota-server policy query [policyValue:1] </b>
- *   - <i>Sets the policy used by the OTA Server Policy Plugin when it receives a query request from the client.</i>
- *     - policyValue - INT8U - 0: Upgrade if server has newer (default), 1: Downgrade if server has older, 2:       Reinstall if server has same, 3: No next version (no next image is available for download)
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_QUERY
-
-/** @brief <b>plugin ota-server policy upgrade [policyValue:1] </b>
- *   - <i>Sets the policy used by the OTA Server Policy Plugin when it receives an upgrade end request</i>
- *     - policyValue - INT8U - 0: Upgrade Now (default), 1: Upgrade in 2       minutes, 2: Ask me later to upgrade, 3: Abort Upgrade (send default response)
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_POLICY_UPGRADE
-
-/** @brief <b>plugin ota-server upgrade [nodeId:2] [endpoint:1] [mfrId:2] [imageType:2] [fileVersion:4] </b>
- *   - <i>Instruct a device to upgrade now.</i>
- *     - nodeId - INT16U - Short destination to send message
- *     - endpoint - INT8U - Endpoint destination to send message
- *     - mfrId - INT16U - Manufacturer ID for the image (0xFFFF for wildcard)
- *     - imageType - INT16U - Image type for the image (0xFFFF for wildcard)
- *     - fileVersion - INT32U - File version for the image (0xFFFFFFFF for wildcard)
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_SERVER_PLUGIN_OTA_SERVER_UPGRADE
-
-/** @} */ // end group plugin-ota-server
-
-/** @addtogroup plugin-ota-storage-common Plugin Commands: OTA Storage Common
- * @ingroup cli
- * The OTA Storage Common plugin provides Over-the-air commands for upgrading
- * firmware and 
-      downloading specific files common to both server and
- * client.
- * 
- * @{
- */
-
-/** @brief <b>plugin ota-storage-common data-print [index:1] [offset:4] </b>
- *   - <i>Print arbitray bytes of the OTA image on disk.</i>
- *     - index - INT8U - The index of the image to print its data.
- *     - offset - INT32U - The offset into the OTA image that will be printed.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_STORAGE_COMMON_PLUGIN_OTA_STORAGE_COMMON_DATA_PRINT
-
-/** @brief <b>plugin ota-storage-common delete [index:1] </b>
- *   - <i>Deletes the image at the specified index.</i>
- *     - index - INT8U - The index at which to begin bootloading the image
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_STORAGE_COMMON_PLUGIN_OTA_STORAGE_COMMON_DELETE
-
-/** @brief <b>plugin ota-storage-common printImages </b>
- *   - <i>Prints the images.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_STORAGE_COMMON_PLUGIN_OTA_STORAGE_COMMON_PRINT_IMAGES
-
-/** @brief <b>plugin ota-storage-common reload </b>
- *   - <i>Reload the storage device.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_STORAGE_COMMON_PLUGIN_OTA_STORAGE_COMMON_RELOAD
-
-/** @brief <b>plugin ota-storage-common storage-info </b>
- *   - <i>Print information about the storage device.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_OTA_STORAGE_COMMON_PLUGIN_OTA_STORAGE_COMMON_STORAGE_INFO
-
-/** @} */ // end group plugin-ota-storage-common
-
-/** @addtogroup plugin-poll-control-client Plugin Commands: Poll Control Client
- * @ingroup cli
- * The poll-control-client plugin contributes CLI commands to the application
- * framework to be used for setting poll control parameters in a local, client
- * context.
- * 
- * @{
- */
-
-/** @brief <b>plugin poll-control-client mode [mode:1] </b>
- *   - <i>Set the fast polling mode.</i>
- *     - mode - BOOLEAN - The fast polling mode.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_POLL_CONTROL_CLIENT_PLUGIN_POLL_CONTROL_CLIENT_MODE
-
-/** @brief <b>plugin poll-control-client print </b>
- *   - <i>Print the fast polling mode and timeout.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_POLL_CONTROL_CLIENT_PLUGIN_POLL_CONTROL_CLIENT_PRINT
-
-/** @brief <b>plugin poll-control-client respond [mode:1] </b>
- *   - <i>Set the response mode.</i>
- *     - mode - BOOLEAN - The response mode.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_POLL_CONTROL_CLIENT_PLUGIN_POLL_CONTROL_CLIENT_RESPOND
-
-/** @brief <b>plugin poll-control-client timeout [timeout:2] </b>
- *   - <i>Set the fast polling timeout.</i>
- *     - timeout - INT16U - The fast polling timeout.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_POLL_CONTROL_CLIENT_PLUGIN_POLL_CONTROL_CLIENT_TIMEOUT
-
-/** @} */ // end group plugin-poll-control-client
-
-/** @addtogroup plugin-reporting Plugin Commands: Reporting
- * @ingroup cli
- * The reporting plugin contributes several CLI commands to the application
- * framework to be used in creating and managing reporting table entries
- * directly on the device.
- * 
- * @{
- */
-
-/** @brief <b>plugin reporting add [endpoint:1] [clusterId:2] [attributeId:2] [mask:1] [minInterval:2] [maxInterval:2] [reportableChange:4] </b>
- *   - <i>Add a new entry to the report table.</i>
- *     - endpoint - INT8U - The local endpoint from which the attribute is reported.
- *     - clusterId - INT16U - The cluster where the attribute is located.
- *     - attributeId - INT16U - The id of the attribute being reported.
- *     - mask - INT8U - 0 for client-side attributes or 1 for server-side attributes.
- *     - minInterval - INT16U - The minimum reporting interval, measured in seconds.
- *     - maxInterval - INT16U - The maximum reporting interval, measured in seconds.
- *     - reportableChange - INT32U - The minimum change to the attribute that will result in a report being sent.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_ADD
-
-/** @brief <b>plugin reporting clear </b>
- *   - <i>Clear all entries from the report table.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_CLEAR
-
-/** @brief <b>plugin reporting clear-last-report-time </b>
- *   - <i>Clear last report time of attributes.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_CLEAR_LAST_REPORT_TIME
-
-/** @brief <b>plugin reporting print </b>
- *   - <i>Print the report table.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_PRINT
-
-/** @brief <b>plugin reporting remove [index:1] </b>
- *   - <i>Remove an entry from the report table.</i>
- *     - index - INT8U - The index of the report to be removed.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_REMOVE
-
-/** @brief <b>plugin reporting test-timing </b>
- *   - <i>FOR TESTING PURPOSES - gather timing metrics for reporting table operations</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_REPORTING_PLUGIN_REPORTING_TEST_TIMING
-
-/** @} */ // end group plugin-reporting
-
-/** @addtogroup plugin-simple-metering-client Plugin Commands: Simple Metering Client
- * @ingroup cli
- * The simple-metering-client plugin contributes CLI commands to the application
- * framework to be used in conjunction with the Simple Metering cluster in a
- * client context.
- * 
- * @{
- */
-
-/** @brief <b>plugin simple-metering-client get-sampled-data [server:2] [clientEndpoint:1] [serverEndpoint:1] [sampleId:2] [startTime:4] [sampleType:1] [numberOfSamples:2] </b>
- *   - <i>Send a start sampling command to a metering server.</i>
- *     - server - INT16U - The network address of the server to which the request will be sent.
- *     - clientEndpoint - INT8U - The local endpoint from which the request will be sent.
- *     - serverEndpoint - INT8U - The remote endpoint to which the request will be sent.
- *     - sampleId - INT16U - The sample id as received in a previous startSamplingResponse
- *     - startTime - INT32U - The earliest start time sampling
- *     - sampleType - INT8U - An 8 bit enumeration that identifies the required type of sampled data
- *     - numberOfSamples - INT16U - The total number of samples.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_SIMPLE_METERING_CLIENT_PLUGIN_SIMPLE_METERING_CLIENT_GET_SAMPLED_DATA
-
-/** @brief <b>plugin simple-metering-client local-change-supply [server:2] [clientEndpoint:1] [serverEndpoint:1] [proposedSupplyStatus:1] </b>
- *   - <i>Send a start sampling command to a metering server.</i>
- *     - server - INT16U - The network address of the server to which the request will be sent.
- *     - clientEndpoint - INT8U - The local endpoint from which the request will be sent.
- *     - serverEndpoint - INT8U - The remote endpoint to which the request will be sent.
- *     - proposedSupplyStatus - INT8U - The proposed supply status: either ON(2) or OFF/ARMED(1)
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_SIMPLE_METERING_CLIENT_PLUGIN_SIMPLE_METERING_CLIENT_LOCAL_CHANGE_SUPPLY
-
-/** @brief <b>plugin simple-metering-client sch-snapshot [server:2] [clientEndpoint:1] [serverEndpoint:1] [issuerId:4] [commandIndex:1] [numberofCommands:1] [snapshotScheduleId:1] [snapshotStartDate:4] [snapshotSchedule:4] [snapshotType:1] [snapshotCause:4] </b>
- *   - <i>Schedule a snapshot.</i>
- *     - server - INT16U - The network address of the server to which the request will be sent.
- *     - clientEndpoint - INT8U - The local endpoint from which the request will be sent.
- *     - serverEndpoint - INT8U - The remote endpoint to which the request will be sent.
- *     - issuerId - INT32U - The issuerId.
- *     - commandIndex - INT8U - The commandIndex.
- *     - numberofCommands - INT8U - The total number of commands
- *     - snapshotScheduleId - INT8U - The snapshot schedule Id.
- *     - snapshotStartDate - INT32U - The start time.
- *     - snapshotSchedule - INT32U - The snapshot schedule. 3 bytes
- *     - snapshotType - INT8U - The snapshot Type.
- *     - snapshotCause - INT32U - The snapshot schedule cause.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_SIMPLE_METERING_CLIENT_PLUGIN_SIMPLE_METERING_CLIENT_SCH_SNAPSHOT
-
-/** @brief <b>plugin simple-metering-client start-sampling [server:2] [clientEndpoint:1] [serverEndpoint:1] [issuerId:4] [startTime:4] [sampleType:1] [SampleRequestInterval:2] [maxNumberOfSamples:2] </b>
- *   - <i>Send a start sampling command to a metering server.</i>
- *     - server - INT16U - The network address of the server to which the request will be sent.
- *     - clientEndpoint - INT8U - The local endpoint from which the request will be sent.
- *     - serverEndpoint - INT8U - The remote endpoint to which the request will be sent.
- *     - issuerId - INT32U - The issuerId.
- *     - startTime - INT32U - The time to start sampling
- *     - sampleType - INT8U - An 8 bit enumeration that identifies the type of data being sampled
- *     - SampleRequestInterval - INT16U - An unsigned 16-bit field representing the interval or time in seconds between samples.
- *     - maxNumberOfSamples - INT16U - A 16 bit unsigned integer that represents the number of samples to be taken.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_SIMPLE_METERING_CLIENT_PLUGIN_SIMPLE_METERING_CLIENT_START_SAMPLING
-
-/** @} */ // end group plugin-simple-metering-client
-
-/** @addtogroup plugin-stack-diagnostics Plugin Commands: Stack Diagnostics
- * @ingroup cli
- * These commands give more information about the status of the status of the
- * stack, such as routing tables, neighbor tables, and child tables.
- * 
- * @{
- */
-
-/** @brief <b>plugin stack-diagnostics child-table </b>
- *   - <i>Prints out the entries in the stack's child table.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_STACK_DIAGNOSTICS_PLUGIN_STACK_DIAGNOSTICS_CHILD_TABLE
-
-/** @brief <b>plugin stack-diagnostics info </b>
- *   - <i>Prints out general information about the state of the stack.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_STACK_DIAGNOSTICS_PLUGIN_STACK_DIAGNOSTICS_INFO
-
-/** @brief <b>plugin stack-diagnostics neighbor-table </b>
- *   - <i>Prints out the entries in the stack's neighbor table.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_STACK_DIAGNOSTICS_PLUGIN_STACK_DIAGNOSTICS_NEIGHBOR_TABLE
-
-/** @brief <b>plugin stack-diagnostics route-table </b>
- *   - <i>Prints out the entries in the stack's route table.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_STACK_DIAGNOSTICS_PLUGIN_STACK_DIAGNOSTICS_ROUTE_TABLE
-
-/** @} */ // end group plugin-stack-diagnostics
-
-/** @addtogroup plugin-test-harness Plugin Commands: Test Harness
- * @ingroup cli
- * The test harness commands are used to test various unusual functionality or
- * behavior of a remote device.
- * 
- * @{
- */
-
-/** @brief <b>plugin test-harness add-child [ShortId:2] [EUI:-1] [nodeType:1] </b>
- *   - <i>Adds a child to the child table.</i>
- *     - ShortId - INT16U - The shortId of the child device.
- *     - EUI - OCTET_STRING - The EUI64 of the child (big endian).
- *     - nodeType - INT8U - The node type of the child device.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ADD_CHILD
-
-/** @brief <b>plugin test-harness aps-sec-for-cluster off </b>
- *   - <i>Turns off automatic APS security for the previously specified cluster.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_APS_SEC_FOR_CLUSTER_OFF
-
-/** @brief <b>plugin test-harness aps-sec-for-cluster on [clusterId:2] </b>
- *   - <i>Turns on automatic APS security for the specified cluster.</i>
- *     - clusterId - INT16U - The cluster ID to add APS security to automatically.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_APS_SEC_FOR_CLUSTER_ON
-
-/** @brief <b>plugin test-harness attr options [type:1] [timeout:2] </b>
- *   - <i>Set the options for the attributes tests.</i>
- *     - type - INT8U
- *     - timeout - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ATTR_OPTIONS
-
-/** @brief <b>plugin test-harness attr set-dest [addr:2] [endpoint:1] </b>
- *   - <i>Set the destination for the attributes tests.</i>
- *     - addr - INT16U
- *     - endpoint - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ATTR_SET_DEST
-
-/** @brief <b>plugin test-harness attr start-test [clusterId:2] [attrStartId:2] [attrEndId:2] [clientToServer:1] </b>
- *   - <i>Start the attributes test.</i>
- *     - clusterId - INT16U
- *     - attrStartId - INT16U
- *     - attrEndId - INT16U
- *     - clientToServer - BOOLEAN
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ATTR_START_TEST
-
-/** @brief <b>plugin test-harness channel-mask add [channel:1] </b>
- *   - <i>Add a channel to the mask</i>
- *     - channel - INT8U - The 802.15.4 chanel to add.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CHANNEL_MASK_ADD
-
-/** @brief <b>plugin test-harness channel-mask all </b>
- *   - <i>Sets the channel mask to all channels</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CHANNEL_MASK_ALL
-
-/** @brief <b>plugin test-harness channel-mask clear </b>
- *   - <i>Clears the channel mask used by network find.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CHANNEL_MASK_CLEAR
-
-/** @brief <b>plugin test-harness channel-mask remove [channel:1] </b>
- *   - <i>Remove a channel from the mask</i>
- *     - channel - INT8U - The 802.15.4 chanel to remove.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CHANNEL_MASK_REMOVE
-
-/** @brief <b>plugin test-harness channel-mask reset </b>
- *   - <i>Resets the channel mask back to the app default.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CHANNEL_MASK_RESET
-
-/** @brief <b>plugin test-harness concentrator start </b>
- *   - <i>Starts the concentrator's periodic broadcasts.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CONCENTRATOR_START
-
-/** @brief <b>plugin test-harness concentrator stop </b>
- *   - <i>Starts the concentrator's periodic broadcasts.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_CONCENTRATOR_STOP
-
-/** @brief <b>plugin test-harness endpoint cluster-endpoint-index [endpoint:1] [clusterId:2] [mask:1] </b>
- *   - <i>Get cluster endpoint index</i>
- *     - endpoint - INT8U - The local endpoint of the cluster.
- *     - clusterId - INT16U - The cluster whose index is needed.
- *     - mask - INT8U - 0 for client-side attributes or 1 for server-side attributes.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ENDPOINT_CLUSTER_ENDPOINT_INDEX
-
-/** @brief <b>plugin test-harness endpoint disable [endpoint:1] </b>
- *   - <i>Disables the endpont to receive messages and be discovered</i>
- *     - endpoint - INT8U - The endpoint number.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ENDPOINT_DISABLE
-
-/** @brief <b>plugin test-harness endpoint enable [endpoint:1] </b>
- *   - <i>Enables the endpont to receive messages and be discovered</i>
- *     - endpoint - INT8U - The endpoint number.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ENDPOINT_ENABLE
-
-/** @brief <b>plugin test-harness endpoint status </b>
- *   - <i>Disables the endpont to receive messages and be discovered</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_ENDPOINT_STATUS
-
-/** @brief <b>plugin test-harness hash-the-flash </b>
- *   - <i>Runs the AES-CCM algorithm over the contents of the software image to calcalute the image stamp.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_HASH_THE_FLASH
-
-/** @brief <b>plugin test-harness key-establishment adv-aps-fc </b>
- *   - <i>Advances the local device's outgoing APS FC by 4096.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_ADV_APS_FC
-
-/** @brief <b>plugin test-harness key-establishment cert-mangle change-byte [byteIndex:1] [byteValue:1] </b>
- *   - <i>Changes a single byte in the cert</i>
- *     - byteIndex - INT8U - The index of the certificate byte to change
- *     - byteValue - INT8U - The new value of the certificate byte
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_CERT_MANGLE_CHANGE_BYTE
-
-/** @brief <b>plugin test-harness key-establishment cert-mangle corrupt [corruptionIndex:1] </b>
- *   - <i>Corrupts a single byte in the cert</i>
- *     - corruptionIndex - INT8U - The index of the certificate byte to corrupt
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_CERT_MANGLE_CORRUPT
-
-/** @brief <b>plugin test-harness key-establishment cert-mangle issuer [issuer:-1] </b>
- *   - <i>Changes the issuer in the certificate.</i>
- *     - issuer - OCTET_STRING - The EUI64 of the issuer (big endian).
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_CERT_MANGLE_ISSUER
-
-/** @brief <b>plugin test-harness key-establishment cert-mangle length [lengthModifier:1] </b>
- *   - <i>Mangles the length of the certificate</i>
- *     - lengthModifier - INT8S - The positive or negative change in length.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_CERT_MANGLE_LENGTH
-
-/** @brief <b>plugin test-harness key-establishment cert-mangle subject [subject:-1] </b>
- *   - <i>Changes the subject (EUI64) of the cert</i>
- *     - subject - OCTET_STRING - The EUI64 of the subject (big endian).
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_CERT_MANGLE_SUBJECT
-
-/** @brief <b>plugin test-harness key-establishment default-resp </b>
- *   - <i>Sends a default response error message in response to initate KE.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_DEFAULT_RESP
-
-/** @brief <b>plugin test-harness key-establishment delay-cbke [actualDelay:2] [advertisedDelay:2] </b>
- *   - <i>Changes the advertised delays by the local device for CBKE.</i>
- *     - actualDelay - INT16U - Set the actual delay that occurs.
- *     - advertisedDelay - INT16U - Sets the advertised delay sent to the partner of key establishment
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_DELAY_CBKE
-
-/** @brief <b>plugin test-harness key-establishment key-mangle [lengthModifier:1] </b>
- *   - <i>Mangles the length of the empheral key.</i>
- *     - lengthModifier - INT8S - The positive or negative change in length.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_KEY_MANGLE
-
-/** @brief <b>plugin test-harness key-establishment new-key-policy [allowKeyEstablishmentPolicy:1] </b>
- *   - <i>Sets the policy of whether the TC allows new KE requests.</i>
- *     - allowKeyEstablishmentPolicy - INT8U - Allows / disallows new key establishment requests.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_NEW_KEY_POLICY
-
-/** @brief <b>plugin test-harness key-establishment no-resources </b>
- *   - <i>All received KE requests will be responded with 'no resources'.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_NO_RESOURCES
-
-/** @brief <b>plugin test-harness key-establishment normal-mode </b>
- *   - <i>Sets the key establishment mode to normal.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_NORMAL_MODE
-
-/** @brief <b>plugin test-harness key-establishment out-of-sequence [commandId:1] </b>
- *   - <i>All received KE requests will be responded with 'no resources'.</i>
- *     - commandId - INT8U - The out-of-sequence command ID to send.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_OUT_OF_SEQUENCE
-
-/** @brief <b>plugin test-harness key-establishment reset-aps-fc </b>
- *   - <i>Forces the local device to reset its outgoing APS FC.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_RESET_APS_FC
-
-/** @brief <b>plugin test-harness key-establishment set-available-suite [suite:2] </b>
- *   - <i>Selects between the CBKE 163k1 and 283k1 suites.</i>
- *     - suite - INT16U - This field holds the type        of key establishment suite. It can be EMBER_AF_CBKE_KEY_ESTABLISHMENT_SUITE_163K1,        EMBER_AF_CBKE_KEY_ESTABLISHMENT_SUITE_283K1, or        EMBER_AF_INVALID_KEY_ESTABLISHMENT_SUITE
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_SET_AVAILABLE_SUITE
-
-/** @brief <b>plugin test-harness key-establishment suite [suite:2] </b>
- *   - <i>Selects between the CBKE 163k1 and 283k1 suites.</i>
- *     - suite - INT16U - This field holds the type        of key establishment suite. It can be EMBER_AF_CBKE_KEY_ESTABLISHMENT_SUITE_163K1,        EMBER_AF_CBKE_KEY_ESTABLISHMENT_SUITE_283K1, or        EMBER_AF_INVALID_KEY_ESTABLISHMENT_SUITE
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_SUITE
-
-/** @brief <b>plugin test-harness key-establishment timeout </b>
- *   - <i>Artificially creates a timeout by delaying an outgoing message.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_ESTABLISHMENT_TIMEOUT
-
-/** @brief <b>plugin test-harness key-update broadcast </b>
- *   - <i>Changes TC NWK key update mechanism to broadcast.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_UPDATE_BROADCAST
-
-/** @brief <b>plugin test-harness key-update now </b>
- *   - <i>Starts a TC NWK key update now</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_UPDATE_NOW
-
-/** @brief <b>plugin test-harness key-update unicast </b>
- *   - <i>Changes TC NWK key update mechanism to unicast with APS security.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_KEY_UPDATE_UNICAST
-
-/** @brief <b>plugin test-harness ota image-mangle [index:2] </b>
- *   - <i>Mangles the Simple Storage RAM OTA image.</i>
- *     - index - INT16U - The byte index into the OTA image that will be mangled.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_OTA_IMAGE_MANGLE
-
-/** @brief <b>plugin test-harness price send-new-fields [sendNewFields:1] </b>
- *   - <i>Controls whether the new SE 1.1 price fields are included.</i>
- *     - sendNewFields - INT8U - Boolean indicating whether to send new fields.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_PRICE_SEND_NEW_FIELDS
-
-/** @brief <b>plugin test-harness price send-se10-fields [sendNewFields:1] </b>
- *   - <i>Controls whether the new SE 1.1 price fields are included.</i>
- *     - sendNewFields - INT8U - Boolean indicating whether to send new fields.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_PRICE_SEND_SE10_FIELDS
-
-/** @brief <b>plugin test-harness radio off </b>
- *   - <i>Turns off the radio so that no messages are sent.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_RADIO_OFF
-
-/** @brief <b>plugin test-harness radio on </b>
- *   - <i>Turns on the radio if it was previously turned off</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_RADIO_ON
-
-/** @brief <b>plugin test-harness registration off </b>
- *   - <i>Turns off automatic SE registration.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_REGISTRATION_OFF
-
-/** @brief <b>plugin test-harness registration on </b>
- *   - <i>Turns on automatic SE registration.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_REGISTRATION_ON
-
-/** @brief <b>plugin test-harness set-compliance-revision [version:1] </b>
- *   - <i>Setting a compliance revision for a device such that the device can act as pre-R21 or R21+ for testing purposes. The reason for doing this is because the end device may send a node descriptor request and the hub will respond with the node descriptor response which will include the hub's compliance revision. If the compliance revision of the hub is R21+, only then will the TC link key request be made by the end device.</i>
- *     - version - INT8U - The compliance version
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_SET_COMPLIANCE_REVISION
-
-/** @brief <b>plugin test-harness set-max-children [maxChildren:1] </b>
- *   - <i>Sets the maximum children supported by the local node.</i>
- *     - maxChildren - INT8U - The maximum number of children to support
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_SET_MAX_CHILDREN
-
-/** @brief <b>plugin test-harness set-neighbor-table-size [neighborTableSize:1] </b>
- *   - <i>Sets the neighbor table size on the local node. Caution: This function does not cause memory to be allocated toward the neighbor table, therefore, the set value needs to be under the compile time size (1,16,26 - depending on EMBER_NEIGHBOR_TABLE_SIZE)</i>
- *     - neighborTableSize - INT8U - The neighbor table size on the node
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_SET_NEIGHBOR_TABLE_SIZE
-
-/** @brief <b>plugin test-harness set-radio-power [power:1] </b>
- *   - <i>Sets the radio power.</i>
- *     - power - INT8U - The radio power to set.
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_SET_RADIO_POWER
-
-/** @brief <b>plugin test-harness stack limit-beacons off </b>
- *   - <i>Disables a limit to the max number of outgoing beacons.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_STACK_LIMIT_BEACONS_OFF
-
-/** @brief <b>plugin test-harness stack limit-beacons on </b>
- *   - <i>Enables a limit to the max number of outgoing beacons.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_STACK_LIMIT_BEACONS_ON
-
-/** @brief <b>plugin test-harness status </b>
- *   - <i>Display the current status of the test harness.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_STATUS
-
-/** @brief <b>plugin test-harness tc-keepalive send </b>
- *   - <i>Sends a Trust Center Keepalive.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_TC_KEEPALIVE_SEND
-
-/** @brief <b>plugin test-harness tc-keepalive start </b>
- *   - <i>Starts the TC keepalive state machine.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_TC_KEEPALIVE_START
-
-/** @brief <b>plugin test-harness tc-keepalive stop </b>
- *   - <i>Stops the TC keepalive state machine.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_TEST_HARNESS_PLUGIN_TEST_HARNESS_TC_KEEPALIVE_STOP
-
-/** @} */ // end group plugin-test-harness
-
-/** @addtogroup plugin-update-tc-link-key Plugin Commands: Update TC Link Key
- * @ingroup cli
- * The update trust center link key commands are used to manipulate the behavior
- * of the joining device to attempt the trust center link key updates in a
- * certain fashion.
- * 
- * @{
- */
-
-/** @brief <b>plugin update-tc-link-key timer [timeInMilliseconds:4] </b>
- *   - <i>This sets the the amount of time between subsequent trust center link key updates in milliseconds.</i>
- *     - timeInMilliseconds - INT32U - The amount of time between subsequent trust center link key updates in milliseconds
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_PLUGIN_UPDATE_TC_LINK_KEY_PLUGIN_UPDATE_TC_LINK_KEY_TIMER
-
-/** @} */ // end group plugin-update-tc-link-key
+/** @} */ // end group plugin-price-common
 
 /** @addtogroup attribute Attribute Management
  * @ingroup cli
@@ -2185,37 +1458,6 @@
  */
 
 /** @} */ // end group zdo
-
-/** @addtogroup basic Cluster Commands: Basic
- * @ingroup cli
- * This group describes the CLI commands for the Basic cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes for determining basic
- * information about a device, setting user device information such as location,
- * and enabling a device.</i>
- * 
- * @{
- */
-
-/** @brief <b>zcl basic rtfd </b>
- *   - <i>Command that resets all attribute values to factory default.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_BASIC_RTFD
-
-/** @brief <b>zcl basic gls [startLocale:-1] [maxLocalesRequested:1] </b>
- *   - <i>This command gets locales supported.</i>
- *     - startLocale - CHAR_STRING
- *     - maxLocalesRequested - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_BASIC_GLS
-
-/** @brief <b>zcl basic glsr [discoveryComplete:1] [localeSupported:-1] </b>
- *   - <i>The locales supported response command is sent in response to a get locales supported command, and is used to discover which locales the device supports.</i>
- *     - discoveryComplete - INT8U
- *     - localeSupported - CHAR_STRING
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_BASIC_GLSR
-
-/** @} */ // end group basic
 
 /** @addtogroup color-control Cluster Commands: Color Control
  * @ingroup cli
@@ -2341,60 +1583,50 @@
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_COLOR_CONTROL_MOVETOCOLORTEMP
 
-/** @brief <b>zcl color-control emovetohue [enhancedHue:2] [direction:1] [transitionTime:2] [optionsMask:1] [optionsOverride:1] </b>
+/** @brief <b>zcl color-control emovetohue [enhancedHue:2] [direction:1] [transitionTime:2] </b>
  *   - <i>Command description for EnhancedMoveToHue</i>
  *     - enhancedHue - INT16U
  *     - direction - HueDirection [ENUM8]
  *     - transitionTime - INT16U
- *     - optionsMask - BITMAP8
- *     - optionsOverride - BITMAP8
  * @sa 
  * EmberAfHueDirection
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_COLOR_CONTROL_EMOVETOHUE
 
-/** @brief <b>zcl color-control emovehue [moveMode:1] [rate:2] [optionsMask:1] [optionsOverride:1] </b>
+/** @brief <b>zcl color-control emovehue [moveMode:1] [rate:2] </b>
  *   - <i>Command description for EnhancedMoveHue</i>
  *     - moveMode - HueMoveMode [ENUM8]
  *     - rate - INT16U
- *     - optionsMask - BITMAP8
- *     - optionsOverride - BITMAP8
  * @sa 
  * EmberAfHueMoveMode
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_COLOR_CONTROL_EMOVEHUE
 
-/** @brief <b>zcl color-control estephue [stepMode:1] [stepSize:2] [transitionTime:2] [optionsMask:1] [optionsOverride:1] </b>
+/** @brief <b>zcl color-control estephue [stepMode:1] [stepSize:2] [transitionTime:2] </b>
  *   - <i>Command description for EnhancedStepHue</i>
  *     - stepMode - HueStepMode [ENUM8]
  *     - stepSize - INT16U
  *     - transitionTime - INT16U
- *     - optionsMask - BITMAP8
- *     - optionsOverride - BITMAP8
  * @sa 
  * EmberAfHueStepMode
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_COLOR_CONTROL_ESTEPHUE
 
-/** @brief <b>zcl color-control emovetohueandsat [enhancedHue:2] [saturation:1] [transitionTime:2] [optionsMask:1] [optionsOverride:1] </b>
+/** @brief <b>zcl color-control emovetohueandsat [enhancedHue:2] [saturation:1] [transitionTime:2] </b>
  *   - <i>Command description for EnhancedMoveToHueAndSaturation</i>
  *     - enhancedHue - INT16U
  *     - saturation - INT8U
  *     - transitionTime - INT16U
- *     - optionsMask - BITMAP8
- *     - optionsOverride - BITMAP8
  */
 #define EMBER_AF_DOXYGEN_CLI_COMMAND_COLOR_CONTROL_EMOVETOHUEANDSAT
 
-/** @brief <b>zcl color-control loop [updateFlags:1] [action:1] [direction:1] [time:2] [startHue:2] [optionsMask:1] [optionsOverride:1] </b>
+/** @brief <b>zcl color-control loop [updateFlags:1] [action:1] [direction:1] [time:2] [startHue:2] </b>
  *   - <i>Command description for ColorLoopSet</i>
  *     - updateFlags - ColorLoopUpdateFlags [BITMAP8]
  *     - action - ColorLoopAction [ENUM8]
  *     - direction - ColorLoopDirection [ENUM8]
  *     - time - INT16U
  *     - startHue - INT16U
- *     - optionsMask - BITMAP8
- *     - optionsOverride - BITMAP8
  * @sa 
  * EmberAfColorLoopAction
  * EmberAfColorLoopDirection
@@ -2437,90 +1669,60 @@
 
 /** @} */ // end group color-control
 
-/** @addtogroup configuration-cluster Cluster Commands: Configuration Cluster
+/** @addtogroup ias-ace Cluster Commands: IAS ACE
  * @ingroup cli
- * This group describes the CLI commands for the Configuration Cluster cluster.
- * Listed below is a description of the cluster:<br><br><i> This cluster allows
- * for the OTA configuration of firmware
-	  parameters.</i>
+ * This group describes the CLI commands for the IAS ACE cluster. Listed below
+ * is a description of the cluster:<br><br><i> Attributes and commands for IAS
+ * Ancillary Control Equipment.</i>
  * 
  * @{
  */
 
-/** @brief <b>zcl ota-config setToken [token:2] [data:-1] </b>
- *   - <i>Command to write a token value over the air.</i>
- *     - token - INT16U
- *     - data - OCTET_STRING
+/** @brief <b>zcl ias-ace a [armMode:1] [armDisarmCode:-1] [zoneId:1] </b>
+ *   - <i>Command description for Arm</i>
+ *     - armMode - IasAceArmMode [ENUM8]
+ *     - armDisarmCode - CHAR_STRING
+ *     - zoneId - INT8U
+ * @sa 
+ * EmberAfIasAceArmMode
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_CONFIGURATION_CLUSTER_SET_TOKEN
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_A
 
-/** @brief <b>zcl ota-config lock </b>
- *   - <i>Command to lock the token values.</i>
+/** @brief <b>zcl ias-ace b [numberOfZones:1] [zoneIds:1] [armDisarmCode:-1] </b>
+ *   - <i>Command description for Bypass</i>
+ *     - numberOfZones - INT8U
+ *     - zoneIds - INT8U
+ *     - armDisarmCode - CHAR_STRING
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_CONFIGURATION_CLUSTER_LOCK
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_B
 
-/** @brief <b>zcl ota-config read [token:2] </b>
- *   - <i>Command to read a token value.</i>
- *     - token - INT16U
+/** @brief <b>zcl ias-ace e </b>
+ *   - <i>Command description for Emergency</i>
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_CONFIGURATION_CLUSTER_READ
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_E
 
-/** @brief <b>zcl ota-config unlock [data:-1] </b>
- *   - <i>Command to unlock tokens with a device-specific password (if allowed).</i>
- *     - data - OCTET_STRING
+/** @brief <b>zcl ias-ace f </b>
+ *   - <i>Command description for Fire</i>
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_CONFIGURATION_CLUSTER_UNLOCK
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_F
 
-/** @} */ // end group configuration-cluster
-
-/** @addtogroup groups Cluster Commands: Groups
- * @ingroup cli
- * This group describes the CLI commands for the Groups cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for group
- * configuration and manipulation.</i>
- * 
- * @{
+/** @brief <b>zcl ias-ace p </b>
+ *   - <i>Command description for Panic</i>
  */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_P
 
-/** @brief <b>zcl groups add [groupId:2] [groupName:-1] </b>
- *   - <i>Command description for AddGroup</i>
- *     - groupId - INT16U
- *     - groupName - CHAR_STRING
+/** @brief <b>zcl ias-ace getzm </b>
+ *   - <i>Command description for GetZoneIdMap</i>
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_ADD
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_GETZM
 
-/** @brief <b>zcl groups view [groupId:2] </b>
- *   - <i>Command description for ViewGroup</i>
- *     - groupId - INT16U
+/** @brief <b>zcl ias-ace getzi [zoneId:1] </b>
+ *   - <i>Command description for GetZoneInformation</i>
+ *     - zoneId - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_VIEW
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_IAS_ACE_GETZI
 
-/** @brief <b>zcl groups get [groupCount:1] [groupList:2] </b>
- *   - <i>Command description for GetGroupMembership</i>
- *     - groupCount - INT8U
- *     - groupList - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_GET
-
-/** @brief <b>zcl groups remove [groupId:2] </b>
- *   - <i>Command description for RemoveGroup</i>
- *     - groupId - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_REMOVE
-
-/** @brief <b>zcl groups rmall </b>
- *   - <i>Command description for RemoveAllGroups</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_RMALL
-
-/** @brief <b>zcl groups add-if-id [groupId:2] [groupName:-1] </b>
- *   - <i>Command description for AddGroupIfIdentifying</i>
- *     - groupId - INT16U
- *     - groupName - CHAR_STRING
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_GROUPS_ADD_IF_ID
-
-/** @} */ // end group groups
+/** @} */ // end group ias-ace
 
 /** @addtogroup ias-zone Cluster Commands: IAS Zone
  * @ingroup cli
@@ -2589,296 +1791,50 @@
 
 /** @} */ // end group identify
 
-/** @addtogroup level-control Cluster Commands: Level Control
+/** @addtogroup power-profile Cluster Commands: Power Profile
  * @ingroup cli
- * This group describes the CLI commands for the Level Control cluster. Listed
- * below is a description of the cluster:<br><br><i> Attributes and commands for
- * controlling devices that can be set to a level between fully 'On' and fully
- * 'Off.'</i>
+ * This group describes the CLI commands for the Power Profile cluster. Listed
+ * below is a description of the cluster:<br><br><i> This cluster provides an
+ * interface for transferring power profile information from a device (e.g.
+ * Whitegood) to a controller (e.g. the Home Gateway).  The Power Profile
+ * transferred can be solicited by client side (request command) or can be
+ * notified directly from the device (server side).</i>
  * 
  * @{
  */
 
-/** @brief <b>zcl level-control mv-to-level [level:1] [transitionTime:2] [optionMask:1] [optionOverride:1] </b>
- *   - <i>Command description for MoveToLevel</i>
- *     - level - INT8U
- *     - transitionTime - INT16U
- *     - optionMask - BITMAP8
- *     - optionOverride - BITMAP8
+/** @brief <b>zcl power-profile profile [powerProfileId:1] </b>
+ *   - <i>The PowerProfileRequest Command is generated by a device supporting the client side of the Power Profile cluster in order to request the Power Profile of a server device.</i>
+ *     - powerProfileId - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_MV_TO_LEVEL
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_POWER_PROFILE_PROFILE
 
-/** @brief <b>zcl level-control move [moveMode:1] [rate:1] [optionMask:1] [optionOverride:1] </b>
- *   - <i>Command description for Move</i>
- *     - moveMode - MoveMode [ENUM8]
- *     - rate - INT8U
- *     - optionMask - BITMAP8
- *     - optionOverride - BITMAP8
- * @sa 
- * EmberAfMoveMode
+/** @brief <b>zcl power-profile state </b>
+ *   - <i>The PowerProfileStateRequest Command is generated in order to retrieve the identifiers of current Power Profiles.</i>
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_MOVE
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_POWER_PROFILE_STATE
 
-/** @brief <b>zcl level-control step [stepMode:1] [stepSize:1] [transitionTime:2] [optionMask:1] [optionOverride:1] </b>
- *   - <i>Command description for Step</i>
- *     - stepMode - StepMode [ENUM8]
- *     - stepSize - INT8U
- *     - transitionTime - INT16U
- *     - optionMask - BITMAP8
- *     - optionOverride - BITMAP8
- * @sa 
- * EmberAfStepMode
+/** @brief <b>zcl power-profile energy-phases-schedule [powerProfileId:1] [numOfScheduledPhases:1] [scheduledPhases:3] </b>
+ *   - <i>The EnergyPhasesScheduleNotification Command is generated by a device supporting the client side of the Power Profile cluster in order to schedule the start of the selected Power Profile and its phases.</i>
+ *     - powerProfileId - INT8U
+ *     - numOfScheduledPhases - INT8U
+ *     - scheduledPhases - struct ScheduledPhase
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_STEP
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_POWER_PROFILE_ENERGY_PHASES_SCHEDULE
 
-/** @brief <b>zcl level-control stop [optionMask:1] [optionOverride:1] </b>
- *   - <i>Command description for Stop</i>
- *     - optionMask - BITMAP8
- *     - optionOverride - BITMAP8
+/** @brief <b>zcl power-profile schedule-constraints [powerProfileId:1] </b>
+ *   - <i>The PowerProfileScheduleConstraintsRequest Command is generated by a device supporting the client side of the Power Profile cluster in order to request the constraints -if set- of Power Profile of a client device, in order to set the proper boundaries for the scheduling when calculating the schedules.</i>
+ *     - powerProfileId - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_STOP
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_POWER_PROFILE_SCHEDULE_CONSTRAINTS
 
-/** @brief <b>zcl level-control o-mv-to-level [level:1] [transitionTime:2] </b>
- *   - <i>Command description for MoveToLevelWithOnOff</i>
- *     - level - INT8U
- *     - transitionTime - INT16U
+/** @brief <b>zcl power-profile energy-phases-schedule-states [powerProfileId:1] </b>
+ *   - <i>The EnergyPhasesScheduleStateRequest  Command is generated by a device supporting the client side of the Power Profile cluster to check the states of the scheduling of a power profile, which is supported in the device implementing the server side of Power Profile cluster.</i>
+ *     - powerProfileId - INT8U
  */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_O_MV_TO_LEVEL
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_POWER_PROFILE_ENERGY_PHASES_SCHEDULE_STATES
 
-/** @brief <b>zcl level-control o-move [moveMode:1] [rate:1] </b>
- *   - <i>Command description for MoveWithOnOff</i>
- *     - moveMode - MoveMode [ENUM8]
- *     - rate - INT8U
- * @sa 
- * EmberAfMoveMode
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_O_MOVE
-
-/** @brief <b>zcl level-control o-step [stepMode:1] [stepSize:1] [transitionTime:2] </b>
- *   - <i>Command description for StepWithOnOff</i>
- *     - stepMode - StepMode [ENUM8]
- *     - stepSize - INT8U
- *     - transitionTime - INT16U
- * @sa 
- * EmberAfStepMode
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_O_STEP
-
-/** @brief <b>zcl level-control o-stop </b>
- *   - <i>Command description for StopWithOnOff</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_O_STOP
-
-/** @brief <b>zcl level-control mv-to-closest-freq [frequency:2] </b>
- *   - <i>Command description for MoveToClosestFrequency</i>
- *     - frequency - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_LEVEL_CONTROL_MV_TO_CLOSEST_FREQ
-
-/** @} */ // end group level-control
-
-/** @addtogroup mfglib-cluster Cluster Commands: MFGLIB Cluster
- * @ingroup cli
- * This group describes the CLI commands for the MFGLIB Cluster cluster. Listed
- * below is a description of the cluster:<br><br><i> This cluster provides
- * commands to kick off MFGLIB actions 
-	  over the air.</i>
- * 
- * @{
- */
-
-/** @brief <b>zcl mfglib stream [channel:1] [power:1] [time:2] </b>
- *   - <i>Command to put the device into streaming mode.</i>
- *     - channel - INT8U
- *     - power - INT8S
- *     - time - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_M_F_G_L_I_B_CLUSTER_STREAM
-
-/** @brief <b>zcl mfglib tone [channel:1] [power:1] [time:2] </b>
- *   - <i>Command to put the device into tone mode.</i>
- *     - channel - INT8U
- *     - power - INT8S
- *     - time - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_M_F_G_L_I_B_CLUSTER_TONE
-
-/** @brief <b>zcl mfglib rx-mode [channel:1] [power:1] [time:2] </b>
- *   - <i>Command to put the device into RX mode.</i>
- *     - channel - INT8U
- *     - power - INT8S
- *     - time - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_M_F_G_L_I_B_CLUSTER_RX_MODE
-
-/** @} */ // end group mfglib-cluster
-
-/** @addtogroup on-off Cluster Commands: On/off
- * @ingroup cli
- * This group describes the CLI commands for the On/off cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for
- * switching devices between 'On' and 'Off' states.</i>
- * 
- * @{
- */
-
-/** @brief <b>zcl on-off off </b>
- *   - <i>Command description for Off</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_OFF
-
-/** @brief <b>zcl on-off on </b>
- *   - <i>Command description for On</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_ON
-
-/** @brief <b>zcl on-off toggle </b>
- *   - <i>Command description for Toggle</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_TOGGLE
-
-/** @brief <b>zcl on-off offeffect [effectId:1] [effectVariant:1] </b>
- *   - <i>Command description for OffWithEffect</i>
- *     - effectId - OnOffEffectIdentifier [ENUM8]
- *     - effectVariant - ENUM8
- * @sa 
- * EmberAfOnOffEffectIdentifier
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_OFFEFFECT
-
-/** @brief <b>zcl on-off onrecall </b>
- *   - <i>Command description for OnWithRecallGlobalScene</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_ONRECALL
-
-/** @brief <b>zcl on-off ontimedoff [onOffControl:1] [onTime:2] [offWaitTime:2] </b>
- *   - <i>Command description for OnWithTimedOff</i>
- *     - onOffControl - OnOffControl [BITMAP8]
- *     - onTime - INT16U
- *     - offWaitTime - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_ON/OFF_ONTIMEDOFF
-
-/** @} */ // end group on-off
-
-/** @addtogroup poll-control Cluster Commands: Poll Control
- * @ingroup cli
- * This group describes the CLI commands for the Poll Control cluster. Listed
- * below is a description of the cluster:<br><br><i> This cluster provides a
- * mechanism for the management of an end device's MAC Data Poll rate.  For the
- * purposes of this cluster, the term "poll" always refers to the sending of a
- * MAC Data Poll from the end device to the end device's parent.</i>
- * 
- * @{
- */
-
-/** @brief <b>zcl poll-control stop </b>
- *   - <i>The Fast Poll Stop command is used to stop the fast poll mode initiated by the Check-in response.</i>
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_POLL_CONTROL_STOP
-
-/** @brief <b>zcl poll-control long [newLongPollInterval:4] </b>
- *   - <i>The Set Long Poll Interval command is used to set the read only Long Poll Interval Attribute.</i>
- *     - newLongPollInterval - INT32U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_POLL_CONTROL_LONG
-
-/** @brief <b>zcl poll-control short [newShortPollInterval:2] </b>
- *   - <i>The Set Short Poll Interval command is used to set the read only Short Poll Interval Attribute.</i>
- *     - newShortPollInterval - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_POLL_CONTROL_SHORT
-
-/** @} */ // end group poll-control
-
-/** @addtogroup scenes Cluster Commands: Scenes
- * @ingroup cli
- * This group describes the CLI commands for the Scenes cluster. Listed below is
- * a description of the cluster:<br><br><i> Attributes and commands for scene
- * configuration and manipulation.</i>
- * 
- * @{
- */
-
-/** @brief <b>zcl scenes add [groupId:2] [sceneId:1] [transitionTime:2] [sceneName:-1] [extensionFieldSets:4] </b>
- *   - <i>Add a scene to the scene table. Extension field sets are supported, and are inputed as arrays of the form [[cluster ID] [length] [value0...n] ...]</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- *     - transitionTime - INT16U
- *     - sceneName - CHAR_STRING
- *     - extensionFieldSets - struct SceneExtensionFieldSet
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_ADD
-
-/** @brief <b>zcl scenes view [groupId:2] [sceneId:1] </b>
- *   - <i>Command description for ViewScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_VIEW
-
-/** @brief <b>zcl scenes remove [groupId:2] [sceneId:1] </b>
- *   - <i>Command description for RemoveScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_REMOVE
-
-/** @brief <b>zcl scenes rmall [groupId:2] </b>
- *   - <i>Command description for RemoveAllScenes</i>
- *     - groupId - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_RMALL
-
-/** @brief <b>zcl scenes store [groupId:2] [sceneId:1] </b>
- *   - <i>Command description for StoreScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_STORE
-
-/** @brief <b>zcl scenes recall [groupId:2] [sceneId:1] [transitionTime:2] </b>
- *   - <i>Command description for RecallScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- *     - transitionTime - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_RECALL
-
-/** @brief <b>zcl scenes get [groupId:2] </b>
- *   - <i>Command description for GetSceneMembership</i>
- *     - groupId - INT16U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_GET
-
-/** @brief <b>zcl scenes eadd [groupId:2] [sceneId:1] [transitionTime:2] [sceneName:-1] [extensionFieldSets:4] </b>
- *   - <i>Command description for EnhancedAddScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- *     - transitionTime - INT16U
- *     - sceneName - CHAR_STRING
- *     - extensionFieldSets - struct SceneExtensionFieldSet
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_EADD
-
-/** @brief <b>zcl scenes eview [groupId:2] [sceneId:1] </b>
- *   - <i>Command description for EnhancedViewScene</i>
- *     - groupId - INT16U
- *     - sceneId - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_EVIEW
-
-/** @brief <b>zcl scenes copy [mode:1] [groupIdFrom:2] [sceneIdFrom:1] [groupIdTo:2] [sceneIdTo:1] </b>
- *   - <i>Command description for CopyScene</i>
- *     - mode - ScenesCopyMode [BITMAP8]
- *     - groupIdFrom - INT16U
- *     - sceneIdFrom - INT8U
- *     - groupIdTo - INT16U
- *     - sceneIdTo - INT8U
- */
-#define EMBER_AF_DOXYGEN_CLI_COMMAND_SCENES_COPY
-
-/** @} */ // end group scenes
+/** @} */ // end group power-profile
 
 /** @addtogroup simple-metering Cluster Commands: Simple Metering
  * @ingroup cli
@@ -3115,6 +2071,52 @@
 
 /** @} */ // end group simple-metering
 
+/** @addtogroup thermostat Cluster Commands: Thermostat
+ * @ingroup cli
+ * This group describes the CLI commands for the Thermostat cluster. Listed
+ * below is a description of the cluster:<br><br><i> An interface for
+ * configuring and controlling the functionality of a thermostat.</i>
+ * 
+ * @{
+ */
+
+/** @brief <b>zcl tstat set [mode:1] [amount:1] </b>
+ *   - <i>Command description for SetpointRaiseLower</i>
+ *     - mode - SetpointAdjustMode [ENUM8]
+ *     - amount - INT8S
+ * @sa 
+ * EmberAfSetpointAdjustMode
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_THERMOSTAT_SET
+
+/** @brief <b>zcl tstat sws [numberOfTransitionsForSequence:1] [dayOfWeekForSequence:1] [modeForSequence:1] [payload:1] </b>
+ *   - <i>Command description for SetWeeklySchedule</i>
+ *     - numberOfTransitionsForSequence - ENUM8
+ *     - dayOfWeekForSequence - DayOfWeek [BITMAP8]
+ *     - modeForSequence - ModeForSequence [BITMAP8]
+ *     - payload - INT8U
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_THERMOSTAT_SWS
+
+/** @brief <b>zcl tstat gws [daysToReturn:1] [modeToReturn:1] </b>
+ *   - <i>Command description for GetWeeklySchedule</i>
+ *     - daysToReturn - DayOfWeek [BITMAP8]
+ *     - modeToReturn - ModeForSequence [BITMAP8]
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_THERMOSTAT_GWS
+
+/** @brief <b>zcl tstat cws </b>
+ *   - <i>The Clear Weekly Schedule command is used to clear the weekly schedule.</i>
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_THERMOSTAT_CWS
+
+/** @brief <b>zcl tstat grs </b>
+ *   - <i>The Get Relay Status Log command is used to query the thermostat internal relay status log.</i>
+ */
+#define EMBER_AF_DOXYGEN_CLI_COMMAND_THERMOSTAT_GRS
+
+/** @} */ // end group thermostat
+
 /** @addtogroup plugin-address-table Plugin Commands: Address Table
  * @ingroup cli
  * This plugin provides a set of APIs and CLI commands for managing the address
@@ -3145,15 +2147,35 @@
 
 /** @} */ // end group plugin-counters
 
-/** @addtogroup plugin-ezmode-commissioning Plugin Commands: EZ-Mode Commissioning
+/** @addtogroup plugin-device-database Plugin Commands: Device Database
  * @ingroup cli
- * The EZ-Mode Commissioning plugin contributes several commands to the
- * application framework's CLI.
+ * This plugin provides a set of CLI commands for printing and manipulating the
+ * device database.
  * 
  * @{
  */
 
-/** @} */ // end group plugin-ezmode-commissioning
+/** @} */ // end group plugin-device-database
+
+/** @addtogroup plugin-find-and-bind-initiator Plugin Commands: Find and Bind Initiator
+ * @ingroup cli
+ * Commands for the finding and binding initiator process from the Base Device
+ * Behavior spec.
+ * 
+ * @{
+ */
+
+/** @} */ // end group plugin-find-and-bind-initiator
+
+/** @addtogroup plugin-find-and-bind-target Plugin Commands: Find and Bind Target
+ * @ingroup cli
+ * Commands for the finding and binding target process from the Base Device
+ * Behavior spec.
+ * 
+ * @{
+ */
+
+/** @} */ // end group plugin-find-and-bind-target
 
 /** @addtogroup plugin-gateway Plugin Commands: Gateway Support
  * @ingroup cli
@@ -3164,17 +2186,6 @@
  */
 
 /** @} */ // end group plugin-gateway
-
-/** @addtogroup plugin-green-power-client Plugin Commands: Green Power Client
- * @ingroup cli
- * The Green Power Client plugin contributes CLI commands to the application
- * framework to be used for getting, setting, and displaying information
- * relevant to the Green Power Client cluster.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-green-power-client
 
 /** @addtogroup plugin-ias-zone-client Plugin Commands: IAS Zone Client
  * @ingroup cli
@@ -3196,6 +2207,16 @@
 
 /** @} */ // end group plugin-identify
 
+/** @addtogroup plugin-interpan Plugin Commands: Interpan
+ * @ingroup cli
+ * The Interpan commands provide commands to set global interpan state and test
+ * interpan fragmentation.
+ * 
+ * @{
+ */
+
+/** @} */ // end group plugin-interpan
+
 /** @addtogroup plugin-network-creator Plugin Commands: Network Creator
  * @ingroup cli
  * Commands pertaining to network creation with the Network Creator plugin.
@@ -3214,101 +2235,14 @@
 
 /** @} */ // end group plugin-network-creator-security
 
-/** @addtogroup plugin-network-steering Plugin Commands: Network Steering
+/** @addtogroup plugin-price-common Plugin Commands: Price Common
  * @ingroup cli
- * The Network Steering plugin commands are currently being used for the Profile
- * Interop event.
+ * Utility functions common to both Price Client / Server.
  * 
  * @{
  */
 
-/** @} */ // end group plugin-network-steering
-
-/** @addtogroup plugin-ota-server Plugin Commands: OTA Server
- * @ingroup cli
- * The OTA Server plugin provides Over-the-air commands for upgrading firmware
- * and downloading specific files on the server side.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-ota-server
-
-/** @addtogroup plugin-ota-storage-common Plugin Commands: OTA Storage Common
- * @ingroup cli
- * The OTA Storage Common plugin provides Over-the-air commands for upgrading
- * firmware and 
-      downloading specific files common to both server and
- * client.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-ota-storage-common
-
-/** @addtogroup plugin-poll-control-client Plugin Commands: Poll Control Client
- * @ingroup cli
- * The poll-control-client plugin contributes CLI commands to the application
- * framework to be used for setting poll control parameters in a local, client
- * context.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-poll-control-client
-
-/** @addtogroup plugin-reporting Plugin Commands: Reporting
- * @ingroup cli
- * The reporting plugin contributes several CLI commands to the application
- * framework to be used in creating and managing reporting table entries
- * directly on the device.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-reporting
-
-/** @addtogroup plugin-simple-metering-client Plugin Commands: Simple Metering Client
- * @ingroup cli
- * The simple-metering-client plugin contributes CLI commands to the application
- * framework to be used in conjunction with the Simple Metering cluster in a
- * client context.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-simple-metering-client
-
-/** @addtogroup plugin-stack-diagnostics Plugin Commands: Stack Diagnostics
- * @ingroup cli
- * These commands give more information about the status of the status of the
- * stack, such as routing tables, neighbor tables, and child tables.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-stack-diagnostics
-
-/** @addtogroup plugin-test-harness Plugin Commands: Test Harness
- * @ingroup cli
- * The test harness commands are used to test various unusual functionality or
- * behavior of a remote device.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-test-harness
-
-/** @addtogroup plugin-update-tc-link-key Plugin Commands: Update TC Link Key
- * @ingroup cli
- * The update trust center link key commands are used to manipulate the behavior
- * of the joining device to attempt the trust center link key updates in a
- * certain fashion.
- * 
- * @{
- */
-
-/** @} */ // end group plugin-update-tc-link-key
+/** @} */ // end group plugin-price-common
 
 
 /** @} END addtogroup */

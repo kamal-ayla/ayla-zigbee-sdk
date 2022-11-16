@@ -34,7 +34,7 @@
 #define ZCL_DISCOVER_ATTRIBUTES_EXTENDED_COMMAND_ID          0x15 // Ver.: always
 #define ZCL_DISCOVER_ATTRIBUTES_EXTENDED_RESPONSE_COMMAND_ID 0x16 // Ver.: always
 // Command types for cluster: Basic
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_GET_LOCALES_SUPPORTED_RESPONSE_COMMAND_ID 0x01 // Ver.: always
@@ -45,7 +45,7 @@
 
 
 // Command types for cluster: Identify
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_IDENTIFY_QUERY_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -59,7 +59,7 @@
 
 
 // Command types for cluster: Groups
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_ADD_GROUP_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -77,7 +77,7 @@
 
 
 // Command types for cluster: Scenes
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_ADD_SCENE_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -104,7 +104,7 @@
 
 
 // Command types for cluster: On/off
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client to server
 #define ZCL_OFF_COMMAND_ID 0x00 // Ver.: always
@@ -121,7 +121,7 @@
 
 
 // Command types for cluster: Level Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Client to server
 #define ZCL_MOVE_TO_LEVEL_COMMAND_ID 0x00 // Ver.: always
@@ -132,11 +132,10 @@
 #define ZCL_MOVE_WITH_ON_OFF_COMMAND_ID 0x05 // Ver.: always
 #define ZCL_STEP_WITH_ON_OFF_COMMAND_ID 0x06 // Ver.: always
 #define ZCL_STOP_WITH_ON_OFF_COMMAND_ID 0x07 // Ver.: always
-#define ZCL_MOVE_TO_CLOSEST_FREQUENCY_COMMAND_ID 0x08 // Ver.: since zcl-7.0-07-5123-07
 
 
 // Command types for cluster: Alarms
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_ALARM_COMMAND_ID 0x00 // Ver.: always
@@ -150,7 +149,7 @@
 
 
 // Command types for cluster: RSSI Location
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_DEVICE_CONFIGURATION_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -173,7 +172,7 @@
 
 
 // Command types for cluster: Commissioning
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_RESTART_DEVICE_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -189,7 +188,7 @@
 
 
 // Command types for cluster: Partition
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_MULTIPLE_ACK_COMMAND_ID 0x00 // Ver.: always
@@ -202,7 +201,7 @@
 
 
 // Command types for cluster: Over the Air Bootloading
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_IMAGE_NOTIFY_COMMAND_ID 0x00 // Ver.: always
@@ -220,7 +219,7 @@
 
 
 // Command types for cluster: Power Profile
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_POWER_PROFILE_NOTIFICATION_COMMAND_ID 0x00 // Ver.: always
@@ -249,7 +248,7 @@
 
 
 // Command types for cluster: Appliance Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_SIGNAL_STATE_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -265,7 +264,7 @@
 
 
 // Command types for cluster: Poll Control
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_CHECK_IN_COMMAND_ID 0x00 // Ver.: always
@@ -303,7 +302,7 @@
 
 
 // Command types for cluster: Door Lock
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Server to client
 #define ZCL_LOCK_DOOR_RESPONSE_COMMAND_ID 0x00 // Ver.: always
@@ -332,11 +331,6 @@
 #define ZCL_GET_RFID_RESPONSE_COMMAND_ID 0x17 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_CLEAR_RFID_RESPONSE_COMMAND_ID 0x18 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_CLEAR_ALL_RFIDS_RESPONSE_COMMAND_ID 0x19 // Ver.: since ha-1.2-05-3520-29
-#define ZCL_SET_DISPOSABLE_SCHEDULE_RESPONSE_COMMAND_ID 0x1A // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_GET_DISPOSABLE_SCHEDULE_RESPONSE_COMMAND_ID 0x1B // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_DISPOSABLE_SCHEDULE_RESPONSE_COMMAND_ID 0x1C // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_BIOMETRIC_CREDENTIAL_RESPONSE_COMMAND_ID 0x1D // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_ALL_BIOMETRIC_CREDENTIALS_RESPONSE_COMMAND_ID 0x1E // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
 #define ZCL_OPERATION_EVENT_NOTIFICATION_COMMAND_ID 0x20 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_PROGRAMMING_EVENT_NOTIFICATION_COMMAND_ID 0x21 // Ver.: since ha-1.2-05-3520-29
 
@@ -367,15 +361,10 @@
 #define ZCL_GET_RFID_COMMAND_ID 0x17 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_CLEAR_RFID_COMMAND_ID 0x18 // Ver.: since ha-1.2-05-3520-29
 #define ZCL_CLEAR_ALL_RFIDS_COMMAND_ID 0x19 // Ver.: since ha-1.2-05-3520-29
-#define ZCL_SET_DISPOSABLE_SCHEDULE_COMMAND_ID 0x1A // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_GET_DISPOSABLE_SCHEDULE_COMMAND_ID 0x1B // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_DISPOSABLE_SCHEDULE_COMMAND_ID 0x1C // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_BIOMETRIC_CREDENTIAL_COMMAND_ID 0x1D // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
-#define ZCL_CLEAR_ALL_BIOMETRIC_CREDENTIALS_COMMAND_ID 0x1E // Ver.: since zcl-nfr-20-52431-003-door-lock-20200611
 
 
 // Command types for cluster: Window Covering
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client to server
 #define ZCL_WINDOW_COVERING_UP_OPEN_COMMAND_ID 0x00 // Ver.: always
@@ -388,7 +377,7 @@
 
 
 // Command types for cluster: Barrier Control
-// Cluster specification level: zcl-nfr-20-52431-003-door-lock-20200611
+// Cluster specification level: zcl-6.0-15-02018-001
 
 // Client to server
 #define ZCL_BARRIER_CONTROL_GO_TO_PERCENT_COMMAND_ID 0x00 // Ver.: always
@@ -761,7 +750,7 @@
 
 
 // Command types for cluster: Key Establishment
-// Cluster specification level: zcl-8.0-07-5123-08
+// Cluster specification level: zcl-7.0-07-5123-07
 
 // Server to client
 #define ZCL_INITIATE_KEY_ESTABLISHMENT_RESPONSE_COMMAND_ID 0x00 // Ver.: always

@@ -16,11 +16,7 @@
 
 
 #include "app/framework/include/af-types.h"
-#include EMBER_AF_API_NETWORK_STEERING
-#include PLATFORM_HEADER
-#include "app/framework/plugin/ota-server-policy/ota-server-policy.h"
-#include "app/framework/include/af.h"
-#include "app/util/ezsp/ezsp-enum.h"
+#include "app/framework/util/util.h"    // emberAfGetPageFrom8bitEncodedChanPg()
 
 
 
@@ -335,9 +331,9 @@ EmberAfStatus emberAfExternalAttributeReadCallback(uint8_t endpoint,
  * useful for host micros which need to store attributes in persistent memory.
  * Because each host micro (used with an Ember NCP) has its own type of
  * persistent memory storage, the Application Framework does not include the
- * ability to mark attributes as stored in flash the way that it does for an SoC
- * architecture. On a host micro, any attributes that need to be stored in
- * persistent memory should be marked as external and accessed through the
+ * ability to mark attributes as stored in flash the way that it does for Ember
+ * SoCs like the EM35x. On a host micro, any attributes that need to be stored
+ * in persistent memory should be marked as external and accessed through the
  * external read and write callbacks. Any host code associated with the
  * persistent storage should be implemented within this callback.
         All of
@@ -603,12 +599,18 @@ void emberAfHalButtonIsrCallback(uint8_t button,
                                  uint8_t state);
 /** @brief Incoming Packet Filter
  *
- * NOTE: REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN. This is called by the
- * Packet Handoff plugin when the stack receives a packet from one of the
- * protocol layers specified in ::EmberZigbeePacketType. The packetType argument
- * is one of the values of the ::EmberZigbeePacketType enum. If the stack
- * receives an 802.15.4 MAC beacon, it will call this function with the
- * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON. The
+ * ** REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN **
+
+        This is called by
+ * the Packet Handoff plugin when the stack receives a packet from one of the
+ * protocol layers specified in ::EmberZigbeePacketType.
+
+        The packetType
+ * argument is one of the values of the ::EmberZigbeePacketType enum. If the
+ * stack receives an 802.15.4 MAC beacon, it will call this function with the
+ * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON.
+
+        The
  * implementation of this callback may alter the data contained in packetData,
  * modify options and flags in the auxillary data, or consume the packet itself,
  * either sending the message, or discarding it as it sees fit.
@@ -763,13 +765,6 @@ bool emberAfMainStartCallback(int* returnCode,
  *
  */
 void emberAfMainTickCallback(void);
-/** @brief Mark Buffers
- *
- * This function is called when the garbage collector runs.  Any buffers held by
- * the application must be marked.
- *
- */
-void emberAfMarkBuffersCallback(void);
 /** @brief Message Sent
  *
  * This function is called by the application framework from the message sent
@@ -932,7 +927,7 @@ void emberAfOtaClientVersionInfoCallback(EmberAfOtaImageId* currentImageInfo,
  * determine if it is allowed for an OTA client to make a page request.  It is
  * only called if page request support has been enabled on the server.  It
  * should return EMBER_ZCL_STATUS_SUCCESS if it allows the page request, and
- * EMBER_ZCL_STATUS_UNSUP_COMMAND if it does not want to allow it.
+ * EMBER_ZCL_STATUS_UNSUP_CLUSTER_COMMAND if it does not want to allow it.
  *
  */
 uint8_t emberAfOtaPageRequestServerPolicyCallback(void);
@@ -1242,15 +1237,21 @@ EmberAfOtaStorageStatus emberAfOtaStorageWriteTempDataCallback(uint32_t offset,
                                                                const uint8_t* data);
 /** @brief Outgoing Packet Filter
  *
- * NOTE: REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN. This is called by the
- * Packet Handoff plugin when the stack prepares to send a packet from one of
- * the protocol layers specified in ::EmberZigbeePacketType. The packetType
- * argument is one of the values of the ::EmberZigbeePacketType enum. If the
- * stack receives an 802.15.4 MAC beacon, it will call this function with the
- * packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON. The
- * implementation of this callback may alter the data contained in packetData,
- * modify options and flags in the auxillary data, or consume the packet itself,
- * either sending the message, or discarding it as it sees fit.
+ * ** REQUIRES INCLUDING THE PACKET-HANDOFF PLUGIN **
+
+        This is called by
+ * the Packet Handoff plugin when the stack prepares to send a packet from one
+ * of the protocol layers specified in ::EmberZigbeePacketType.
+
+        The
+ * packetType argument is one of the values of the ::EmberZigbeePacketType enum.
+ * If the stack receives an 802.15.4 MAC beacon, it will call this function with
+ * the packetType argument set to ::EMBER_ZIGBEE_PACKET_TYPE_BEACON.
+
+       
+ * The implementation of this callback may alter the data contained in
+ * packetData, modify options and flags in the auxillary data, or consume the
+ * packet itself, either sending the message, or discarding it as it sees fit.
  *
  * @param packetType the type of packet and associated protocol layer  Ver.:
  * always
@@ -3815,13 +3816,6 @@ bool emberAfLevelControlClusterMoveCallback(uint8_t moveMode,
                                                uint8_t rate,
                                                uint8_t optionMask,
                                                uint8_t optionOverride);
-/** @brief Level Control Cluster Move To Closest Frequency
- *
- * 
- *
- * @param frequency   Ver.: always
- */
-bool emberAfLevelControlClusterMoveToClosestFrequencyCallback(uint16_t frequency);
 /** @brief Level Control Cluster Move To Level
  *
  * 
@@ -7136,19 +7130,6 @@ void emberAfShadeConfigClusterServerTickCallback(uint8_t endpoint);
 /** @name Door Lock Cluster Callbacks */
 // @{
 
-/** @brief Door Lock Cluster Clear All Biometric Credentials
- *
- * 
- *
- */
-bool emberAfDoorLockClusterClearAllBiometricCredentialsCallback(void);
-/** @brief Door Lock Cluster Clear All Biometric Credentials Response
- *
- * 
- *
- * @param status   Ver.: always
- */
-bool emberAfDoorLockClusterClearAllBiometricCredentialsResponseCallback(uint8_t status);
 /** @brief Door Lock Cluster Clear All Pins
  *
  * 
@@ -7175,34 +7156,6 @@ bool emberAfDoorLockClusterClearAllRfidsCallback(void);
  * @param status   Ver.: always
  */
 bool emberAfDoorLockClusterClearAllRfidsResponseCallback(uint8_t status);
-/** @brief Door Lock Cluster Clear Biometric Credential
- *
- * 
- *
- * @param userId   Ver.: always
- */
-bool emberAfDoorLockClusterClearBiometricCredentialCallback(uint16_t userId);
-/** @brief Door Lock Cluster Clear Biometric Credential Response
- *
- * 
- *
- * @param status   Ver.: always
- */
-bool emberAfDoorLockClusterClearBiometricCredentialResponseCallback(uint8_t status);
-/** @brief Door Lock Cluster Clear Disposable Schedule
- *
- * 
- *
- * @param userId   Ver.: always
- */
-bool emberAfDoorLockClusterClearDisposableScheduleCallback(uint16_t userId);
-/** @brief Door Lock Cluster Clear Disposable Schedule Response
- *
- * 
- *
- * @param status   Ver.: always
- */
-bool emberAfDoorLockClusterClearDisposableScheduleResponseCallback(uint8_t status);
 /** @brief Door Lock Cluster Clear Holiday Schedule
  *
  * 
@@ -7357,26 +7310,6 @@ EmberAfStatus emberAfDoorLockClusterClientPreAttributeChangedCallback(uint8_t en
  * @param endpoint Endpoint that is being served  Ver.: always
  */
 void emberAfDoorLockClusterClientTickCallback(uint8_t endpoint);
-/** @brief Door Lock Cluster Get Disposable Schedule
- *
- * 
- *
- * @param userId   Ver.: always
- */
-bool emberAfDoorLockClusterGetDisposableScheduleCallback(uint16_t userId);
-/** @brief Door Lock Cluster Get Disposable Schedule Response
- *
- * 
- *
- * @param userId   Ver.: always
- * @param status   Ver.: always
- * @param localStartTime   Ver.: always
- * @param localEndTime   Ver.: always
- */
-bool emberAfDoorLockClusterGetDisposableScheduleResponseCallback(uint16_t userId,
-                                                                    uint8_t status,
-                                                                    uint32_t localStartTime,
-                                                                    uint32_t localEndTime);
 /** @brief Door Lock Cluster Get Holiday Schedule
  *
  * 
@@ -7683,24 +7616,6 @@ EmberAfStatus emberAfDoorLockClusterServerPreAttributeChangedCallback(uint8_t en
  * @param endpoint Endpoint that is being served  Ver.: always
  */
 void emberAfDoorLockClusterServerTickCallback(uint8_t endpoint);
-/** @brief Door Lock Cluster Set Disposable Schedule
- *
- * 
- *
- * @param userId   Ver.: always
- * @param localStartTime   Ver.: always
- * @param localEndTime   Ver.: always
- */
-bool emberAfDoorLockClusterSetDisposableScheduleCallback(uint16_t userId,
-                                                            uint32_t localStartTime,
-                                                            uint32_t localEndTime);
-/** @brief Door Lock Cluster Set Disposable Schedule Response
- *
- * 
- *
- * @param status   Ver.: always
- */
-bool emberAfDoorLockClusterSetDisposableScheduleResponseCallback(uint8_t status);
 /** @brief Door Lock Cluster Set Holiday Schedule
  *
  * 
@@ -9272,29 +9187,21 @@ void emberAfColorControlClusterClientTickCallback(uint8_t endpoint);
  * @param direction   Ver.: always
  * @param time   Ver.: always
  * @param startHue   Ver.: always
- * @param optionsMask   Ver.: since zcl6-errata-14-0129-15
- * @param optionsOverride   Ver.: since zcl6-errata-14-0129-15
  */
 bool emberAfColorControlClusterColorLoopSetCallback(uint8_t updateFlags,
                                                        uint8_t action,
                                                        uint8_t direction,
                                                        uint16_t time,
-                                                       uint16_t startHue,
-                                                       uint8_t optionsMask,
-                                                       uint8_t optionsOverride);
+                                                       uint16_t startHue);
 /** @brief Color Control Cluster Enhanced Move Hue
  *
  * 
  *
  * @param moveMode   Ver.: always
  * @param rate   Ver.: always
- * @param optionsMask   Ver.: since zcl6-errata-14-0129-15
- * @param optionsOverride   Ver.: since zcl6-errata-14-0129-15
  */
 bool emberAfColorControlClusterEnhancedMoveHueCallback(uint8_t moveMode,
-                                                          uint16_t rate,
-                                                          uint8_t optionsMask,
-                                                          uint8_t optionsOverride);
+                                                          uint16_t rate);
 /** @brief Color Control Cluster Enhanced Move To Hue And Saturation
  *
  * 
@@ -9302,14 +9209,10 @@ bool emberAfColorControlClusterEnhancedMoveHueCallback(uint8_t moveMode,
  * @param enhancedHue   Ver.: always
  * @param saturation   Ver.: always
  * @param transitionTime   Ver.: always
- * @param optionsMask   Ver.: since zcl6-errata-14-0129-15
- * @param optionsOverride   Ver.: since zcl6-errata-14-0129-15
  */
 bool emberAfColorControlClusterEnhancedMoveToHueAndSaturationCallback(uint16_t enhancedHue,
                                                                          uint8_t saturation,
-                                                                         uint16_t transitionTime,
-                                                                         uint8_t optionsMask,
-                                                                         uint8_t optionsOverride);
+                                                                         uint16_t transitionTime);
 /** @brief Color Control Cluster Enhanced Move To Hue
  *
  * 
@@ -9317,14 +9220,10 @@ bool emberAfColorControlClusterEnhancedMoveToHueAndSaturationCallback(uint16_t e
  * @param enhancedHue   Ver.: always
  * @param direction   Ver.: always
  * @param transitionTime   Ver.: always
- * @param optionsMask   Ver.: since zcl6-errata-14-0129-15
- * @param optionsOverride   Ver.: since zcl6-errata-14-0129-15
  */
 bool emberAfColorControlClusterEnhancedMoveToHueCallback(uint16_t enhancedHue,
                                                             uint8_t direction,
-                                                            uint16_t transitionTime,
-                                                            uint8_t optionsMask,
-                                                            uint8_t optionsOverride);
+                                                            uint16_t transitionTime);
 /** @brief Color Control Cluster Enhanced Step Hue
  *
  * 
@@ -9332,14 +9231,10 @@ bool emberAfColorControlClusterEnhancedMoveToHueCallback(uint16_t enhancedHue,
  * @param stepMode   Ver.: always
  * @param stepSize   Ver.: always
  * @param transitionTime   Ver.: always
- * @param optionsMask   Ver.: since zcl6-errata-14-0129-15
- * @param optionsOverride   Ver.: since zcl6-errata-14-0129-15
  */
 bool emberAfColorControlClusterEnhancedStepHueCallback(uint8_t stepMode,
                                                           uint16_t stepSize,
-                                                          uint16_t transitionTime,
-                                                          uint8_t optionsMask,
-                                                          uint8_t optionsOverride);
+                                                          uint16_t transitionTime);
 /** @brief Color Control Cluster Move Color
  *
  * 
@@ -26450,6 +26345,109 @@ bool emberAfSlWwahClusterUseTrustCenterForClusterServerResponseCallback(uint8_t 
 /** @} END SL Works With All Hubs Cluster Callbacks */
 
 
+/** @name Network Find Plugin Callbacks */
+// @{
+
+/** @brief Finished
+ *
+ * This callback is fired when the network-find plugin is finished with the
+ * forming or joining process. The result of the operation will be returned in
+ * the status parameter.
+ *
+ * @param status   Ver.: always
+ */
+void emberAfPluginNetworkFindFinishedCallback(EmberStatus status);
+/** @brief Get Radio Power For Channel
+ *
+ * This callback is called by the framework when it is setting the radio power
+ * during the discovery process. The framework will set the radio power
+ * depending on what is returned by this callback.
+ *
+ * @param pgChan   Ver.: always
+ */
+int8_t emberAfPluginNetworkFindGetRadioPowerForChannelCallback(uint8_t pgChan);
+/** @brief Join
+ *
+ * This callback is called by the plugin when a joinable network has been
+ * found. If the application returns true, the plugin will attempt to join the
+ * network. Otherwise, the plugin will ignore the network and continue
+ * searching. Applications can use this callback to implement a network
+ * blacklist.
+ *
+ * @param networkFound   Ver.: always
+ * @param lqi   Ver.: always
+ * @param rssi   Ver.: always
+ */
+bool emberAfPluginNetworkFindJoinCallback(EmberZigbeeNetwork *networkFound,
+                                          uint8_t lqi,
+                                          int8_t rssi);
+/** @brief Get Energy Threshold For Channel
+ *
+ * This callback is called during the energy scan when forming the network.
+ * Should the energy level exceed the value returned by this callback, the
+ * current channel will not be considered a suitable candidate for forming.
+ * Should none of the channels in the channel mask be considered suitable,
+ * the scan will fall back on all channels, including those not on the
+ * channel mask. The return value is RSSI, in dBm.
+ * This callback is called only when the fallback functionality is enabled.
+ *
+ * @param pgChan   Ver.: always
+ */
+int8_t emberAfPluginNetworkFindGetEnergyThresholdForChannelCallback(uint8_t pgChan);
+/** @brief Get Enable Scanning All Channels
+ *
+ * Returns true is the fallback on scanning all channels is enabled,
+ * false if not.
+ */
+bool emberAfPluginNetworkFindGetEnableScanningAllChannelsCallback(void);
+/** @} END Network Find Plugin Callbacks */
+
+
+/** @name ZLL Commissioning Common Plugin Callbacks */
+// @{
+
+/** @brief Initial Security State
+ *
+ * This function is called by the ZLL Commissioning Common plugin to determine the
+ * initial security state to be used by the device. The application must
+ * populate the ::EmberZllInitialSecurityState structure with a configuration
+ * appropriate for the network being formed, joined, or started. Once the
+ * device forms, joins, or starts a network, the same security configuration
+ * will remain in place until the device leaves the network.
+ *
+ * @param securityState The security configuration to be populated by the
+ * application and ultimately set in the stack. Ver.: always
+ */
+void emberAfPluginZllCommissioningCommonInitialSecurityStateCallback(EmberZllInitialSecurityState *securityState);
+/** @brief Touch Link Complete
+ *
+ * This function is called by the ZLL Commissioning Common plugin when touch linking
+ * completes.
+ *
+ * @param networkInfo The ZigBee and ZLL-specific information about the network
+ * and target. Ver.: always
+ * @param deviceInformationRecordCount The number of sub-device information
+ * records for the target. Ver.: always
+ * @param deviceInformationRecordList The list of sub-device information
+ * records for the target. Ver.: always
+ */
+void emberAfPluginZllCommissioningCommonTouchLinkCompleteCallback(const EmberZllNetwork *networkInfo,
+                                                                  uint8_t deviceInformationRecordCount,
+                                                                  const EmberZllDeviceInfoRecord *deviceInformationRecordList);
+/** @brief Reset To Factory New
+ *
+ * This function is called by the ZLL Commissioning Common plugin when a request to
+ * reset to factory new is received. The plugin will leave the network, reset
+ * attributes managed by the framework to their default values, and clear the
+ * group and scene tables. The application should perform any other necessary
+ * reset-related operations in this callback, including resetting any
+ * externally-stored attributes.
+ *
+ */
+void emberAfPluginZllCommissioningCommonResetToFactoryNewCallback(void);
+/** @} END ZLL Commissioning Common Plugin Callbacks */
+
+
 /** @name File Descriptor Dispatch Plugin Callbacks */
 // @{
 
@@ -26465,150 +26463,6 @@ bool emberAfSlWwahClusterUseTrustCenterForClusterServerResponseCallback(uint8_t 
  */
 void emberAfPluginFileDescriptorDispatchBadFileDescriptorCallback(int fd);
 /** @} END File Descriptor Dispatch Plugin Callbacks */
-
-
-/** @name Simple Metering Client Plugin Callbacks */
-// @{
-
-/** @brief Request Mirror
- *
- * This function is called by the Simple Metering client plugin whenever a
- * Request Mirror command is received. The application should return the
- * endpoint to which the mirror has been assigned. If no mirror could be
- * assigned, the application should return 0xFFFF.
- *
- * @param requestingDeviceIeeeAddress   Ver.: always
- */
-uint16_t emberAfPluginSimpleMeteringClientRequestMirrorCallback(EmberEUI64 requestingDeviceIeeeAddress);
-/** @brief Remove Mirror
- *
- * This function is called by the Simple Metering client plugin whenever a
- * Remove Mirror command is received. The application should return the
- * endpoint on which the mirror has been removed. If the mirror could not be
- * removed, the application should return 0xFFFF.
- *
- * @param requestingDeviceIeeeAddress   Ver.: always
- */
-uint16_t emberAfPluginSimpleMeteringClientRemoveMirrorCallback(EmberEUI64 requestingDeviceIeeeAddress);
-/** @} END Simple Metering Client Plugin Callbacks */
-
-
-/** @name OTA Bootload Cluster Server Policy Plugin Callbacks */
-// @{
-
-/** @brief GetClientDelayUnits
- *
- * Called when the server receives an Image Block Request from a client that
- * supports rate limiting using the Minimum Block Period feature. This callback
- * gives the server a chance to decide which units the client uses for the
- * Minimum Block Period, seconds or milliseconds. The server can also return
- * OTA_SERVER_DISCOVER_CLIENT_DELAY_UNITS, which causes the plugin code to test
- * the client by sending it a preset delay value. The length of time the client
- * delays determines which units it uses. For more information on this feature,
- * please read the plugin option descriptions under the OTA Server plugin.
- *
- * @param clientNodeId     Ver.: always
- * @param clientEui64      Ver.: always
- *
- * For return values, see ota-server-policy.h. An unknown return value will
- * result in the same behavior as if OTA_SERVER_CLIENT_USES_MILLISECONDS had
- * been returned.
- */
-uint8_t emberAfPluginOtaServerPolicyGetClientDelayUnits(EmberNodeId clientNodeId,
-                                                        EmberEUI64 clientEui64);
-/** @} END OTA Bootload Cluster Server Policy Plugin Callbacks */
-
-
-/** @name OTA Bootload Cluster Server Plugin Callbacks */
-// @{
-
-/** @brief UpdateStarted
- *
- * Called when an OTA upgrade starts.
- *
- * @param manufacturerId   Ver.: always
- * @param imageTypeId      Ver.: always
- * @param firmwareVersion  Ver.: always
- * @param maxDataSize      Ver.: always
- * @param offset           Ver.: always
- */
-void emberAfPluginOtaServerUpdateStartedCallback(uint16_t manufacturerId,
-                                                 uint16_t imageTypeId,
-                                                 uint32_t firmwareVersion,
-                                                 uint8_t maxDataSize,
-                                                 uint32_t offset);
-/** @brief OTA Server Block Sent Callback
- *
- * This function will be called when a block is sent to a device.
- *
- * @param actualLength      Ver.: always
- * @param manufacturerId    Ver.: always
- * @param imageTypeId       Ver.: always
- * @param firmwareVersion   Ver.: always
- */
-void emberAfPluginOtaServerBlockSentCallback(uint8_t actualLength,
-                                             uint16_t manufacturerId,
-                                             uint16_t imageTypeId,
-                                             uint32_t firmwareVersion);
-/** @brief OTA Server Update Complete Callback
- *
- * This function will be called when an OTA update has finished.
- *
- * @param manufacturerId  ManufacturerId.
- * @param imageTypeId  Image Type Id.
- * @param firmwareVersion  Firmware Version.
- * @param source  Source node id.
- * @param status  Status of update.
- */
-void emberAfPluginOtaServerUpdateCompleteCallback(uint16_t manufacturerId,
-                                                  uint16_t imageTypeId,
-                                                  uint32_t firmwareVersion,
-                                                  EmberNodeId source,
-                                                  uint8_t status);
-/** @brief Ota Server Image Block Request
- *
- * This function is called when the server application receives an image block
- * request by a client.
- *
- * @param data A struct containing the details of the image block response and
- * values that can be returned by the application to effect the behavior of the
- * server's response.
- */
-uint8_t emberAfOtaServerImageBlockRequestCallback(EmberAfImageBlockRequestCallbackStruct* data);
-/** @} END OTA Bootload Cluster Server Plugin Callbacks */
-
-
-/** @name Reporting Plugin Callbacks */
-// @{
-
-/** @brief Configured
- *
- * This callback is called by the Reporting plugin whenever a reporting entry
- * is configured, including when entries are deleted or updated. The
- * application can use this callback for scheduling readings or measurements
- * based on the minimum and maximum reporting interval for the entry. The
- * application should return EMBER_ZCL_STATUS_SUCCESS if it can support the
- * configuration or an error status otherwise. Note: attribute reporting is
- * required for many clusters and attributes, so rejecting a reporting
- * configuration may violate ZigBee specifications.
- *
- * @param entry   Ver.: always
- */
-EmberAfStatus emberAfPluginReportingConfiguredCallback(const EmberAfPluginReportingEntry *entry);
-/** @brief Configured
- *
- * This callback is called by the Reporting plugin to get the default reporting
- * configuration values from user if there is no default value available within
- * af generated default reporting configuration tabel. The application need to
- * write to the minInterval, maxInterval and reportable change in the passed
- * IO pointer in the arguement while handleing this callback, then application
- * shall return true if it has provided the default values or else false for
- * reporting plugin to further handleing.
- *
- * @param entry   Ver.: always
- */
-bool emberAfPluginReportingGetDefaultReportingConfigCallback(EmberAfPluginReportingEntry *entry);
-/** @} END Reporting Plugin Callbacks */
 
 
 /** @name Identify Cluster Plugin Callbacks */
@@ -26641,21 +26495,6 @@ void emberAfPluginIdentifyStopFeedbackCallback(uint8_t endpoint);
 /** @} END Identify Cluster Plugin Callbacks */
 
 
-/** @name EZ-Mode Commissioning Plugin Callbacks */
-// @{
-
-/** @brief Client Complete
- *
- * This function is called by the EZ-Mode Commissioning plugin when client
- * commissioning completes.
- *
- * @param bindingIndex The binding index that was created or
- * ::EMBER_NULL_BINDING if an error occurred. Ver.: always
- */
-void emberAfPluginEzmodeCommissioningClientCompleteCallback(uint8_t bindingIndex);
-/** @} END EZ-Mode Commissioning Plugin Callbacks */
-
-
 /** @name Gateway Support Plugin Callbacks */
 // @{
 
@@ -26678,59 +26517,6 @@ int emberAfPluginGatewaySelectFileDescriptorsCallback(int*list,
 /** @} END Gateway Support Plugin Callbacks */
 
 
-/** @name Level Control Server Cluster Plugin Callbacks */
-// @{
-
-/** @brief Level Control Cluster Server Post Init
- *
- * Following resolution of the Current Level at startup for this endpoint,
- * perform any additional initialization needed; e.g., synchronize hardware
- * state.
- *
- * @param endpoint Endpoint that is being initialized  Ver.: always
- */
-void emberAfPluginLevelControlClusterServerPostInitCallback(uint8_t endpoint);
-/** @brief Level Control Coupled Color Temp Change
- *
- * Adjust Color Control cluster Color Temperature in response to a change in
- * Level Control cluster CurrentLevel.
- *
- * @param endpoint Endpoint that is being initialized  Ver.: always
- */
-void emberAfPluginLevelControlCoupledColorTempChangeCallback(uint8_t endpoint);
-/** @} END Level Control Server Cluster Plugin Callbacks */
-
-
-/** @name Color Control Cluster Server Plugin Callbacks */
-// @{
-
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the HSV values.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromHsvCallback(uint8_t endpoint);
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the color X and color Y values.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromXyCallback(uint8_t endpoint);
-/** @brief Compute Pwm from HSV
- *
- * This function is called from the color server when it is time for the PWMs to
- * be driven with a new value from the color temperature.
- *
- * @param endpoint The identifying endpoint Ver.: always
- */
-void emberAfPluginColorControlServerComputePwmFromTempCallback(uint8_t endpoint);
-/** @} END Color Control Cluster Server Plugin Callbacks */
-
-
 /** @name Concentrator Support Plugin Callbacks */
 // @{
 
@@ -26744,114 +26530,125 @@ void emberAfPluginConcentratorBroadcastSentCallback(void);
 /** @} END Concentrator Support Plugin Callbacks */
 
 
-/** @name On/Off Server Cluster Plugin Callbacks */
+/** @name Form and Join Library Plugin Callbacks */
 // @{
 
-/** @brief On/off Cluster Server Post Init
+/** @brief Network Found
  *
- * Following resolution of the On/Off state at startup for this endpoint, perform any
- * additional initialization needed; e.g., synchronize hardware state.
+ * This is called by the form-and-join library to notify the application of the
+ * network found after a call to ::emberScanForJoinableNetwork() or
+ * ::emberScanForNextJoinableNetwork(). See form-and-join documentation for
+ * more information.
  *
- * @param endpoint Endpoint that is being initialized  Ver.: always
+ * @param networkFound   Ver.: always
+ * @param lqi   Ver.: always
+ * @param rssi   Ver.: always
  */
-void emberAfPluginOnOffClusterServerPostInitCallback(uint8_t endpoint);
-/** @} END On/Off Server Cluster Plugin Callbacks */
-
-
-/** @name ZCL Framework Core Plugin Callbacks */
-// @{
-
-/** @brief EZSP Error Handler
+void emberAfPluginFormAndJoinNetworkFoundCallback(EmberZigbeeNetwork *networkFound,
+                                                  uint8_t lqi,
+                                                  int8_t rssi);
+/** @brief Unused Pan Id Found
  *
- * This callback is fired when the host process receives an error from the EZSP
- * link when talking to the NCP. The return boolean gives the user application
- * the option to reboot the NCP. If this function returns true, the NCP will be
- * rebooted and the connection between the host and NCP will drop. If not, the
- * NCP will continue operating.
+ * This function is called when the form-and-join library finds an unused PAN
+ * ID that can be used to form a new network on.
  *
- * @param status The EzspStatus error code received.
- *
- * @return bool True to reset NCP, false not to.
- *
- * @note This callback is only fired on the host application. It has no use for
- * SoC or NCP applications.
+ * @param panId A randomly generated PAN ID without other devices on it.
+ * Ver.: always
+ * @param channel The channel where the PAN ID can be used to form a new
+ * network. Ver.: always
  */
-bool emberAfPluginZclFrameworkCoreEzspErrorCallback(EzspStatus status);
-/** @} END ZCL Framework Core Plugin Callbacks */
+void emberAfPluginFormAndJoinUnusedPanIdFoundCallback(EmberPanId panId,
+                                                      uint8_t channel);
+/** @} END Form and Join Library Plugin Callbacks */
 
 
-/** @name Update TC Link Key Plugin Callbacks */
+/** @name Interpan Plugin Callbacks */
 // @{
 
-/** @brief Status
+/** @brief Pre Message Received
  *
- * This callback is fired when the Update Link Key exchange process is updated
- * with a status from the stack. Implementations will know that the Update TC
- * Link Key plugin has completed its link key request when the keyStatus
- * parameter is EMBER_VERIFY_LINK_KEY_SUCCESS.
+ * This function is called by the Interpan plugin when an interpan message is
+ * received but has not yet been handled by the plugin or the framework. The
+ * application should return true if the message was handled.
  *
- * @param keyStatus An ::EmberKeyStatus value describing the success or failure
- * of the key exchange process. Ver.: always
+ * @param header The inter-PAN header Ver.: always
+ * @param msgLen The message payload length Ver.: always
+ * @param message The message payload Ver.: always
  */
-void emberAfPluginUpdateTcLinkKeyStatusCallback(EmberKeyStatus keyStatus);
-/** @} END Update TC Link Key Plugin Callbacks */
+bool emberAfPluginInterpanPreMessageReceivedCallback(const EmberAfInterpanHeader *header,
+                                                     uint8_t msgLen,
+                                                     uint8_t *message);
+/** @brief Message Received Over Fragments
+ *
+ * This function is called by the Interpan plugin when a fully reconstructed
+ * message has been received over inter-PAN fragments, or IPMFs.
+ *
+ * @param header The inter-PAN header Ver.: always
+ * @param msgLen The message payload length Ver.: always
+ * @param message The message payload Ver.: always
+ */
+void emberAfPluginInterpanMessageReceivedOverFragmentsCallback(const EmberAfInterpanHeader *header,
+                                                               uint8_t msgLen,
+                                                               uint8_t *message);
+/** @brief Fragment Transmission Failed
+ *
+ * This function is called by the Interpan plugin when a fragmented
+ * transmission has failed.
+ *
+ * @param interpanFragmentationStatus The status describing why transmission
+ * failed Ver.: always
+ * @param fragmentNum The fragment number that encountered the failure
+ * Ver.: always
+ */
+void emberAfPluginInterpanFragmentTransmissionFailedCallback(uint8_t interpanFragmentationStatus,
+                                                             uint8_t fragmentNum);
+/** @} END Interpan Plugin Callbacks */
 
 
-/** @name Network Steering Plugin Callbacks */
+/** @name Device Database Plugin Callbacks */
 // @{
 
+/** @brief Discovery Complete
+ *
+ * This function is called when a device in the database has been set to
+ * EMBER_AF_DEVICE_DISCOVERY_STATUS_DONE.
+ *
+ * @param device A pointer to the information struct about the device.
+ * Ver.: always
+ */
+void emberAfPluginDeviceDatabaseDiscoveryCompleteCallback(const EmberAfDeviceInfo*device);
+/** @} END Device Database Plugin Callbacks */
+
+
+/** @name Find and Bind Initiator Plugin Callbacks */
+// @{
+
+/** @brief Bind Target
+ *
+ * This callback with enable the user to programmatically decide if they want
+ * to bind with a potential target. The plugin will try to bind with this
+ * target if and only if the function returns true. By default, the callback
+ * tells the plugin to try to bind with the target. If the binding type is
+ * changed to ::EMBER_MULTICAST_BINDING, a multicast binding will be created.
+ *
+ * @param nodeId short ID of the potential target Ver.: always
+ * @param bindingEntry The binding entry for that target. Ver.: always
+ * @param groupName The name of the group if a multicast binding is created.
+ * Ver.: always
+ */
+bool emberAfPluginFindAndBindInitiatorBindTargetCallback(EmberNodeId nodeId,
+                                                         EmberBindingTableEntry *bindingEntry,
+                                                         uint8_t *groupName);
 /** @brief Complete
  *
- * This callback is fired when the Network Steering plugin is complete.
+ * This callback is fired by the initiator when the Find and Bind process is
+ * complete.
  *
- * @param status On success this will be set to EMBER_SUCCESS to indicate a
- * network was joined successfully. On failure this will be the status code of
- * the last join or scan attempt. Ver.: always
- * @param totalBeacons The total number of 802.15.4 beacons that were heard,
- * including beacons from different devices with the same PAN ID. Ver.: always
- * @param joinAttempts The number of join attempts that were made to get onto
- * an open Zigbee network. Ver.: always
- * @param finalState The finishing state of the network steering process. From
- * this, one is able to tell on which channel mask and with which key the
- * process was complete. Ver.: always
+ * @param status Status code describing the completion of the find and bind
+ * process Ver.: always
  */
-void emberAfPluginNetworkSteeringCompleteCallback(EmberStatus status,
-                                                  uint8_t totalBeacons,
-                                                  uint8_t joinAttempts,
-                                                  uint8_t finalState);
-/** @brief Get Power For Radio Channel
- *
- * This callback is fired when the Network Steering plugin needs to set the
- * power level. The application has the ability to change the max power level
- * used for this particular channel.
- *
- * @param channel The channel that the plugin is inquiring about the power
- * level. Ver.: always
- */
-int8_t emberAfPluginNetworkSteeringGetPowerForRadioChannelCallback(uint8_t channel);
-/** @brief Get Distributed Key
- *
- * This callback is fired when the Network Steering plugin needs to set the distributed
- * key. The application set the distributed key from Zigbee Alliance thru this callback
- * or the network steering will use the default test key.
- *
- * @param pointer to the distributed key struct
- * @return true if the key is loaded successfully, otherwise false.
- * level. Ver.: always
- */
-bool emberAfPluginNetworkSteeringGetDistributedKeyCallback(EmberKeyData * key);
-/** @brief Get Node Type
- *
- * This callback allows the application to set the node type that the network
- * steering process will use in joining a network.
- *
- * @param state The current ::EmberAfPluginNetworkSteeringJoiningState.
- *
- * @return An ::EmberNodeType value that the network steering process will
- * try to join a network as.
- */
-EmberNodeType emberAfPluginNetworkSteeringGetNodeTypeCallback(EmberAfPluginNetworkSteeringJoiningState state);
-/** @} END Network Steering Plugin Callbacks */
+void emberAfPluginFindAndBindInitiatorCompleteCallback(EmberStatus status);
+/** @} END Find and Bind Initiator Plugin Callbacks */
 
 
 /** @name Network Creator Plugin Callbacks */
@@ -26888,6 +26685,79 @@ int8_t emberAfPluginNetworkCreatorGetRadioPowerCallback(void);
 /** @} END Network Creator Plugin Callbacks */
 
 
+/** @name ZLL Commissioning Server Plugin Callbacks */
+// @{
+
+/** @brief Group Identifier Count
+ *
+ * This function is called by the ZLL Commissining Server plugin to determine the
+ * number of group identifiers in use by a specific endpoint on the device. The
+ * total number of group identifiers on the device, which are shared by all
+ * endpoints, is defined by ::EMBER_ZLL_GROUP_ADDRESSES.
+ *
+ * @param endpoint The endpoint for which the group identifier count is
+ * requested. Ver.: always
+ */
+uint8_t emberAfPluginZllCommissioningServerGroupIdentifierCountCallback(uint8_t endpoint);
+/** @brief Group Identifier
+ *
+ * This function is called by the ZLL Commissining Server plugin to obtain
+ * information about the group identifiers in use by a specific endpoint on the
+ * device. The application should populate the record with information about
+ * the group identifier and return true. If no information is available for the
+ * given endpoint and index, the application should return false.
+ *
+ * @param endpoint The endpoint for which the group identifier is requested.
+ * Ver.: always
+ * @param index The index of the group on the endpoint. Ver.: always
+ * @param record The group information record. Ver.: always
+ */
+bool emberAfPluginZllCommissioningServerGroupIdentifierCallback(uint8_t endpoint,
+                                                                uint8_t index,
+                                                                EmberAfPluginZllCommissioningGroupInformationRecord *record);
+/** @brief Endpoint Information Count
+ *
+ * This function is called by the ZLL Commissining Server plugin to determine the
+ * number of remote endpoints controlled by a specific endpoint on the local
+ * device.
+ *
+ * @param endpoint The local endpoint for which the remote endpoint information
+ * count is requested. Ver.: always
+ */
+uint8_t emberAfPluginZllCommissioningServerEndpointInformationCountCallback(uint8_t endpoint);
+/** @brief Endpoint Information
+ *
+ * This function is called by the ZLL Commissining Server plugin to obtain
+ * information about the remote endpoints controlled by a specific endpoint on
+ * the local device. The application should populate the record with
+ * information about the remote endpoint and return true. If no information is
+ * available for the given endpoint and index, the application should return
+ * false.
+ *
+ * @param endpoint The local endpoint for which the remote endpoint information
+ * is requested. Ver.: always
+ * @param index The index of the remote endpoint information on the local
+ * endpoint. Ver.: always
+ * @param record The endpoint information record. Ver.: always
+ */
+bool emberAfPluginZllCommissioningServerEndpointInformationCallback(uint8_t endpoint,
+                                                                    uint8_t index,
+                                                                    EmberAfPluginZllCommissioningEndpointInformationRecord *record);
+/** @brief Identify
+ *
+ * This function is called by the ZLL Commissining Server plugin to notify the
+ * application that it should take an action to identify itself. This typically
+ * occurs when an Identify Request is received via inter-PAN messaging.
+ *
+ * @param durationS If the duration is zero, the device should exit identify
+ * mode. If the duration is 0xFFFF, the device should remain in identify mode
+ * for the default time. Otherwise, the duration specifies the length of time
+ * in seconds that the device should remain in identify mode. Ver.: always
+ */
+void emberAfPluginZllCommissioningServerIdentifyCallback(uint16_t durationS);
+/** @} END ZLL Commissioning Server Plugin Callbacks */
+
+
 /** @name Counters Plugin Callbacks */
 // @{
 
@@ -26920,23 +26790,6 @@ EmberStatus emberAfGenerateRandomKey(EmberKeyData* result);
  */
 EmberStatus emberAfGenerateRandomData(uint8_t* result, uint8_t size);
 /** @} END EZSP Common Plugin Callbacks */
-
-
-/** @name Basic Server Cluster Plugin Callbacks */
-// @{
-
-/** @brief Reset To Factory Defaults
- *
- * This function is called by the Basic server plugin when a request to reset
- * to factory defaults is received. The plugin will reset attributes managed by
- * the framework to their default values. The application should perform any
- * other necessary reset-related operations in this callback, including
- * resetting any externally-stored attributes.
- *
- * @param endpoint   Ver.: always
- */
-void emberAfPluginBasicResetToFactoryDefaultsCallback(uint8_t endpoint);
-/** @} END Basic Server Cluster Plugin Callbacks */
 
 
 /** @} END addtogroup */

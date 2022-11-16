@@ -34,6 +34,12 @@
 
 
 
+#if defined(MBEDTLS_ENTROPY_C)
+// Enable RAIL radio as entropy source by default
+// This is going to help on devices that does not have TRNG support by software
+// (FR32XG13 (SDID_89) and EFR32XG14 (SDID_95))
+#define MBEDTLS_ENTROPY_RAIL_C
+#endif
 
 // Inclusion of the Silabs specific device acceleration configuration file.
 #if defined(MBEDTLS_DEVICE_ACCELERATION_CONFIG_FILE)
@@ -44,9 +50,6 @@
 #if defined(MBEDTLS_DEVICE_ACCELERATION_CONFIG_APP_FILE)
 #include MBEDTLS_DEVICE_ACCELERATION_CONFIG_APP_FILE
 #endif
-
-// Inclusion of the PSA config header file.
-#include "mbedtls/config_psa.h"
 
 // Inclusion of the mbed TLS config_check.h header file.
 #include "mbedtls/check_config.h"

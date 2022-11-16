@@ -1160,7 +1160,7 @@ void zb_poll(void)
 		/* let the ZCL Utils run - this should go after ezspTick */
 		emberAfTick();
 
-		emberSerialBufferTick();
+		//emberSerialBufferTick();
 
 		emberAfRunEvents();
 

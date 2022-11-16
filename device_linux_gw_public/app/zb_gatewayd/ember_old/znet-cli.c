@@ -201,9 +201,32 @@ static const char * const networkExtpanidCommandArguments[] = {
 
 
 void findJoinableNetworkCommand(void);
+void findMaskCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const networkFindMaskCommandArguments[] = {
+  "channel page (0 and 28-31, if sub-GHz support is included)",
+  "channel mask",
+  NULL
+};
+#endif
+
+
+void findModeCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const networkFindModeCommandArguments[] = {
+  "Bit 0 = enable 2.4GHz, Bit 1 = enable sub-GHz",
+  NULL
+};
+#endif
+
+
+void findPrintCommand(void);
 void findUnusedPanIdCommand(void);
 static EmberCommandEntry emberCommandNetworkFindTable[] = {
   emberCommandEntryActionWithDetails("joinable", findJoinableNetworkCommand, "", "Begin a search for a joinable networ ...", NULL),
+  emberCommandEntryActionWithDetails("mask", findMaskCommand, "uw", "Set a channel mask for a given channel page for 'find joinable' and 'f ...", networkFindMaskCommandArguments),
+  emberCommandEntryActionWithDetails("mode", findModeCommand, "u", "Set a search mode for 'find joinable' and 'find unused'.", networkFindModeCommandArguments),
+  emberCommandEntryActionWithDetails("print", findPrintCommand, "", "Print network search parameters (mode and channel masks).", NULL),
   emberCommandEntryActionWithDetails("unused", findUnusedPanIdCommand, "", "Begin a search for an unused Channel and Pan I ...", NULL),
   emberCommandEntryTerminator(),
 };
@@ -220,7 +243,6 @@ static const char * const networkFormCommandArguments[] = {
 
 void networkIdCommand(void);
 void networkInitCommand(void);
-void networkCheckPjoinCommand(void);
 void networkJoinCommand(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
 static const char * const networkJoinCommandArguments[] = {
@@ -303,7 +325,6 @@ static EmberCommandEntry emberCommandNetworkTable[] = {
   emberCommandEntryActionWithDetails("form", networkFormCommand, "usv", "Create a network on the given channel, power and panId.", networkFormCommandArguments),
   emberCommandEntryActionWithDetails("id", networkIdCommand, "", "Prints the current Node ID, EUI64, and Pan ID.", NULL),
   emberCommandEntryActionWithDetails("init", networkInitCommand, "", "Initialize a network; this is a test command used for tc-swap-out test ...", NULL),
-  emberCommandEntryActionWithDetails("isopen", networkCheckPjoinCommand, "", "Check if and for how long the network is open.", NULL),
   emberCommandEntryActionWithDetails("join", networkJoinCommand, "usv", "Join an existing network on the given channel, power and panId.", networkJoinCommandArguments),
   emberCommandEntryActionWithDetails("leave", networkLeaveCommand, "", "Leave the current network.", NULL),
   emberCommandEntryActionWithDetails("multi-phy-start", networkMultiPhyStartCommand, "uus*", "To start multi phy interface other than native and form the networ ...", networkMultiPhyStartCommandArguments),
@@ -559,122 +580,73 @@ static EmberCommandEntry emberCommandPluginCountersTable[] = {
   emberCommandEntryActionWithDetails("simple-print", emberAfPluginCountersSimplePrintCommand, "", "Print all counter values.", NULL),
   emberCommandEntryTerminator(),
 };
-void emberAfPluginEzModeCommissioningClientCommand(void);
+void emAfPluginDeviceDatabaseAddDummyDevice(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginEzmodeCommissioningClientCommandArguments[] = {
-  "The local endpoint.",
-  "::EMBER_AF_EZMODE_COMMISSIONING_SERVER_TO_CLIENT or ::EMBER_AF_EZMODE_ ...",
-  "A list of cluster ids.",
-  "",
+static const char * const pluginDeviceDatabaseDeviceAddDummyCommandArguments[] = {
+  "The address of the dummy device to add.",
+  "The number of dummy endpoints to add.",
+  "The number of dummy clusters to add.",
   NULL
 };
 #endif
 
 
-void emberAfPluginEzModeCommissioningServerCommand(void);
+void emAfPluginDeviceDatabaseErase(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginEzmodeCommissioningServerCommandArguments[] = {
-  "The local endpoint.",
-  "The identify time in seconds.",
+static const char * const pluginDeviceDatabaseDeviceEraseCommandArguments[] = {
+  "The address of the device to erase from the database.",
   NULL
 };
 #endif
 
 
-static EmberCommandEntry emberCommandPluginEzmodeCommissioningTable[] = {
-  emberCommandEntryActionWithDetails("client", emberAfPluginEzModeCommissioningClientCommand, "uuv*", "Start EZ-Mode client commissioning.", pluginEzmodeCommissioningClientCommandArguments),
-  emberCommandEntryActionWithDetails("server", emberAfPluginEzModeCommissioningServerCommand, "uv", "Start EZ-Mode server commissioning.", pluginEzmodeCommissioningServerCommandArguments),
+void emAfPluginDeviceDatabasePrintDevice(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginDeviceDatabaseDevicePrintCommandArguments[] = {
+  "The address of the device to be looked up (little endian)",
+  NULL
+};
+#endif
+
+
+static EmberCommandEntry emberCommandPluginDeviceDatabaseDeviceTable[] = {
+  emberCommandEntryActionWithDetails("add-dummy", emAfPluginDeviceDatabaseAddDummyDevice, "buv", "Add a device with specified EUI64 and a sequential number of clusters  ...", pluginDeviceDatabaseDeviceAddDummyCommandArguments),
+  emberCommandEntryActionWithDetails("erase", emAfPluginDeviceDatabaseErase, "b", "Erase the device with specified EUI64 from the database.", pluginDeviceDatabaseDeviceEraseCommandArguments),
+  emberCommandEntryActionWithDetails("print", emAfPluginDeviceDatabasePrintDevice, "b", "Print all the clusters and endpoints known about the specified device  ...", pluginDeviceDatabaseDevicePrintCommandArguments),
+  emberCommandEntryTerminator(),
+};
+void emAfPluginDeviceDatabasePrintAll(void);
+static EmberCommandEntry emberCommandPluginDeviceDatabaseTable[] = {
+  emberCommandEntrySubMenu("device", emberCommandPluginDeviceDatabaseDeviceTable, ""),
+  emberCommandEntryActionWithDetails("print-all", emAfPluginDeviceDatabasePrintAll, "", "Print all devices in the database.", NULL),
+  emberCommandEntryTerminator(),
+};
+void emberAfPluginFindAndBindInitiatorStartCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginFindAndBindInitiatorCommandArguments[] = {
+  "The endpoint on which to begin the Finding and Binding initiator proce ...",
+  NULL
+};
+#endif
+
+
+void emberAfPluginFindAndBindTargetStartCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginFindAndBindTargetCommandArguments[] = {
+  "The endpoint on which to begin the Finding and Binding target process.",
+  NULL
+};
+#endif
+
+
+static EmberCommandEntry emberCommandPluginFindAndBindTable[] = {
+  emberCommandEntryActionWithDetails("initiator", emberAfPluginFindAndBindInitiatorStartCommand, "u", "Makes this node start the initiator part of the finding and binding pr ...", pluginFindAndBindInitiatorCommandArguments),
+  emberCommandEntryActionWithDetails("target", emberAfPluginFindAndBindTargetStartCommand, "u", "Makes this node start identifying as a target for binding with an init ...", pluginFindAndBindTargetCommandArguments),
   emberCommandEntryTerminator(),
 };
 void emberAfPluginGatewaySupportTimeSyncLocal(void);
 static EmberCommandEntry emberCommandPluginGatewayTable[] = {
   emberCommandEntryActionWithDetails("time-sync-local", emberAfPluginGatewaySupportTimeSyncLocal, "", "This command will sync the ZCL device's local time attribute with the  ...", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginGreenPowerClientAddGroupcastSink(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientAddGroupSinkCommandArguments[] = {
-  "GPD Source ID",
-  "Sink group",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientAddSink(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientAddSinkCommandArguments[] = {
-  "GPD Source ID",
-  "Sink's IEEE address",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientClearProxyTable(void);
-void emberAfPluginGreenPowerClientDuplicateFilteringTest(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientDuplicateFilterTestCommandArguments[] = {
-  "endpoint",
-  "source Id of the fake incoming message",
-  "sequence number",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientPrintProxyTable(void);
-void emberAfPluginGreenPowerClientRemoveProxyTableEntry(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientRmGpdCommandArguments[] = {
-  "GPD Source ID",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientAddSink(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientRmSinkCommandArguments[] = {
-  "GPD Source ID",
-  "Sink's IEEE address",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientSetKey(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientSetKeyCommandArguments[] = {
-  "index",
-  "source Id of the fake incoming message",
-  NULL
-};
-#endif
-
-
-void emberAfPluginGreenPowerClientSetProxyEntry(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginGreenPowerClientSetProxyEntryCommandArguments[] = {
-  "index to proxy table",
-  "GPD Source ID",
-  "Sink's node address",
-  "options",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginGreenPowerClientTable[] = {
-  emberCommandEntryActionWithDetails("add-group-sink", emberAfPluginGreenPowerClientAddGroupcastSink, "wv", "Add a groupcast sink for a given GPD", pluginGreenPowerClientAddGroupSinkCommandArguments),
-  emberCommandEntryActionWithDetails("add-sink", emberAfPluginGreenPowerClientAddSink, "wb", "Add a sink for a given GPD", pluginGreenPowerClientAddSinkCommandArguments),
-  emberCommandEntryActionWithDetails("clear-proxy-table", emberAfPluginGreenPowerClientClearProxyTable, "", "clear the proxy table", NULL),
-  emberCommandEntryActionWithDetails("duplicate-filter-test", emberAfPluginGreenPowerClientDuplicateFilteringTest, "uwu", "This is used to instrument the current device receiving a message in o ...", pluginGreenPowerClientDuplicateFilterTestCommandArguments),
-  emberCommandEntryActionWithDetails("print-proxy-table", emberAfPluginGreenPowerClientPrintProxyTable, "", "Print the proxy table", NULL),
-  emberCommandEntryActionWithDetails("rm-gpd", emberAfPluginGreenPowerClientRemoveProxyTableEntry, "w", "Remove a given GPD from the proxy table", pluginGreenPowerClientRmGpdCommandArguments),
-  emberCommandEntryActionWithDetails("rm-sink", emberAfPluginGreenPowerClientAddSink, "wb", "remove a sink for a given GP ...", pluginGreenPowerClientRmSinkCommandArguments),
-  emberCommandEntryActionWithDetails("set-key", emberAfPluginGreenPowerClientSetKey, "ub", "This is used to set the key for a proxy table entry", pluginGreenPowerClientSetKeyCommandArguments),
-  emberCommandEntryActionWithDetails("set-proxy-entry", emberAfPluginGreenPowerClientSetProxyEntry, "uwvw", "Set a proxy table entry", pluginGreenPowerClientSetProxyEntryCommandArguments),
   emberCommandEntryTerminator(),
 };
 void emAfPluginIasZoneClientClearAllServersCommand(void);
@@ -687,6 +659,36 @@ static EmberCommandEntry emberCommandPluginIasZoneClientTable[] = {
 void emAfPluginIdentifyCliPrint(void);
 static EmberCommandEntry emberCommandPluginIdentifyTable[] = {
   emberCommandEntryActionWithDetails("print", emAfPluginIdentifyCliPrint, "", "Print which endpoints are reporting.", NULL),
+  emberCommandEntryTerminator(),
+};
+void emAfInterpanDisableCommand(void);
+void emAfInterpanEnableCommand(void);
+void emAfInterpanFragmentTestCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginInterpanFragmentTestCommandArguments[] = {
+  "The PAN ID that the target is located on",
+  "The target's EUI64 (big endian)",
+  "The cluster ID that the sample message should contain",
+  "The length of the randomly-filled message to be sent across inter-PAN",
+  NULL
+};
+#endif
+
+
+void emAfInterpanSetMessageTimeoutCommand(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginInterpanSetMsgTimeoutCommandArguments[] = {
+  "Message timeout in seconds.",
+  NULL
+};
+#endif
+
+
+static EmberCommandEntry emberCommandPluginInterpanTable[] = {
+  emberCommandEntryActionWithDetails("disable", emAfInterpanDisableCommand, "", "Disables inter-PAN globally.", NULL),
+  emberCommandEntryActionWithDetails("enable", emAfInterpanEnableCommand, "", "Enables inter-PAN globally.", NULL),
+  emberCommandEntryActionWithDetails("fragment-test", emAfInterpanFragmentTestCommand, "vbvv", "Sends a message of specified length of random values to target device  ...", pluginInterpanFragmentTestCommandArguments),
+  emberCommandEntryActionWithDetails("set-msg-timeout", emAfInterpanSetMessageTimeoutCommand, "u", "Sets the timeout for inter-PAN messages sent and received.", pluginInterpanSetMsgTimeoutCommandArguments),
   emberCommandEntryTerminator(),
 };
 void emberAfPluginNetworkCreatorFormCommand(void);
@@ -790,811 +792,176 @@ static const char * const pluginNetworkCreatorSecuritySetJoiningLinkKeyCommandAr
 
 static EmberCommandEntry emberCommandPluginNetworkCreatorSecurityTable[] = {
   emberCommandEntryActionWithDetails("clear-joining-link-keys", emAfPluginNetworkCreatorSecurityClearJoiningLinkKeyCommand, "", "Clear all of the joining link keys stored in the stack.", NULL),
-  emberCommandEntryActionWithDetails("close-network", emAfPluginNetworkCreatorSecurityOpenOrCloseNetworkCommand, "", "Close the network for joining. Rejoins are permitted.", NULL),
+  emberCommandEntryActionWithDetails("close-network", emAfPluginNetworkCreatorSecurityOpenOrCloseNetworkCommand, "", "Close the network for joining.", NULL),
   emberCommandEntryActionWithDetails("open-network", emAfPluginNetworkCreatorSecurityOpenOrCloseNetworkCommand, "", "Open the network for joining.", NULL),
   emberCommandEntryActionWithDetails("open-with-key", emAfPluginNetworkCreatorSecurityOpenNetworkWithKeyCommand, "bb", "Open the network that would only allow the node with specified EUI and ...", pluginNetworkCreatorSecurityOpenWithKeyCommandArguments),
   emberCommandEntryActionWithDetails("set-distributed-key", emAfPluginNetworkCreatorSecurityConfigureDistributedKey, "b", "Set the TC Link key for a distributed network", pluginNetworkCreatorSecuritySetDistributedKeyCommandArguments),
   emberCommandEntryActionWithDetails("set-joining-link-key", emAfPluginNetworkCreatorSecuritySetJoiningLinkKeyCommand, "bb", "Set the link key that a specific joining device will use when joining  ...", pluginNetworkCreatorSecuritySetJoiningLinkKeyCommandArguments),
   emberCommandEntryTerminator(),
 };
-void emberAfPluginNetworkSteeringChannelAddOrSubtractCommand(void);
+void emAfPluginPriceCommonClusterGetAdjustedStartTimeCli(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginNetworkSteeringMaskAddCommandArguments[] = {
-  "The channel mask to add a channel to.",
-  "The channel to add to the mask.",
+static const char * const pluginPriceCommonAdjStTCommandArguments[] = {
+  "start time utc",
+  "duration type",
   NULL
 };
 #endif
 
 
-void emberAfPluginNetworkSteeringChannelSetCommand(void);
+void emAfPluginPriceCommonClusterConvertDurationToSecondsCli(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginNetworkSteeringMaskSetCommandArguments[] = {
-  "The channel mask to subtract the channel from.",
-  "The value to set the channel mask to.",
+static const char * const pluginPriceCommonCnvrtDurnToSecCommandArguments[] = {
+  "start time utc",
+  "duration",
+  "duration type",
   NULL
 };
 #endif
 
 
-void emberAfPluginNetworkSteeringChannelAddOrSubtractCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginNetworkSteeringMaskSubtractCommandArguments[] = {
-  "The channel mask to subtract the channel from.",
-  "The channel to subtract the mask from.",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginNetworkSteeringMaskTable[] = {
-  emberCommandEntryActionWithDetails("add", emberAfPluginNetworkSteeringChannelAddOrSubtractCommand, "uu", "Adds a channel to either the primary or secondary channel mask of the  ...", pluginNetworkSteeringMaskAddCommandArguments),
-  emberCommandEntryActionWithDetails("set", emberAfPluginNetworkSteeringChannelSetCommand, "uw", "Set either the primary or secondary channel mask.", pluginNetworkSteeringMaskSetCommandArguments),
-  emberCommandEntryActionWithDetails("subtract", emberAfPluginNetworkSteeringChannelAddOrSubtractCommand, "uu", "Subtracts a channel from either the primary or secondary channel mask  ...", pluginNetworkSteeringMaskSubtractCommandArguments),
+static EmberCommandEntry emberCommandPluginPriceCommonTable[] = {
+  emberCommandEntryActionWithDetails("adj-st-t", emAfPluginPriceCommonClusterGetAdjustedStartTimeCli, "wu", "Calculates a new UTC start time value based on the duration type param ...", pluginPriceCommonAdjStTCommandArguments),
+  emberCommandEntryActionWithDetails("cnvrt-durn-to-sec", emAfPluginPriceCommonClusterConvertDurationToSecondsCli, "wwu", "Converts the duration to a number of seconds based on the duration typ ...", pluginPriceCommonCnvrtDurnToSecCommandArguments),
   emberCommandEntryTerminator(),
 };
-void emberAfPluginNetworkSteeringSetPreconfiguredKeyCommand(void);
+void abortTouchLink(void);
+void cancelRxOn(void);
+void setScanChannel(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginNetworkSteeringPreConfiguredKeySetCommandArguments[] = {
-  "Set the preconfigured key so that the joining device can enter the net ...",
+static const char * const pluginZllCommissioningChannelCommandArguments[] = {
+  "The primary channel to be used.",
   NULL
 };
 #endif
 
 
-void emberAfPluginNetworkSteeringStartCommand(void);
+void disable(void);
+void enable(void);
+void getEndpointListRequest(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginNetworkSteeringStartCommandArguments[] = {
-  "A mask of options for indicating specific behavior within the network- ...",
+static const char * const pluginZllCommissioningEndpointsCommandArguments[] = {
+  "The network address of the device to which the request will be sent.",
+  "The source endpoint from which the request will be sent.",
+  "The destination endpoint to which the request will be sent.",
+  "The endpoint index at which to start retreiving data.",
   NULL
 };
 #endif
 
 
-void emberAfPluginNetworkSteeringStatusCommand(void);
-void emberAfPluginNetworkSteeringStopCommand(void);
-static EmberCommandEntry emberCommandPluginNetworkSteeringTable[] = {
-  emberCommandEntrySubMenu("mask", emberCommandPluginNetworkSteeringMaskTable, ""),
-  emberCommandEntryActionWithDetails("pre-configured-key-set", emberAfPluginNetworkSteeringSetPreconfiguredKeyCommand, "b", "Set the pre-configured key", pluginNetworkSteeringPreConfiguredKeySetCommandArguments),
-  emberCommandEntryActionWithDetails("start", emberAfPluginNetworkSteeringStartCommand, "u", "Starts the network steering process.", pluginNetworkSteeringStartCommandArguments),
-  emberCommandEntryActionWithDetails("status", emberAfPluginNetworkSteeringStatusCommand, "", "Displays the current status of the network steering process.", NULL),
-  emberCommandEntryActionWithDetails("stop", emberAfPluginNetworkSteeringStopCommand, "", "Stops the network steering process.", NULL),
+void formNetwork(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginZllCommissioningFormCommandArguments[] = {
+  "The channel on which to form the network.",
+  "The power setting for network transmissions.",
+  "The PAN identifier for the network.",
+  NULL
+};
+#endif
+
+
+void getGroupIdentifiersRequest(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginZllCommissioningGroupsCommandArguments[] = {
+  "The network address of the device to which the request will be sent.",
+  "The source endpoint from which the request will be sent.",
+  "The destination endpoint to which the request will be sent.",
+  "The group table index at which to start retreiving data.",
+  NULL
+};
+#endif
+
+
+void setIdentifyDuration(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginZllCommissioningIdentifyCommandArguments[] = {
+  "The duration (in tenths of a second) of identify mode or 0xFFFF to ind ...",
+  NULL
+};
+#endif
+
+
+void endpointInformation(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginZllCommissioningInfoCommandArguments[] = {
+  "The network address of the device to which the request will be sent.",
+  "The source endpoint from which the request will be sent.",
+  "The destination endpoint to which the request will be sent.",
+  NULL
+};
+#endif
+
+
+void joinable(void);
+void initiateTouchLink(void);
+void setScanMask(void);
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const pluginZllCommissioningMaskCommandArguments[] = {
+  "The index of the channel mask to be used.",
+  NULL
+};
+#endif
+
+
+void noResetForNFN(void);
+void noTouchlinkForNFN(void);
+void emberAfZllResetToFactoryNew(void);
+void rxOnStatus(void);
+void scanTouchLink(void);
+void scanTouchLink(void);
+void scanTouchLink(void);
+static EmberCommandEntry emberCommandPluginZllCommissioningScanTable[] = {
+  emberCommandEntryActionWithDetails("device", scanTouchLink, "", "Initiate a touch link for the purpose of retrieving information about  ...", NULL),
+  emberCommandEntryActionWithDetails("identify", scanTouchLink, "", "Initiate a touch link for the purpose of causing a target device to id ...", NULL),
+  emberCommandEntryActionWithDetails("reset", scanTouchLink, "", "Initiate a touch link for the purpose of resetting a target device.", NULL),
   emberCommandEntryTerminator(),
 };
-void emAfOtaLoadFileCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD) && defined(EMBER_TEST)
-static const char * const pluginOtaServerLoadFileCommandArguments[] = {
-  "The file name.",
-  NULL
-};
-#endif
-
-
-void otaImageNotifyCommand(void);
+void setSecondaryScanChannel(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerNotifyCommandArguments[] = {
-  "The node ID (can be a broadcast address) to which this OTA Notify mess ...",
-  "Target endpoint for the OTA Notify message (only really meaningful for ...",
-  "Used to specify which parameters you want included in the OTA Notify c ...",
-  "Corresponds to QueryJitter parameter in the OTA Upgrade cluster specif ...",
-  "Manufacturer ID for the image being advertised (should match the mfr I ...",
-  "Image type ID for the image being advertised (should match the image t ...",
-  "Firmware version of the image being advertised (should match the versi ...",
+static const char * const pluginZllCommissioningSecondaryChannelCommandArguments[] = {
+  "The secondary channel to be used.",
   NULL
 };
 #endif
 
 
-void setPolicy(void);
+void setRxOn(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyBlockRequestCommandArguments[] = {
-  "0: Send block (default), 1: Delay download once for 2 minutes, 2: Alwa ...",
+static const char * const pluginZllCommissioningSetRxOnCommandArguments[] = {
+  "The duration for the Rx On period.",
   NULL
 };
 #endif
 
 
-void otaServerSetClientDelayUnits(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD) && defined(EMBER_TEST)
-static const char * const pluginOtaServerPolicyClientDelayUnitsCommandArguments[] = {
-  "The unit to treat the minimum block period field.",
-  NULL
-};
-#endif
-
-
-void setPolicy(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyImageReqMinPeriodCommandArguments[] = {
-  "The minimum block period in milliseconds.",
-  NULL
-};
-#endif
-
-
-void setPolicy(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyPageReqMissCommandArguments[] = {
-  "The block modulus number to skip sending when responding to an Image P ...",
-  NULL
-};
-#endif
-
-
-void setPolicy(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyPageReqSupCommandArguments[] = {
-  "1 if Page Request is supported, 0 if unsupported",
-  NULL
-};
-#endif
-
-
-void emAfOtaServerPolicyPrint(void);
-void setPolicy(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyQueryCommandArguments[] = {
-  "0: Upgrade if server has newer (default), 1: Downgrade if server has o ...",
-  NULL
-};
-#endif
-
-
-void setPolicy(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerPolicyUpgradeCommandArguments[] = {
-  "0: Upgrade Now (default), 1: Upgrade in 2       minutes, 2: Ask me lat ...",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginOtaServerPolicyTable[] = {
-  emberCommandEntryActionWithDetails("block-request", setPolicy, "u", "Sets the policy used by the ota-server Policy Plugin when it receives  ...", pluginOtaServerPolicyBlockRequestCommandArguments),
-#if defined(EMBER_TEST)
-  emberCommandEntryActionWithDetails("client-delay-units", otaServerSetClientDelayUnits, "u", "For testing, force the server to treat the Minimum Block Period in a c ...", pluginOtaServerPolicyClientDelayUnitsCommandArguments),
-#endif //defined(EMBER_TEST)
-  emberCommandEntryActionWithDetails("image-req-min-period", setPolicy, "v", "", pluginOtaServerPolicyImageReqMinPeriodCommandArguments),
-  emberCommandEntryActionWithDetails("page-req-miss", setPolicy, "u", "Sets the modulus number of blocks to not respond t ...", pluginOtaServerPolicyPageReqMissCommandArguments),
-  emberCommandEntryActionWithDetails("page-req-sup", setPolicy, "u", "Sets whether the Page Request feature is supported or not.", pluginOtaServerPolicyPageReqSupCommandArguments),
-  emberCommandEntryActionWithDetails("print", emAfOtaServerPolicyPrint, "", "Prints the polices used by the OTA Server Policy Plugin", NULL),
-  emberCommandEntryActionWithDetails("query", setPolicy, "u", "Sets the policy used by the OTA Server Policy Plugin when it receives  ...", pluginOtaServerPolicyQueryCommandArguments),
-  emberCommandEntryActionWithDetails("upgrade", setPolicy, "u", "Sets the policy used by the OTA Server Policy Plugin when it receives  ...", pluginOtaServerPolicyUpgradeCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void otaSendUpgradeCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaServerUpgradeCommandArguments[] = {
-  "Short destination to send message",
-  "Endpoint destination to send message",
-  "Manufacturer ID for the image (0xFFFF for wildcard)",
-  "Image type for the image (0xFFFF for wildcard)",
-  "File version for the image (0xFFFFFFFF for wildcard)",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginOtaServerTable[] = {
-#if defined(EMBER_TEST)
-  emberCommandEntryActionWithDetails("load-file", emAfOtaLoadFileCommand, "b", "Load file.", pluginOtaServerLoadFileCommandArguments),
-#endif //defined(EMBER_TEST)
-  emberCommandEntryActionWithDetails("notify", otaImageNotifyCommand, "vuuuvvw", "Sends an OTA Image Notify message to the specified destination indicat ...", pluginOtaServerNotifyCommandArguments),
-  emberCommandEntrySubMenu("policy", emberCommandPluginOtaServerPolicyTable, ""),
-  emberCommandEntryActionWithDetails("upgrade", otaSendUpgradeCommand, "vuvvw", "Instruct a device to upgrade now.", pluginOtaServerUpgradeCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emAfOtaStorageDataPrint(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaStorageCommonDataPrintCommandArguments[] = {
-  "The index of the image to print its data.",
-  "The offset into the OTA image that will be printed.",
-  NULL
-};
-#endif
-
-
-void emAfOtaImageDelete(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginOtaStorageCommonDeleteCommandArguments[] = {
-  "The index at which to begin bootloading the image",
-  NULL
-};
-#endif
-
-
-void emAfOtaPrintAllImages(void);
-void emAfOtaReloadStorageDevice(void);
-void emAfOtaStorageInfoPrint(void);
-static EmberCommandEntry emberCommandPluginOtaStorageCommonTable[] = {
-  emberCommandEntryActionWithDetails("data-print", emAfOtaStorageDataPrint, "uw", "Print arbitray bytes of the OTA image on disk.", pluginOtaStorageCommonDataPrintCommandArguments),
-  emberCommandEntryActionWithDetails("delete", emAfOtaImageDelete, "u", "Deletes the image at the specified index.", pluginOtaStorageCommonDeleteCommandArguments),
-  emberCommandEntryActionWithDetails("printImages", emAfOtaPrintAllImages, "", "Prints the images.", NULL),
-  emberCommandEntryActionWithDetails("reload", emAfOtaReloadStorageDevice, "", "Reload the storage device.", NULL),
-  emberCommandEntryActionWithDetails("storage-info", emAfOtaStorageInfoPrint, "", "Print information about the storage device.", NULL),
-  emberCommandEntryTerminator(),
-};
-void mode(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginPollControlClientModeCommandArguments[] = {
-  "The fast polling mode.",
-  NULL
-};
-#endif
-
-
-void print(void);
-void respond(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginPollControlClientRespondCommandArguments[] = {
-  "The response mode.",
-  NULL
-};
-#endif
-
-
-void timeout(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginPollControlClientTimeoutCommandArguments[] = {
-  "The fast polling timeout.",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginPollControlClientTable[] = {
-  emberCommandEntryActionWithDetails("mode", mode, "u", "Set the fast polling mode.", pluginPollControlClientModeCommandArguments),
-  emberCommandEntryActionWithDetails("print", print, "", "Print the fast polling mode and timeout.", NULL),
-  emberCommandEntryActionWithDetails("respond", respond, "u", "Set the response mode.", pluginPollControlClientRespondCommandArguments),
-  emberCommandEntryActionWithDetails("timeout", timeout, "v", "Set the fast polling timeout.", pluginPollControlClientTimeoutCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emAfPluginReportingCliAdd(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginReportingAddCommandArguments[] = {
-  "The local endpoint from which the attribute is reported.",
-  "The cluster where the attribute is located.",
-  "The id of the attribute being reported.",
-  "0 for client-side attributes or 1 for server-side attributes.",
-  "The minimum reporting interval, measured in seconds.",
-  "The maximum reporting interval, measured in seconds.",
-  "The minimum change to the attribute that will result in a report being ...",
-  NULL
-};
-#endif
-
-
-void emAfPluginReportingCliClear(void);
-void emAfPluginReportingCliClearLastReportTime(void);
-void emAfPluginReportingCliPrint(void);
-void emAfPluginReportingCliRemove(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginReportingRemoveCommandArguments[] = {
-  "The index of the report to be removed.",
-  NULL
-};
-#endif
-
-
-void emAfPluginReportingCliTestTiming(void);
-static EmberCommandEntry emberCommandPluginReportingTable[] = {
-  emberCommandEntryActionWithDetails("add", emAfPluginReportingCliAdd, "uvvuvvw", "Add a new entry to the report table.", pluginReportingAddCommandArguments),
-  emberCommandEntryActionWithDetails("clear", emAfPluginReportingCliClear, "", "Clear all entries from the report table.", NULL),
-  emberCommandEntryActionWithDetails("clear-last-report-time", emAfPluginReportingCliClearLastReportTime, "", "Clear last report time of attributes.", NULL),
-  emberCommandEntryActionWithDetails("print", emAfPluginReportingCliPrint, "", "Print the report table.", NULL),
-  emberCommandEntryActionWithDetails("remove", emAfPluginReportingCliRemove, "u", "Remove an entry from the report table.", pluginReportingRemoveCommandArguments),
-  emberCommandEntryActionWithDetails("test-timing", emAfPluginReportingCliTestTiming, "", "FOR TESTING PURPOSES - gather timing metrics for reporting table opera ...", NULL),
-  emberCommandEntryTerminator(),
-};
-void emAfPluginSimpleMeteringClientCliGetSampledData(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginSimpleMeteringClientGetSampledDataCommandArguments[] = {
-  "The network address of the server to which the request will be sent.",
-  "The local endpoint from which the request will be sent.",
-  "The remote endpoint to which the request will be sent.",
-  "The sample id as received in a previous startSamplingResponse",
-  "The earliest start time sampling",
-  "An 8 bit enumeration that identifies the required type of sampled data",
-  "The total number of samples.",
-  NULL
-};
-#endif
-
-
-void emAfPluginSimpleMeteringClientCliLocalChangeSupply(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginSimpleMeteringClientLocalChangeSupplyCommandArguments[] = {
-  "The network address of the server to which the request will be sent.",
-  "The local endpoint from which the request will be sent.",
-  "The remote endpoint to which the request will be sent.",
-  "The proposed supply status: either ON(2) or OFF/ARMED(1)",
-  NULL
-};
-#endif
-
-
-void emAfPluginSimpleMeteringClientCliSchSnapshot(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginSimpleMeteringClientSchSnapshotCommandArguments[] = {
-  "The network address of the server to which the request will be sent.",
-  "The local endpoint from which the request will be sent.",
-  "The remote endpoint to which the request will be sent.",
-  "The issuerId.",
-  "The commandIndex.",
-  "The total number of commands",
-  "The snapshot schedule Id.",
-  "The start time.",
-  "The snapshot schedule. 3 bytes",
-  "The snapshot Type.",
-  "The snapshot schedule cause.",
-  NULL
-};
-#endif
-
-
-void emAfPluginSimpleMeteringClientCliStartSampling(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginSimpleMeteringClientStartSamplingCommandArguments[] = {
-  "The network address of the server to which the request will be sent.",
-  "The local endpoint from which the request will be sent.",
-  "The remote endpoint to which the request will be sent.",
-  "The issuerId.",
-  "The time to start sampling",
-  "An 8 bit enumeration that identifies the type of data being sampled",
-  "An unsigned 16-bit field representing the interval or time in seconds  ...",
-  "A 16 bit unsigned integer that represents the number of samples to be  ...",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginSimpleMeteringClientTable[] = {
-  emberCommandEntryActionWithDetails("get-sampled-data", emAfPluginSimpleMeteringClientCliGetSampledData, "vuuvwuv", "Send a start sampling command to a metering server.", pluginSimpleMeteringClientGetSampledDataCommandArguments),
-  emberCommandEntryActionWithDetails("local-change-supply", emAfPluginSimpleMeteringClientCliLocalChangeSupply, "vuuu", "Send a start sampling command to a metering server.", pluginSimpleMeteringClientLocalChangeSupplyCommandArguments),
-  emberCommandEntryActionWithDetails("sch-snapshot", emAfPluginSimpleMeteringClientCliSchSnapshot, "vuuwuuuwwuw", "Schedule a snapshot.", pluginSimpleMeteringClientSchSnapshotCommandArguments),
-  emberCommandEntryActionWithDetails("start-sampling", emAfPluginSimpleMeteringClientCliStartSampling, "vuuwwuvv", "Send a start sampling command to a metering server.", pluginSimpleMeteringClientStartSamplingCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void printChildTable(void);
-void printInfo(void);
-void printNeighborTable(void);
-void printRouteTable(void);
-static EmberCommandEntry emberCommandPluginStackDiagnosticsTable[] = {
-  emberCommandEntryActionWithDetails("child-table", printChildTable, "", "Prints out the entries in the stack's child table.", NULL),
-  emberCommandEntryActionWithDetails("info", printInfo, "", "Prints out general information about the state of the stack.", NULL),
-  emberCommandEntryActionWithDetails("neighbor-table", printNeighborTable, "", "Prints out the entries in the stack's neighbor table.", NULL),
-  emberCommandEntryActionWithDetails("route-table", printRouteTable, "", "Prints out the entries in the stack's route table.", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessAddChildCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessAddChildCommandArguments[] = {
-  "The shortId of the child device.",
-  "The EUI64 of the child (big endian).",
-  "The node type of the child device.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessSetApsSecurityForClusterCommand(void);
-void emberAfPluginTestHarnessSetApsSecurityForClusterCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessApsSecForClusterOnCommandArguments[] = {
-  "The cluster ID to add APS security to automatically.",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginTestHarnessApsSecForClusterTable[] = {
-  emberCommandEntryActionWithDetails("off", emberAfPluginTestHarnessSetApsSecurityForClusterCommand, "", "Turns off automatic APS security for the previously specified cluster.", NULL),
-  emberCommandEntryActionWithDetails("on", emberAfPluginTestHarnessSetApsSecurityForClusterCommand, "v", "Turns on automatic APS security for the specified cluster.", pluginTestHarnessApsSecForClusterOnCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void setOptionsCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessAttrOptionsCommandArguments[] = {
-  "type",
-  "timeout",
-  NULL
-};
-#endif
-
-
-void setDestinationCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessAttrSetDestCommandArguments[] = {
-  "addr",
-  "endpoint",
-  NULL
-};
-#endif
-
-
-void startTestCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessAttrStartTestCommandArguments[] = {
-  "cluster id",
-  "attr start id",
-  "attr end id",
-  "client to server",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginTestHarnessAttrTable[] = {
-  emberCommandEntryActionWithDetails("options", setOptionsCommand, "uv", "Set the options for the attributes tests.", pluginTestHarnessAttrOptionsCommandArguments),
-  emberCommandEntryActionWithDetails("set-dest", setDestinationCommand, "vu", "Set the destination for the attributes tests.", pluginTestHarnessAttrSetDestCommandArguments),
-  emberCommandEntryActionWithDetails("start-test", startTestCommand, "vvvu", "Start the attributes test.", pluginTestHarnessAttrStartTestCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessChannelMaskAddOrRemoveCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD) && defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-static const char * const pluginTestHarnessChannelMaskAddCommandArguments[] = {
-  "The 802.15.4 chanel to add.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessChannelMaskResetClearAllCommand(void);
-void emberAfPluginTestHarnessChannelMaskResetClearAllCommand(void);
-void emberAfPluginTestHarnessChannelMaskAddOrRemoveCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD) && defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-static const char * const pluginTestHarnessChannelMaskRemoveCommandArguments[] = {
-  "The 802.15.4 chanel to remove.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessChannelMaskResetClearAllCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessChannelMaskTable[] = {
-#if defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryActionWithDetails("add", emberAfPluginTestHarnessChannelMaskAddOrRemoveCommand, "u", "Add a channel to the mask", pluginTestHarnessChannelMaskAddCommandArguments),
-#endif //defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-#if defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryActionWithDetails("all", emberAfPluginTestHarnessChannelMaskResetClearAllCommand, "", "Sets the channel mask to all channels", NULL),
-#endif //defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-#if defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryActionWithDetails("clear", emberAfPluginTestHarnessChannelMaskResetClearAllCommand, "", "Clears the channel mask used by network find.", NULL),
-#endif //defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-#if defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryActionWithDetails("remove", emberAfPluginTestHarnessChannelMaskAddOrRemoveCommand, "u", "Remove a channel from the mask", pluginTestHarnessChannelMaskRemoveCommandArguments),
-#endif //defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-#if defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryActionWithDetails("reset", emberAfPluginTestHarnessChannelMaskResetClearAllCommand, "", "Resets the channel mask back to the app default.", NULL),
-#endif //defined(EMBER_AF_PLUGIN_NETWORK_FIND)
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessConcentratorStartStopCommand(void);
-void emberAfPluginTestHarnessConcentratorStartStopCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessConcentratorTable[] = {
-  emberCommandEntryActionWithDetails("start", emberAfPluginTestHarnessConcentratorStartStopCommand, "", "Starts the concentrator's periodic broadcasts.", NULL),
-  emberCommandEntryActionWithDetails("stop", emberAfPluginTestHarnessConcentratorStartStopCommand, "", "Starts the concentrator's periodic broadcasts.", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessClusterEndpointIndexCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessEndpointClusterEndpointIndexCommandArguments[] = {
-  "The local endpoint of the cluster.",
-  "The cluster whose index is needed.",
-  "0 for client-side attributes or 1 for server-side attributes.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessEnableDisableEndpointCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessEndpointDisableCommandArguments[] = {
-  "The endpoint number.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessEnableDisableEndpointCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessEndpointEnableCommandArguments[] = {
-  "The endpoint number.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessEndpointStatusCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessEndpointTable[] = {
-  emberCommandEntryActionWithDetails("cluster-endpoint-index", emberAfPluginTestHarnessClusterEndpointIndexCommand, "uvu", "Get cluster endpoint index", pluginTestHarnessEndpointClusterEndpointIndexCommandArguments),
-  emberCommandEntryActionWithDetails("disable", emberAfPluginTestHarnessEnableDisableEndpointCommand, "u", "Disables the endpont to receive messages and be discovered", pluginTestHarnessEndpointDisableCommandArguments),
-  emberCommandEntryActionWithDetails("enable", emberAfPluginTestHarnessEnableDisableEndpointCommand, "u", "Enables the endpont to receive messages and be discovered", pluginTestHarnessEndpointEnableCommandArguments),
-  emberCommandEntryActionWithDetails("status", emberAfPluginTestHarnessEndpointStatusCommand, "", "Disables the endpont to receive messages and be discovered", NULL),
-  emberCommandEntryTerminator(),
-};
-void emAfTestHarnessStartImageStampCalculation(void);
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-void emberAfPluginTestHarnessCertMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentCertMangleChangeByteCommandArguments[] = {
-  "The index of the certificate byte to change",
-  "The new value of the certificate byte",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessCertMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentCertMangleCorruptCommandArguments[] = {
-  "The index of the certificate byte to corrupt",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessCertMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentCertMangleIssuerCommandArguments[] = {
-  "The EUI64 of the issuer (big endian).",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessCertMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentCertMangleLengthCommandArguments[] = {
-  "The positive or negative change in length.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessCertMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentCertMangleSubjectCommandArguments[] = {
-  "The EUI64 of the subject (big endian).",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginTestHarnessKeyEstablishmentCertMangleTable[] = {
-  emberCommandEntryActionWithDetails("change-byte", emberAfPluginTestHarnessCertMangleCommand, "uu", "Changes a single byte in the cert", pluginTestHarnessKeyEstablishmentCertMangleChangeByteCommandArguments),
-  emberCommandEntryActionWithDetails("corrupt", emberAfPluginTestHarnessCertMangleCommand, "u", "Corrupts a single byte in the cert", pluginTestHarnessKeyEstablishmentCertMangleCorruptCommandArguments),
-  emberCommandEntryActionWithDetails("issuer", emberAfPluginTestHarnessCertMangleCommand, "b", "Changes the issuer in the certificate.", pluginTestHarnessKeyEstablishmentCertMangleIssuerCommandArguments),
-  emberCommandEntryActionWithDetails("length", emberAfPluginTestHarnessCertMangleCommand, "s", "Mangles the length of the certificate", pluginTestHarnessKeyEstablishmentCertMangleLengthCommandArguments),
-  emberCommandEntryActionWithDetails("subject", emberAfPluginTestHarnessCertMangleCommand, "b", "Changes the subject (EUI64) of the cert", pluginTestHarnessKeyEstablishmentCertMangleSubjectCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentDelayCbkeCommandArguments[] = {
-  "Set the actual delay that occurs.",
-  "Sets the advertised delay sent to the partner of key establishment",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentKeyMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentKeyMangleCommandArguments[] = {
-  "The positive or negative change in length.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentNewKeyPolicyCommandArguments[] = {
-  "Allows / disallows new key establishment requests.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentOutOfSequenceCommandArguments[] = {
-  "The out-of-sequence command ID to send.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-void emberAfPluginTestHarnessKeyEstablishmentSetAvailableSuiteCommand (void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentSetAvailableSuiteCommandArguments[] = {
-  "This field holds the type        of key establishment suit ...",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentSelectSuiteCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessKeyEstablishmentSuiteCommandArguments[] = {
-  "This field holds the type        of key establishment suit ...",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessKeyEstablishmentSetModeCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessKeyEstablishmentTable[] = {
-  emberCommandEntryActionWithDetails("adv-aps-fc", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "Advances the local device's outgoing APS FC by 4096.", NULL),
-  emberCommandEntrySubMenu("cert-mangle", emberCommandPluginTestHarnessKeyEstablishmentCertMangleTable, ""),
-  emberCommandEntryActionWithDetails("default-resp", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "Sends a default response error message in response to initate KE.", NULL),
-  emberCommandEntryActionWithDetails("delay-cbke", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "vv", "Changes the advertised delays by the local device for CBKE.", pluginTestHarnessKeyEstablishmentDelayCbkeCommandArguments),
-  emberCommandEntryActionWithDetails("key-mangle", emberAfPluginTestHarnessKeyEstablishmentKeyMangleCommand, "s", "Mangles the length of the empheral key.", pluginTestHarnessKeyEstablishmentKeyMangleCommandArguments),
-  emberCommandEntryActionWithDetails("new-key-policy", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "u", "Sets the policy of whether the TC allows new KE requests.", pluginTestHarnessKeyEstablishmentNewKeyPolicyCommandArguments),
-  emberCommandEntryActionWithDetails("no-resources", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "All received KE requests will be responded with 'no resources'.", NULL),
-  emberCommandEntryActionWithDetails("normal-mode", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "Sets the key establishment mode to normal.", NULL),
-  emberCommandEntryActionWithDetails("out-of-sequence", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "u", "All received KE requests will be responded with 'no resources'.", pluginTestHarnessKeyEstablishmentOutOfSequenceCommandArguments),
-  emberCommandEntryActionWithDetails("reset-aps-fc", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "Forces the local device to reset its outgoing APS FC.", NULL),
-  emberCommandEntryActionWithDetails("set-available-suite", emberAfPluginTestHarnessKeyEstablishmentSetAvailableSuiteCommand , "v", "Selects between the CBKE 163k1 and 283k1 suites.", pluginTestHarnessKeyEstablishmentSetAvailableSuiteCommandArguments),
-  emberCommandEntryActionWithDetails("suite", emberAfPluginTestHarnessKeyEstablishmentSelectSuiteCommand, "v", "Selects between the CBKE 163k1 and 283k1 suites.", pluginTestHarnessKeyEstablishmentSuiteCommandArguments),
-  emberCommandEntryActionWithDetails("timeout", emberAfPluginTestHarnessKeyEstablishmentSetModeCommand, "", "Artificially creates a timeout by delaying an outgoing message.", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessKeyUpdateCommand(void);
-void emberAfPluginTestHarnessKeyUpdateCommand(void);
-void emberAfPluginTestHarnessKeyUpdateCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessKeyUpdateTable[] = {
-  emberCommandEntryActionWithDetails("broadcast", emberAfPluginTestHarnessKeyUpdateCommand, "", "Changes TC NWK key update mechanism to broadcast.", NULL),
-  emberCommandEntryActionWithDetails("now", emberAfPluginTestHarnessKeyUpdateCommand, "", "Starts a TC NWK key update now", NULL),
-  emberCommandEntryActionWithDetails("unicast", emberAfPluginTestHarnessKeyUpdateCommand, "", "Changes TC NWK key update mechanism to unicast with APS security.", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessOtaImageMangleCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessOtaImageMangleCommandArguments[] = {
-  "The byte index into the OTA image that will be mangled.",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginTestHarnessOtaTable[] = {
-  emberCommandEntryActionWithDetails("image-mangle", emberAfPluginTestHarnessOtaImageMangleCommand, "v", "Mangles the Simple Storage RAM OTA image.", pluginTestHarnessOtaImageMangleCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessPriceSendNewFieldsCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessPriceSendNewFieldsCommandArguments[] = {
-  "Boolean indicating whether to send new fields.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessPriceSendNewFieldsCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessPriceSendSe10FieldsCommandArguments[] = {
-  "Boolean indicating whether to send new fields.",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginTestHarnessPriceTable[] = {
-  emberCommandEntryActionWithDetails("send-new-fields", emberAfPluginTestHarnessPriceSendNewFieldsCommand, "u", "Controls whether the new SE 1.1 price fields are included.", pluginTestHarnessPriceSendNewFieldsCommandArguments),
-  emberCommandEntryActionWithDetails("send-se10-fields", emberAfPluginTestHarnessPriceSendNewFieldsCommand, "u", "Controls whether the new SE 1.1 price fields are included.", pluginTestHarnessPriceSendSe10FieldsCommandArguments),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessRadioOnOffCommand(void);
-void emberAfPluginTestHarnessRadioOnOffCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessRadioTable[] = {
-  emberCommandEntryActionWithDetails("off", emberAfPluginTestHarnessRadioOnOffCommand, "", "Turns off the radio so that no messages are sent.", NULL),
-  emberCommandEntryActionWithDetails("on", emberAfPluginTestHarnessRadioOnOffCommand, "", "Turns on the radio if it was previously turned off", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessSetRegistrationCommand(void);
-void emberAfPluginTestHarnessSetRegistrationCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessRegistrationTable[] = {
-  emberCommandEntryActionWithDetails("off", emberAfPluginTestHarnessSetRegistrationCommand, "", "Turns off automatic SE registration.", NULL),
-  emberCommandEntryActionWithDetails("on", emberAfPluginTestHarnessSetRegistrationCommand, "", "Turns on automatic SE registration.", NULL),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessSetNodeDescriptorComplianceRevision(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessSetComplianceRevisionCommandArguments[] = {
-  "The compliance version",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessSetMaxChildren(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessSetMaxChildrenCommandArguments[] = {
-  "The maximum number of children to support",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessSetNeighborTableSize(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessSetNeighborTableSizeCommandArguments[] = {
-  "The neighbor table size on the node",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessSetRadioPower(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginTestHarnessSetRadioPowerCommandArguments[] = {
-  "The radio power to set.",
-  NULL
-};
-#endif
-
-
-void emberAfPluginTestHarnessLimitBeaconsOnOffCommand(void);
-void emberAfPluginTestHarnessLimitBeaconsOnOffCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessStackLimitBeaconsTable[] = {
-  emberCommandEntryActionWithDetails("off", emberAfPluginTestHarnessLimitBeaconsOnOffCommand, "", "Disables a limit to the max number of outgoing beacons.", NULL),
-  emberCommandEntryActionWithDetails("on", emberAfPluginTestHarnessLimitBeaconsOnOffCommand, "", "Enables a limit to the max number of outgoing beacons.", NULL),
-  emberCommandEntryTerminator(),
-};
-static EmberCommandEntry emberCommandPluginTestHarnessStackTable[] = {
-  emberCommandEntrySubMenu("limit-beacons", emberCommandPluginTestHarnessStackLimitBeaconsTable, ""),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginTestHarnessStatusCommand(void);
-void emberAfPluginTestHarnessTcKeepaliveSendCommand(void);
-void emberAfPluginTestHarnessTcKeepaliveStartStopCommand(void);
-void emberAfPluginTestHarnessTcKeepaliveStartStopCommand(void);
-static EmberCommandEntry emberCommandPluginTestHarnessTcKeepaliveTable[] = {
-  emberCommandEntryActionWithDetails("send", emberAfPluginTestHarnessTcKeepaliveSendCommand, "", "Sends a Trust Center Keepalive.", NULL),
-  emberCommandEntryActionWithDetails("start", emberAfPluginTestHarnessTcKeepaliveStartStopCommand, "", "Starts the TC keepalive state machine.", NULL),
-  emberCommandEntryActionWithDetails("stop", emberAfPluginTestHarnessTcKeepaliveStartStopCommand, "", "Stops the TC keepalive state machine.", NULL),
-  emberCommandEntryTerminator(),
-};
-static EmberCommandEntry emberCommandPluginTestHarnessTable[] = {
-  emberCommandEntryActionWithDetails("add-child", emberAfPluginTestHarnessAddChildCommand, "vbu", "Adds a child to the child table.", pluginTestHarnessAddChildCommandArguments),
-  emberCommandEntrySubMenu("aps-sec-for-cluster", emberCommandPluginTestHarnessApsSecForClusterTable, ""),
-  emberCommandEntrySubMenu("attr", emberCommandPluginTestHarnessAttrTable, ""),
-  emberCommandEntrySubMenu("channel-mask", emberCommandPluginTestHarnessChannelMaskTable, ""),
-  emberCommandEntrySubMenu("concentrator", emberCommandPluginTestHarnessConcentratorTable, ""),
-  emberCommandEntrySubMenu("endpoint", emberCommandPluginTestHarnessEndpointTable, ""),
-  emberCommandEntryActionWithDetails("hash-the-flash", emAfTestHarnessStartImageStampCalculation, "", "Runs the AES-CCM algorithm over the contents of the software image to  ...", NULL),
-  emberCommandEntrySubMenu("key-establishment", emberCommandPluginTestHarnessKeyEstablishmentTable, ""),
-  emberCommandEntrySubMenu("key-update", emberCommandPluginTestHarnessKeyUpdateTable, ""),
-  emberCommandEntrySubMenu("ota", emberCommandPluginTestHarnessOtaTable, ""),
-  emberCommandEntrySubMenu("price", emberCommandPluginTestHarnessPriceTable, ""),
-  emberCommandEntrySubMenu("radio", emberCommandPluginTestHarnessRadioTable, ""),
-  emberCommandEntrySubMenu("registration", emberCommandPluginTestHarnessRegistrationTable, ""),
-  emberCommandEntryActionWithDetails("set-compliance-revision", emberAfPluginTestHarnessSetNodeDescriptorComplianceRevision, "u", "Setting a compliance revision for a device such that the device can ac ...", pluginTestHarnessSetComplianceRevisionCommandArguments),
-  emberCommandEntryActionWithDetails("set-max-children", emberAfPluginTestHarnessSetMaxChildren, "u", "Sets the maximum children supported by the local node.", pluginTestHarnessSetMaxChildrenCommandArguments),
-  emberCommandEntryActionWithDetails("set-neighbor-table-size", emberAfPluginTestHarnessSetNeighborTableSize, "u", "Sets the neighbor table size on the local nod ...", pluginTestHarnessSetNeighborTableSizeCommandArguments),
-  emberCommandEntryActionWithDetails("set-radio-power", emberAfPluginTestHarnessSetRadioPower, "u", "Sets the radio power.", pluginTestHarnessSetRadioPowerCommandArguments),
-  emberCommandEntrySubMenu("stack", emberCommandPluginTestHarnessStackTable, ""),
-  emberCommandEntryActionWithDetails("status", emberAfPluginTestHarnessStatusCommand, "", "Display the current status of the test harness.", NULL),
-  emberCommandEntrySubMenu("tc-keepalive", emberCommandPluginTestHarnessTcKeepaliveTable, ""),
-  emberCommandEntryTerminator(),
-};
-void emberAfPluginSetTCLinkKeyUpdateTimerCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const pluginUpdateTcLinkKeyTimerCommandArguments[] = {
-  "The amount of time between subsequent trust center link key updates in ...",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandPluginUpdateTcLinkKeyTable[] = {
-  emberCommandEntryActionWithDetails("timer", emberAfPluginSetTCLinkKeyUpdateTimerCommand, "w", "This sets the the amount of time between subsequent trust center link  ...", pluginUpdateTcLinkKeyTimerCommandArguments),
+void statusCommand(void);
+void printZllTokens(void);
+void unused(void);
+static EmberCommandEntry emberCommandPluginZllCommissioningTable[] = {
+  emberCommandEntryActionWithDetails("abort", abortTouchLink, "", "Abort the touch link procedure.", NULL),
+  emberCommandEntryActionWithDetails("cancel-rx-on", cancelRxOn, "", "Cancel Rx On When Idle.", NULL),
+  emberCommandEntryActionWithDetails("channel", setScanChannel, "u", "Set the scan channel used by the ZLL Commissioning plugin.", pluginZllCommissioningChannelCommandArguments),
+  emberCommandEntryActionWithDetails("disable", disable, "", "Disable touchlinkin ...", NULL),
+  emberCommandEntryActionWithDetails("enable", enable, "", "Enable touchlinkin ...", NULL),
+  emberCommandEntryActionWithDetails("endpoints", getEndpointListRequest, "vuuu", "Send a GetEndpointListRequest to a server.", pluginZllCommissioningEndpointsCommandArguments),
+  emberCommandEntryActionWithDetails("form", formNetwork, "usv", "Form a ZLL network.", pluginZllCommissioningFormCommandArguments),
+  emberCommandEntryActionWithDetails("groups", getGroupIdentifiersRequest, "vuuu", "Send a GroupIdentifiersRequest to a server.", pluginZllCommissioningGroupsCommandArguments),
+  emberCommandEntryActionWithDetails("identify", setIdentifyDuration, "v", "Set the duration that a target device should remain in identify mode d ...", pluginZllCommissioningIdentifyCommandArguments),
+  emberCommandEntryActionWithDetails("info", endpointInformation, "vuu", "Send an EndpointInformationRequest to a client.", pluginZllCommissioningInfoCommandArguments),
+  emberCommandEntryActionWithDetails("joinable", joinable, "", "Scan for joinable networks and attempt to join if a network is found.", NULL),
+  emberCommandEntryActionWithDetails("link", initiateTouchLink, "", "Initiate the touch link procedure.", NULL),
+  emberCommandEntryActionWithDetails("mask", setScanMask, "u", "Set the scan channel set used by the ZLL Commissioning plugi ...", pluginZllCommissioningMaskCommandArguments),
+  emberCommandEntryActionWithDetails("noreset-nfn", noResetForNFN, "", "Disable reset for an NFN device on a centralized security network.", NULL),
+  emberCommandEntryActionWithDetails("notouchlink-nfn", noTouchlinkForNFN, "", "Disable touchlinking (stealing) for an NFN device.", NULL),
+  emberCommandEntryActionWithDetails("reset", emberAfZllResetToFactoryNew, "", "Reset the local device to factory new.", NULL),
+  emberCommandEntryActionWithDetails("rx-on-active", rxOnStatus, "", "Get Rx On When Idle status.", NULL),
+  emberCommandEntrySubMenu("scan", emberCommandPluginZllCommissioningScanTable, ""),
+  emberCommandEntryActionWithDetails("secondary-channel", setSecondaryScanChannel, "u", "Set the scan channel used by the ZLL Commissioning plugin.", pluginZllCommissioningSecondaryChannelCommandArguments),
+  emberCommandEntryActionWithDetails("set-rx-on", setRxOn, "w", "Set Rx On When Idle duration.", pluginZllCommissioningSetRxOnCommandArguments),
+  emberCommandEntryActionWithDetails("status", statusCommand, "", "Print the ZLL channel set and tokens.", NULL),
+  emberCommandEntryActionWithDetails("tokens", printZllTokens, "", "Print the ZLL tokens.", NULL),
+  emberCommandEntryActionWithDetails("unused", unused, "", "Scan for an unused PAN identifier and form a new ZLL network.", NULL),
   emberCommandEntryTerminator(),
 };
 static EmberCommandEntry emberCommandPluginTable[] = {
@@ -1602,22 +969,16 @@ static EmberCommandEntry emberCommandPluginTable[] = {
   emberCommandEntrySubMenu("concentrator", emberCommandPluginConcentratorTable, ""),
   emberCommandEntrySubMenu("counter", emberCommandPluginCounterTable, ""),
   emberCommandEntrySubMenu("counters", emberCommandPluginCountersTable, ""),
-  emberCommandEntrySubMenu("ezmode-commissioning", emberCommandPluginEzmodeCommissioningTable, ""),
+  emberCommandEntrySubMenu("device-database", emberCommandPluginDeviceDatabaseTable, ""),
+  emberCommandEntrySubMenu("find-and-bind", emberCommandPluginFindAndBindTable, ""),
   emberCommandEntrySubMenu("gateway", emberCommandPluginGatewayTable, ""),
-  emberCommandEntrySubMenu("green-power-client", emberCommandPluginGreenPowerClientTable, ""),
   emberCommandEntrySubMenu("ias-zone-client", emberCommandPluginIasZoneClientTable, ""),
   emberCommandEntrySubMenu("identify", emberCommandPluginIdentifyTable, ""),
+  emberCommandEntrySubMenu("interpan", emberCommandPluginInterpanTable, ""),
   emberCommandEntrySubMenu("network-creator", emberCommandPluginNetworkCreatorTable, ""),
   emberCommandEntrySubMenu("network-creator-security", emberCommandPluginNetworkCreatorSecurityTable, ""),
-  emberCommandEntrySubMenu("network-steering", emberCommandPluginNetworkSteeringTable, ""),
-  emberCommandEntrySubMenu("ota-server", emberCommandPluginOtaServerTable, ""),
-  emberCommandEntrySubMenu("ota-storage-common", emberCommandPluginOtaStorageCommonTable, ""),
-  emberCommandEntrySubMenu("poll-control-client", emberCommandPluginPollControlClientTable, ""),
-  emberCommandEntrySubMenu("reporting", emberCommandPluginReportingTable, ""),
-  emberCommandEntrySubMenu("simple-metering-client", emberCommandPluginSimpleMeteringClientTable, ""),
-  emberCommandEntrySubMenu("stack-diagnostics", emberCommandPluginStackDiagnosticsTable, ""),
-  emberCommandEntrySubMenu("test-harness", emberCommandPluginTestHarnessTable, ""),
-  emberCommandEntrySubMenu("update-tc-link-key", emberCommandPluginUpdateTcLinkKeyTable, ""),
+  emberCommandEntrySubMenu("price-common", emberCommandPluginPriceCommonTable, ""),
+  emberCommandEntrySubMenu("zll-commissioning", emberCommandPluginZllCommissioningTable, ""),
   emberCommandEntryTerminator(),
 };
 void emberAfPrintAttributeTable(void);
@@ -1736,20 +1097,6 @@ static const char * const writeCommandArguments[] = {
 #endif
 
 
-static void zclBasicGlsCommand(void) {
-  zclSimpleClientCommand( ZCL_BASIC_CLUSTER_ID,
-                          ZCL_GET_LOCALES_SUPPORTED_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclBasicGlsCommandArguments[] = {
-  "start locale",
-  "max locales requested",
-  NULL
-};
-#endif
-
-
 static void zclBasicGlsrCommand(void) {
   zclSimpleServerCommand( ZCL_BASIC_CLUSTER_ID,
                           ZCL_GET_LOCALES_SUPPORTED_RESPONSE_COMMAND_ID);
@@ -1765,15 +1112,8 @@ static const char * const zclBasicGlsrCommandArguments[] = {
 #endif
 
 
-static void zclBasicRtfdCommand(void) {
-  zclSimpleClientCommand( ZCL_BASIC_CLUSTER_ID,
-                          ZCL_RESET_TO_FACTORY_DEFAULTS_COMMAND_ID);
-}
-
 static EmberCommandEntry emberCommandZclBasicTable[] = {
-  emberCommandEntryActionWithDetails("gls", zclBasicGlsCommand, "bu", "This command gets locales supported.", zclBasicGlsCommandArguments),
   emberCommandEntryActionWithDetails("glsr", zclBasicGlsrCommand, "ub*", "The locales supported response command is sent in response to a get lo ...", zclBasicGlsrCommandArguments),
-  emberCommandEntryActionWithDetails("rtfd", zclBasicRtfdCommand, "", "Command that resets all attribute values to factory default.", NULL),
   emberCommandEntryTerminator(),
 };
 static void zclColorControlEmovehueCommand(void) {
@@ -1785,8 +1125,6 @@ static void zclColorControlEmovehueCommand(void) {
 static const char * const zclColorControlEmovehueCommandArguments[] = {
   "move mode",
   "rate",
-  "options mask",
-  "options override",
   NULL
 };
 #endif
@@ -1802,8 +1140,6 @@ static const char * const zclColorControlEmovetohueCommandArguments[] = {
   "enhanced hue",
   "direction",
   "transition time",
-  "options mask",
-  "options override",
   NULL
 };
 #endif
@@ -1819,8 +1155,6 @@ static const char * const zclColorControlEmovetohueandsatCommandArguments[] = {
   "enhanced hue",
   "saturation",
   "transition time",
-  "options mask",
-  "options override",
   NULL
 };
 #endif
@@ -1836,8 +1170,6 @@ static const char * const zclColorControlEstephueCommandArguments[] = {
   "step mode",
   "step size",
   "transition time",
-  "options mask",
-  "options override",
   NULL
 };
 #endif
@@ -1855,8 +1187,6 @@ static const char * const zclColorControlLoopCommandArguments[] = {
   "direction",
   "time",
   "start hue",
-  "options mask",
-  "options override",
   NULL
 };
 #endif
@@ -2096,11 +1426,11 @@ static const char * const zclColorControlStopmovestepCommandArguments[] = {
 
 
 static EmberCommandEntry emberCommandZclColorControlTable[] = {
-  emberCommandEntryActionWithDetails("emovehue", zclColorControlEmovehueCommand, "uv!uu", "Command description for EnhancedMoveHue", zclColorControlEmovehueCommandArguments),
-  emberCommandEntryActionWithDetails("emovetohue", zclColorControlEmovetohueCommand, "vuv!uu", "Command description for EnhancedMoveToHue", zclColorControlEmovetohueCommandArguments),
-  emberCommandEntryActionWithDetails("emovetohueandsat", zclColorControlEmovetohueandsatCommand, "vuv!uu", "Command description for EnhancedMoveToHueAndSaturation", zclColorControlEmovetohueandsatCommandArguments),
-  emberCommandEntryActionWithDetails("estephue", zclColorControlEstephueCommand, "uvv!uu", "Command description for EnhancedStepHue", zclColorControlEstephueCommandArguments),
-  emberCommandEntryActionWithDetails("loop", zclColorControlLoopCommand, "uuuvv!uu", "Command description for ColorLoopSet", zclColorControlLoopCommandArguments),
+  emberCommandEntryActionWithDetails("emovehue", zclColorControlEmovehueCommand, "uv", "Command description for EnhancedMoveHue", zclColorControlEmovehueCommandArguments),
+  emberCommandEntryActionWithDetails("emovetohue", zclColorControlEmovetohueCommand, "vuv", "Command description for EnhancedMoveToHue", zclColorControlEmovetohueCommandArguments),
+  emberCommandEntryActionWithDetails("emovetohueandsat", zclColorControlEmovetohueandsatCommand, "vuv", "Command description for EnhancedMoveToHueAndSaturation", zclColorControlEmovetohueandsatCommandArguments),
+  emberCommandEntryActionWithDetails("estephue", zclColorControlEstephueCommand, "uvv", "Command description for EnhancedStepHue", zclColorControlEstephueCommandArguments),
+  emberCommandEntryActionWithDetails("loop", zclColorControlLoopCommand, "uuuvv", "Command description for ColorLoopSet", zclColorControlLoopCommandArguments),
   emberCommandEntryActionWithDetails("movecolor", zclColorControlMovecolorCommand, "rr!uu", "Moves the color.", zclColorControlMovecolorCommandArguments),
   emberCommandEntryActionWithDetails("movecolortemp", zclColorControlMovecolortempCommand, "uvvv!uu", "Command description for MoveColorTemperature", zclColorControlMovecolortempCommandArguments),
   emberCommandEntryActionWithDetails("movehue", zclColorControlMovehueCommand, "uu!uu", "Move hue up or down at specified rate.", zclColorControlMovehueCommandArguments),
@@ -2268,83 +1598,78 @@ static EmberCommandEntry emberCommandZclGlobalTable[] = {
   emberCommandEntryActionWithDetails("write", zclGlobalWriteCommand, "vvwb", "Creates a global write command message to write to the cluster and att ...", zclGlobalWriteCommandArguments),
   emberCommandEntryTerminator(),
 };
-static void zclGroupsAddCommand(void) {
-  zclSimpleClientCommand( ZCL_GROUPS_CLUSTER_ID,
-                          ZCL_ADD_GROUP_COMMAND_ID);
+static void zclIasAceACommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_ARM_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclGroupsAddCommandArguments[] = {
-  "group id",
-  "group name",
+static const char * const zclIasAceACommandArguments[] = {
+  "arm mode",
+  "arm disarm code",
+  "zone id",
   NULL
 };
 #endif
 
 
-static void zclGroupsAddIfIdCommand(void) {
-  zclSimpleClientCommand( ZCL_GROUPS_CLUSTER_ID,
-                          ZCL_ADD_GROUP_IF_IDENTIFYING_COMMAND_ID);
+static void zclIasAceBCommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_BYPASS_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclGroupsAddIfIdCommandArguments[] = {
-  "group id",
-  "group name",
-  NULL
-};
-#endif
-
-
-void zclGroupsGetCommand(void);
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclGroupsGetCommandArguments[] = {
-  "group count",
-  "group list",
+static const char * const zclIasAceBCommandArguments[] = {
+  "number of zones",
+  "zone ids",
   "",
+  "arm disarm code",
   NULL
 };
 #endif
 
 
-static void zclGroupsRemoveCommand(void) {
-  zclSimpleClientCommand( ZCL_GROUPS_CLUSTER_ID,
-                          ZCL_REMOVE_GROUP_COMMAND_ID);
+static void zclIasAceECommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_EMERGENCY_COMMAND_ID);
+}
+
+static void zclIasAceFCommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_FIRE_COMMAND_ID);
+}
+
+static void zclIasAceGetziCommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_GET_ZONE_INFORMATION_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclGroupsRemoveCommandArguments[] = {
-  "group id",
+static const char * const zclIasAceGetziCommandArguments[] = {
+  "zone id",
   NULL
 };
 #endif
 
 
-static void zclGroupsRmallCommand(void) {
-  zclSimpleClientCommand( ZCL_GROUPS_CLUSTER_ID,
-                          ZCL_REMOVE_ALL_GROUPS_COMMAND_ID);
+static void zclIasAceGetzmCommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_GET_ZONE_ID_MAP_COMMAND_ID);
 }
 
-static void zclGroupsViewCommand(void) {
-  zclSimpleClientCommand( ZCL_GROUPS_CLUSTER_ID,
-                          ZCL_VIEW_GROUP_COMMAND_ID);
+static void zclIasAcePCommand(void) {
+  zclSimpleClientCommand( ZCL_IAS_ACE_CLUSTER_ID,
+                          ZCL_PANIC_COMMAND_ID);
 }
 
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclGroupsViewCommandArguments[] = {
-  "group id",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandZclGroupsTable[] = {
-  emberCommandEntryActionWithDetails("add", zclGroupsAddCommand, "vb", "Command description for AddGroup", zclGroupsAddCommandArguments),
-  emberCommandEntryActionWithDetails("add-if-id", zclGroupsAddIfIdCommand, "vb", "Command description for AddGroupIfIdentifying", zclGroupsAddIfIdCommandArguments),
-  emberCommandEntryActionWithDetails("get", zclGroupsGetCommand, "uv*", "Command description for GetGroupMembership", zclGroupsGetCommandArguments),
-  emberCommandEntryActionWithDetails("remove", zclGroupsRemoveCommand, "v", "Command description for RemoveGroup", zclGroupsRemoveCommandArguments),
-  emberCommandEntryActionWithDetails("rmall", zclGroupsRmallCommand, "", "Command description for RemoveAllGroups", NULL),
-  emberCommandEntryActionWithDetails("view", zclGroupsViewCommand, "v", "Command description for ViewGroup", zclGroupsViewCommandArguments),
+static EmberCommandEntry emberCommandZclIasAceTable[] = {
+  emberCommandEntryActionWithDetails("a", zclIasAceACommand, "ubu", "Command description for Arm", zclIasAceACommandArguments),
+  emberCommandEntryActionWithDetails("b", zclIasAceBCommand, "uu*b", "Command description for Bypass", zclIasAceBCommandArguments),
+  emberCommandEntryActionWithDetails("e", zclIasAceECommand, "", "Command description for Emergency", NULL),
+  emberCommandEntryActionWithDetails("f", zclIasAceFCommand, "", "Command description for Fire", NULL),
+  emberCommandEntryActionWithDetails("getzi", zclIasAceGetziCommand, "u", "Command description for GetZoneInformation", zclIasAceGetziCommandArguments),
+  emberCommandEntryActionWithDetails("getzm", zclIasAceGetzmCommand, "", "Command description for GetZoneIdMap", NULL),
+  emberCommandEntryActionWithDetails("p", zclIasAcePCommand, "", "Command description for Panic", NULL),
   emberCommandEntryTerminator(),
 };
 static void zclIdentifyEzModeCommand(void) {
@@ -2418,142 +1743,6 @@ static EmberCommandEntry emberCommandZclIdentifyTable[] = {
   emberCommandEntryActionWithDetails("on", zclIdentifyOnOffCommand, "uv", "Writes the IdentifyTime attribute", zclIdentifyOnCommandArguments),
   emberCommandEntryActionWithDetails("query", zclIdentifyQueryCommand, "", "Command description for IdentifyQuery", NULL),
   emberCommandEntryActionWithDetails("trigger", zclIdentifyTriggerCommand, "uu", "Command description for TriggerEffect", zclIdentifyTriggerCommandArguments),
-  emberCommandEntryTerminator(),
-};
-static void zclLevelControlMoveCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_MOVE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlMoveCommandArguments[] = {
-  "move mode",
-  "rate",
-  "option mask",
-  "option override",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlMvToClosestFreqCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_MOVE_TO_CLOSEST_FREQUENCY_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlMvToClosestFreqCommandArguments[] = {
-  "frequency",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlMvToLevelCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_MOVE_TO_LEVEL_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlMvToLevelCommandArguments[] = {
-  "level",
-  "transition time",
-  "option mask",
-  "option override",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlOMoveCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_MOVE_WITH_ON_OFF_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlOMoveCommandArguments[] = {
-  "move mode",
-  "rate",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlOMvToLevelCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_MOVE_TO_LEVEL_WITH_ON_OFF_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlOMvToLevelCommandArguments[] = {
-  "level",
-  "transition time",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlOStepCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_STEP_WITH_ON_OFF_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlOStepCommandArguments[] = {
-  "step mode",
-  "step size",
-  "transition time",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlOStopCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_STOP_WITH_ON_OFF_COMMAND_ID);
-}
-
-static void zclLevelControlStepCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_STEP_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlStepCommandArguments[] = {
-  "step mode",
-  "step size",
-  "transition time",
-  "option mask",
-  "option override",
-  NULL
-};
-#endif
-
-
-static void zclLevelControlStopCommand(void) {
-  zclSimpleClientCommand( ZCL_LEVEL_CONTROL_CLUSTER_ID,
-                          ZCL_STOP_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclLevelControlStopCommandArguments[] = {
-  "option mask",
-  "option override",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandZclLevelControlTable[] = {
-  emberCommandEntryActionWithDetails("move", zclLevelControlMoveCommand, "uu!uu", "Command description for Move", zclLevelControlMoveCommandArguments),
-  emberCommandEntryActionWithDetails("mv-to-closest-freq", zclLevelControlMvToClosestFreqCommand, "v", "Command description for MoveToClosestFrequency", zclLevelControlMvToClosestFreqCommandArguments),
-  emberCommandEntryActionWithDetails("mv-to-level", zclLevelControlMvToLevelCommand, "uv!uu", "Command description for MoveToLevel", zclLevelControlMvToLevelCommandArguments),
-  emberCommandEntryActionWithDetails("o-move", zclLevelControlOMoveCommand, "uu", "Command description for MoveWithOnOff", zclLevelControlOMoveCommandArguments),
-  emberCommandEntryActionWithDetails("o-mv-to-level", zclLevelControlOMvToLevelCommand, "uv", "Command description for MoveToLevelWithOnOff", zclLevelControlOMvToLevelCommandArguments),
-  emberCommandEntryActionWithDetails("o-step", zclLevelControlOStepCommand, "uuv", "Command description for StepWithOnOff", zclLevelControlOStepCommandArguments),
-  emberCommandEntryActionWithDetails("o-stop", zclLevelControlOStopCommand, "", "Command description for StopWithOnOff", NULL),
-  emberCommandEntryActionWithDetails("step", zclLevelControlStepCommand, "uuv!uu", "Command description for Step", zclLevelControlStepCommandArguments),
-  emberCommandEntryActionWithDetails("stop", zclLevelControlStopCommand, "!uu", "Command description for Stop", zclLevelControlStopCommandArguments),
   emberCommandEntryTerminator(),
 };
 static void zclMeteringChgSupplyCommand(void) {
@@ -2784,365 +1973,72 @@ static const char * const zclMfgCodeCommandArguments[] = {
 #endif
 
 
-static void zclMfglibRxModeCommand(void) {
-  zclSimpleClientCommand( ZCL_MFGLIB_CLUSTER_ID,
-                          ZCL_RX_MODE_COMMAND_ID);
+static void zclPowerProfileEnergyPhasesScheduleCommand(void) {
+  zclSimpleClientCommand( ZCL_POWER_PROFILE_CLUSTER_ID,
+                          ZCL_ENERGY_PHASES_SCHEDULE_NOTIFICATION_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclMfglibRxModeCommandArguments[] = {
-  "channel",
-  "power",
-  "time",
-  NULL
-};
-#endif
-
-
-static void zclMfglibStreamCommand(void) {
-  zclSimpleClientCommand( ZCL_MFGLIB_CLUSTER_ID,
-                          ZCL_STREAM_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclMfglibStreamCommandArguments[] = {
-  "channel",
-  "power",
-  "time",
-  NULL
-};
-#endif
-
-
-static void zclMfglibToneCommand(void) {
-  zclSimpleClientCommand( ZCL_MFGLIB_CLUSTER_ID,
-                          ZCL_TONE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclMfglibToneCommandArguments[] = {
-  "channel",
-  "power",
-  "time",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandZclMfglibTable[] = {
-  emberCommandEntryActionWithDetails("rx-mode", zclMfglibRxModeCommand, "usv", "Command to put the device into RX mode.", zclMfglibRxModeCommandArguments),
-  emberCommandEntryActionWithDetails("stream", zclMfglibStreamCommand, "usv", "Command to put the device into streaming mode.", zclMfglibStreamCommandArguments),
-  emberCommandEntryActionWithDetails("tone", zclMfglibToneCommand, "usv", "Command to put the device into tone mode.", zclMfglibToneCommandArguments),
-  emberCommandEntryTerminator(),
-};
-static void zclOnOffOffCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_OFF_COMMAND_ID);
-}
-
-static void zclOnOffOffeffectCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_OFF_WITH_EFFECT_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclOnOffOffeffectCommandArguments[] = {
-  "effect id",
-  "effect variant",
-  NULL
-};
-#endif
-
-
-static void zclOnOffOnCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_ON_COMMAND_ID);
-}
-
-static void zclOnOffOnrecallCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_ON_WITH_RECALL_GLOBAL_SCENE_COMMAND_ID);
-}
-
-static void zclOnOffOntimedoffCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_ON_WITH_TIMED_OFF_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclOnOffOntimedoffCommandArguments[] = {
-  "on off control",
-  "on time",
-  "off wait time",
-  NULL
-};
-#endif
-
-
-static void zclOnOffToggleCommand(void) {
-  zclSimpleClientCommand( ZCL_ON_OFF_CLUSTER_ID,
-                          ZCL_TOGGLE_COMMAND_ID);
-}
-
-static EmberCommandEntry emberCommandZclOnOffTable[] = {
-  emberCommandEntryActionWithDetails("off", zclOnOffOffCommand, "", "Command description for Off", NULL),
-  emberCommandEntryActionWithDetails("offeffect", zclOnOffOffeffectCommand, "uu", "Command description for OffWithEffect", zclOnOffOffeffectCommandArguments),
-  emberCommandEntryActionWithDetails("on", zclOnOffOnCommand, "", "Command description for On", NULL),
-  emberCommandEntryActionWithDetails("onrecall", zclOnOffOnrecallCommand, "", "Command description for OnWithRecallGlobalScene", NULL),
-  emberCommandEntryActionWithDetails("ontimedoff", zclOnOffOntimedoffCommand, "uvv", "Command description for OnWithTimedOff", zclOnOffOntimedoffCommandArguments),
-  emberCommandEntryActionWithDetails("toggle", zclOnOffToggleCommand, "", "Command description for Toggle", NULL),
-  emberCommandEntryTerminator(),
-};
-static void zclOtaConfigLockCommand(void) {
-  zclSimpleClientCommand( ZCL_OTA_CONFIGURATION_CLUSTER_ID,
-                          ZCL_LOCK_TOKENS_COMMAND_ID);
-}
-
-static void zclOtaConfigReadCommand(void) {
-  zclSimpleClientCommand( ZCL_OTA_CONFIGURATION_CLUSTER_ID,
-                          ZCL_READ_TOKENS_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclOtaConfigReadCommandArguments[] = {
-  "token",
-  NULL
-};
-#endif
-
-
-static void zclOtaConfigSetTokenCommand(void) {
-  zclSimpleClientCommand( ZCL_OTA_CONFIGURATION_CLUSTER_ID,
-                          ZCL_SET_TOKEN_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclOtaConfigSetTokenCommandArguments[] = {
-  "token",
-  "data",
-  NULL
-};
-#endif
-
-
-static void zclOtaConfigUnlockCommand(void) {
-  zclSimpleClientCommand( ZCL_OTA_CONFIGURATION_CLUSTER_ID,
-                          ZCL_UNLOCK_TOKENS_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclOtaConfigUnlockCommandArguments[] = {
-  "data",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandZclOtaConfigTable[] = {
-  emberCommandEntryActionWithDetails("lock", zclOtaConfigLockCommand, "", "Command to lock the token values.", NULL),
-  emberCommandEntryActionWithDetails("read", zclOtaConfigReadCommand, "v", "Command to read a token value.", zclOtaConfigReadCommandArguments),
-  emberCommandEntryActionWithDetails("setToken", zclOtaConfigSetTokenCommand, "vb", "Command to write a token value over the air.", zclOtaConfigSetTokenCommandArguments),
-  emberCommandEntryActionWithDetails("unlock", zclOtaConfigUnlockCommand, "b", "Command to unlock tokens with a device-specific password (if allowed).", zclOtaConfigUnlockCommandArguments),
-  emberCommandEntryTerminator(),
-};
-static void zclPollControlLongCommand(void) {
-  zclSimpleClientCommand( ZCL_POLL_CONTROL_CLUSTER_ID,
-                          ZCL_SET_LONG_POLL_INTERVAL_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclPollControlLongCommandArguments[] = {
-  "new long poll interval",
-  NULL
-};
-#endif
-
-
-static void zclPollControlShortCommand(void) {
-  zclSimpleClientCommand( ZCL_POLL_CONTROL_CLUSTER_ID,
-                          ZCL_SET_SHORT_POLL_INTERVAL_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclPollControlShortCommandArguments[] = {
-  "new short poll interval",
-  NULL
-};
-#endif
-
-
-static void zclPollControlStopCommand(void) {
-  zclSimpleClientCommand( ZCL_POLL_CONTROL_CLUSTER_ID,
-                          ZCL_FAST_POLL_STOP_COMMAND_ID);
-}
-
-static EmberCommandEntry emberCommandZclPollControlTable[] = {
-  emberCommandEntryActionWithDetails("long", zclPollControlLongCommand, "w", "The Set Long Poll Interval command is used to set the read only Long P ...", zclPollControlLongCommandArguments),
-  emberCommandEntryActionWithDetails("short", zclPollControlShortCommand, "v", "The Set Short Poll Interval command is used to set the read only Short ...", zclPollControlShortCommandArguments),
-  emberCommandEntryActionWithDetails("stop", zclPollControlStopCommand, "", "The Fast Poll Stop command is used to stop the fast poll mode initiate ...", NULL),
-  emberCommandEntryTerminator(),
-};
-static void zclScenesAddCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_ADD_SCENE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesAddCommandArguments[] = {
-  "group id",
-  "scene id",
-  "transition time",
-  "scene name",
-  "extension field sets",
+static const char * const zclPowerProfileEnergyPhasesScheduleCommandArguments[] = {
+  "power profile id",
+  "num of scheduled phases",
+  "scheduled phases",
   "",
   NULL
 };
 #endif
 
 
-static void zclScenesCopyCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_COPY_SCENE_COMMAND_ID);
+static void zclPowerProfileEnergyPhasesScheduleStatesCommand(void) {
+  zclSimpleClientCommand( ZCL_POWER_PROFILE_CLUSTER_ID,
+                          ZCL_ENERGY_PHASES_SCHEDULE_STATE_REQUEST_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesCopyCommandArguments[] = {
-  "mode",
-  "group id from",
-  "scene id from",
-  "group id to",
-  "scene id to",
+static const char * const zclPowerProfileEnergyPhasesScheduleStatesCommandArguments[] = {
+  "power profile id",
   NULL
 };
 #endif
 
 
-static void zclScenesEaddCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_ENHANCED_ADD_SCENE_COMMAND_ID);
+static void zclPowerProfileProfileCommand(void) {
+  zclSimpleClientCommand( ZCL_POWER_PROFILE_CLUSTER_ID,
+                          ZCL_POWER_PROFILE_REQUEST_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesEaddCommandArguments[] = {
-  "group id",
-  "scene id",
-  "transition time",
-  "scene name",
-  "extension field sets",
-  "",
+static const char * const zclPowerProfileProfileCommandArguments[] = {
+  "power profile id",
   NULL
 };
 #endif
 
 
-static void zclScenesEviewCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_ENHANCED_VIEW_SCENE_COMMAND_ID);
+static void zclPowerProfileScheduleConstraintsCommand(void) {
+  zclSimpleClientCommand( ZCL_POWER_PROFILE_CLUSTER_ID,
+                          ZCL_POWER_PROFILE_SCHEDULE_CONSTRAINTS_REQUEST_COMMAND_ID);
 }
 
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesEviewCommandArguments[] = {
-  "group id",
-  "scene id",
+static const char * const zclPowerProfileScheduleConstraintsCommandArguments[] = {
+  "power profile id",
   NULL
 };
 #endif
 
 
-static void zclScenesGetCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_GET_SCENE_MEMBERSHIP_COMMAND_ID);
+static void zclPowerProfileStateCommand(void) {
+  zclSimpleClientCommand( ZCL_POWER_PROFILE_CLUSTER_ID,
+                          ZCL_POWER_PROFILE_STATE_REQUEST_COMMAND_ID);
 }
 
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesGetCommandArguments[] = {
-  "group id",
-  NULL
-};
-#endif
-
-
-static void zclScenesRecallCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_RECALL_SCENE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesRecallCommandArguments[] = {
-  "group id",
-  "scene id",
-  "transition time",
-  NULL
-};
-#endif
-
-
-static void zclScenesRemoveCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_REMOVE_SCENE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesRemoveCommandArguments[] = {
-  "group id",
-  "scene id",
-  NULL
-};
-#endif
-
-
-static void zclScenesRmallCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_REMOVE_ALL_SCENES_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesRmallCommandArguments[] = {
-  "group id",
-  NULL
-};
-#endif
-
-
-static void zclScenesStoreCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_STORE_SCENE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesStoreCommandArguments[] = {
-  "group id",
-  "scene id",
-  NULL
-};
-#endif
-
-
-static void zclScenesViewCommand(void) {
-  zclSimpleClientCommand( ZCL_SCENES_CLUSTER_ID,
-                          ZCL_VIEW_SCENE_COMMAND_ID);
-}
-
-#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
-static const char * const zclScenesViewCommandArguments[] = {
-  "group id",
-  "scene id",
-  NULL
-};
-#endif
-
-
-static EmberCommandEntry emberCommandZclScenesTable[] = {
-  emberCommandEntryActionWithDetails("add", zclScenesAddCommand, "vuvbw*", "Add a scene to the scene tabl ...", zclScenesAddCommandArguments),
-  emberCommandEntryActionWithDetails("copy", zclScenesCopyCommand, "uvuvu", "Command description for CopyScene", zclScenesCopyCommandArguments),
-  emberCommandEntryActionWithDetails("eadd", zclScenesEaddCommand, "vuvbw*", "Command description for EnhancedAddScene", zclScenesEaddCommandArguments),
-  emberCommandEntryActionWithDetails("eview", zclScenesEviewCommand, "vu", "Command description for EnhancedViewScene", zclScenesEviewCommandArguments),
-  emberCommandEntryActionWithDetails("get", zclScenesGetCommand, "v", "Command description for GetSceneMembership", zclScenesGetCommandArguments),
-  emberCommandEntryActionWithDetails("recall", zclScenesRecallCommand, "vu!v", "Command description for RecallScene", zclScenesRecallCommandArguments),
-  emberCommandEntryActionWithDetails("remove", zclScenesRemoveCommand, "vu", "Command description for RemoveScene", zclScenesRemoveCommandArguments),
-  emberCommandEntryActionWithDetails("rmall", zclScenesRmallCommand, "v", "Command description for RemoveAllScenes", zclScenesRmallCommandArguments),
-  emberCommandEntryActionWithDetails("store", zclScenesStoreCommand, "vu", "Command description for StoreScene", zclScenesStoreCommandArguments),
-  emberCommandEntryActionWithDetails("view", zclScenesViewCommand, "vu", "Command description for ViewScene", zclScenesViewCommandArguments),
+static EmberCommandEntry emberCommandZclPowerProfileTable[] = {
+  emberCommandEntryActionWithDetails("energy-phases-schedule", zclPowerProfileEnergyPhasesScheduleCommand, "uub*", "The EnergyPhasesScheduleNotification Command is generated by a device  ...", zclPowerProfileEnergyPhasesScheduleCommandArguments),
+  emberCommandEntryActionWithDetails("energy-phases-schedule-states", zclPowerProfileEnergyPhasesScheduleStatesCommand, "u", "The EnergyPhasesScheduleStateRequest  Command is generated by a device ...", zclPowerProfileEnergyPhasesScheduleStatesCommandArguments),
+  emberCommandEntryActionWithDetails("profile", zclPowerProfileProfileCommand, "u", "The PowerProfileRequest Command is generated by a device supporting th ...", zclPowerProfileProfileCommandArguments),
+  emberCommandEntryActionWithDetails("schedule-constraints", zclPowerProfileScheduleConstraintsCommand, "u", "The PowerProfileScheduleConstraintsRequest Command is generated by a d ...", zclPowerProfileScheduleConstraintsCommandArguments),
+  emberCommandEntryActionWithDetails("state", zclPowerProfileStateCommand, "", "The PowerProfileStateRequest Command is generated in order to retrieve ...", NULL),
   emberCommandEntryTerminator(),
 };
 void zclTestResponseOffCommand(void);
@@ -3165,6 +2061,69 @@ static const char * const zclTimeCommandArguments[] = {
 #endif
 
 
+static void zclTstatCwsCommand(void) {
+  zclSimpleClientCommand( ZCL_THERMOSTAT_CLUSTER_ID,
+                          ZCL_CLEAR_WEEKLY_SCHEDULE_COMMAND_ID);
+}
+
+static void zclTstatGrsCommand(void) {
+  zclSimpleClientCommand( ZCL_THERMOSTAT_CLUSTER_ID,
+                          ZCL_GET_RELAY_STATUS_LOG_COMMAND_ID);
+}
+
+static void zclTstatGwsCommand(void) {
+  zclSimpleClientCommand( ZCL_THERMOSTAT_CLUSTER_ID,
+                          ZCL_GET_WEEKLY_SCHEDULE_COMMAND_ID);
+}
+
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const zclTstatGwsCommandArguments[] = {
+  "days to return",
+  "mode to return",
+  NULL
+};
+#endif
+
+
+static void zclTstatSetCommand(void) {
+  zclSimpleClientCommand( ZCL_THERMOSTAT_CLUSTER_ID,
+                          ZCL_SETPOINT_RAISE_LOWER_COMMAND_ID);
+}
+
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const zclTstatSetCommandArguments[] = {
+  "mode",
+  "amount",
+  NULL
+};
+#endif
+
+
+static void zclTstatSwsCommand(void) {
+  zclSimpleClientCommand( ZCL_THERMOSTAT_CLUSTER_ID,
+                          ZCL_SET_WEEKLY_SCHEDULE_COMMAND_ID);
+}
+
+#if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
+static const char * const zclTstatSwsCommandArguments[] = {
+  "number of transitions for sequence",
+  "day of week for sequence",
+  "mode for sequence",
+  "payload",
+  "",
+  NULL
+};
+#endif
+
+
+static EmberCommandEntry emberCommandZclTstatTable[] = {
+  emberCommandEntryActionWithDetails("cws", zclTstatCwsCommand, "", "The Clear Weekly Schedule command is used to clear the weekly schedule ...", NULL),
+  emberCommandEntryActionWithDetails("grs", zclTstatGrsCommand, "", "The Get Relay Status Log command is used to query the thermostat inter ...", NULL),
+  emberCommandEntryActionWithDetails("gws", zclTstatGwsCommand, "uu", "Command description for GetWeeklySchedule", zclTstatGwsCommandArguments),
+  emberCommandEntryActionWithDetails("set", zclTstatSetCommand, "us", "Command description for SetpointRaiseLower", zclTstatSetCommandArguments),
+  emberCommandEntryActionWithDetails("sws", zclTstatSwsCommand, "uuuu*", "Command description for SetWeeklySchedule", zclTstatSwsCommandArguments),
+  emberCommandEntryTerminator(),
+};
 void zclUseNextSequenceCommand(void);
 #if defined(EMBER_COMMAND_INTEPRETER_HAS_DESCRIPTION_FIELD)
 static const char * const zclUseNextSequenceCommandArguments[] = {
@@ -3187,18 +2146,14 @@ static EmberCommandEntry emberCommandZclTable[] = {
   emberCommandEntrySubMenu("basic", emberCommandZclBasicTable, ""),
   emberCommandEntrySubMenu("color-control", emberCommandZclColorControlTable, ""),
   emberCommandEntrySubMenu("global", emberCommandZclGlobalTable, ""),
-  emberCommandEntrySubMenu("groups", emberCommandZclGroupsTable, ""),
+  emberCommandEntrySubMenu("ias-ace", emberCommandZclIasAceTable, ""),
   emberCommandEntrySubMenu("identify", emberCommandZclIdentifyTable, ""),
-  emberCommandEntrySubMenu("level-control", emberCommandZclLevelControlTable, ""),
   emberCommandEntrySubMenu("metering", emberCommandZclMeteringTable, ""),
   emberCommandEntryActionWithDetails("mfg-code", zclMfgCodeCommand, "v", "Sets the two byte manufacturer specific identifier to use for the next ...", zclMfgCodeCommandArguments),
-  emberCommandEntrySubMenu("mfglib", emberCommandZclMfglibTable, ""),
-  emberCommandEntrySubMenu("on-off", emberCommandZclOnOffTable, ""),
-  emberCommandEntrySubMenu("ota-config", emberCommandZclOtaConfigTable, ""),
-  emberCommandEntrySubMenu("poll-control", emberCommandZclPollControlTable, ""),
-  emberCommandEntrySubMenu("scenes", emberCommandZclScenesTable, ""),
+  emberCommandEntrySubMenu("power-profile", emberCommandZclPowerProfileTable, ""),
   emberCommandEntrySubMenu("test", emberCommandZclTestTable, ""),
   emberCommandEntryActionWithDetails("time", zclTimeCommand, "w", "Cli command to call emberAfSetTime function documented in af.h", zclTimeCommandArguments),
+  emberCommandEntrySubMenu("tstat", emberCommandZclTstatTable, ""),
   emberCommandEntryActionWithDetails("use-next-sequence", zclUseNextSequenceCommand, "u", "Sets the flag to use the incremented sequence number from the framewor ...", zclUseNextSequenceCommandArguments),
   emberCommandEntryActionWithDetails("x-default-resp", zclXDefaultRespCommand, "u", "Sets the Disable Default Response Frame Control bit to use for the nex ...", zclXDefaultRespCommandArguments),
   emberCommandEntryTerminator(),

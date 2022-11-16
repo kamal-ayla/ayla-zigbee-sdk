@@ -9,13 +9,13 @@ EXEC = appd
 DIR = app/zb_gatewayd
 SRC = ../..
 
-EMBER_STACK_DIR = ../../../v2.7
+EMBER_STACK_DIR = ../../../v3.2
 EMBER_PROJECT_NAME = ember
 EMBER_LIB_DIR = $(EMBER_STACK_DIR)/app/builder/$(EMBER_PROJECT_NAME)/build/exe
 #EMBER_LIB_DIR = /home/rajandi/ayla_owa/v2.7/app/builder/ember/build/exe
 #EMBER_LIB_NAME = em3588stack6.7.6
 
-EMBER_LIB_NAME = ember
+EMBER_LIB_NAME = Z3GatewayHost_3_2
 CALLBACK_STUB_UPDATED= $(OBJ_DIR)/callback-stub-updated
 
 
@@ -68,6 +68,10 @@ INCLUDES= \
   -I$(EMBER_STACK_DIR)/protocol/zigbee/stack \
   -I$(EMBER_STACK_DIR)/platform/base \
   -I$(EMBER_STACK_DIR)/platform/base/hal \
+  -I$(EMBER_STACK_DIR)/platform/radio/mac/ \
+  -I$(EMBER_STACK_DIR)/platform/common/inc \
+  -I$(EMBER_STACK_DIR)/util/silicon_labs/silabs_core \
+  -I$(EMBER_STACK_DIR)/protocol/zigbee/app/framework/include \
   -I$(EMBER_PROJECT_NAME) \
   -I$(PKG_BUILD_DIR)/libopkg \
 #

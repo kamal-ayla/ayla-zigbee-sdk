@@ -30,9 +30,9 @@
 #     .a file extension.
 #
 # Then pass the makefile to this one on the command line with:
-#   "make -C app/builder/ember INCLUDE_MAKEFILE=my-custom.mak"
+#   "make -C app/builder/Z3GatewayHost_3_2 INCLUDE_MAKEFILE=my-custom.mak"
 #   or 
-#   "cd app/builder/ember; make INCLUDE_MAKEFILE=my-custom.mak"
+#   "cd app/builder/Z3GatewayHost_3_2; make INCLUDE_MAKEFILE=my-custom.mak"
 #
 
 ifdef INCLUDE_MAKEFILE
@@ -41,9 +41,13 @@ endif
 
 .SUFFIXES:
 
-COMPILER ?= gcc
-LINKER   ?= gcc
-ARCHIVE  ?= ar
+#COMPILER ?= gcc
+#LINKER   ?= gcc
+#ARCHIVE  ?= ar
+COMPILER = $(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc
+LINKER   = $(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc
+ARCHIVE = $(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar
+
 STD      ?= gnu99
 
 ARCHIVE_EXTENSION ?= .a
@@ -51,6 +55,8 @@ ARCHIVE_EXTENSION ?= .a
 CC = $(COMPILER)
 LD = $(LINKER)
 SHELL = /bin/sh
+removeSpaces = $(subst \ ,+SL5C20+,$1)
+restoreSpaces = $(subst +SL5C20+,\ ,$1)
 
 ifneq ($(CURDIR),$(shell dirname '$(abspath $(lastword $(MAKEFILE_LIST)))'))
 $(error This makefile should only be invoked under its current directory ($(shell dirname '$(abspath $(lastword $(MAKEFILE_LIST)))')))
@@ -73,39 +79,49 @@ INCLUDES= -I./ \
   -I./../../../protocol/zigbee/app/framework/include \
   -I./../../../protocol/zigbee/app/framework/security \
   -I./../../../protocol/zigbee/app/framework/util \
-  -I./ember \
+  -I./Z3GatewayHost_3_2 \
   -I./../../../platform/base/hal \
   -I./../../../platform/base/hal/plugin \
   -I./../../../platform/base/hal/.. \
   -I./../../../platform/base/hal/micro/generic \
   -I./../../../platform/base/hal/micro/unix/host \
-  -I../../../platform/base/hal/micro/unix/host/board \
-  -I../../../util/plugin/plugin-common/mbedtls \
-  -I../../../util/third_party/mbedtls \
-  -I../../../util/third_party/mbedtls/include \
-  -I../../../util/third_party/mbedtls/include/mbedtls \
-  -I../../../util/third_party/mbedtls/sl_crypto/include \
+  -I./../../../platform/common/inc/ \
+  -I./../../../platform/radio/mac/ \
+  -I./../../../util/silicon_labs/silabs_core/ \
+  -I./../../../util/silicon_labs/silabs_core/buffer_manager \
+  -I./../../../util/silicon_labs/silabs_core/event_control \
+  -I../../..//platform/base/hal/micro/unix/host/board \
+  -I../../..//util/silicon_labs/silabs_core \
+  -I../../..//util/plugin/plugin-common/mbedtls \
+  -I../../..//util/third_party/crypto/mbedtls \
+  -I../../..//util/third_party/crypto/mbedtls/include \
+  -I../../..//util/third_party/crypto/mbedtls/include/mbedtls \
+  -I../../..//util/third_party/crypto/mbedtls/include/psa \
+  -I../../..//util/third_party/crypto/mbedtls/library \
  \
 
 APP_BUILDER_OUTPUT_DIRECTORY=.
-APP_BUILDER_CONFIG_HEADER=$(APP_BUILDER_OUTPUT_DIRECTORY)/ember.h
-APP_BUILDER_STORAGE_FILE=$(APP_BUILDER_OUTPUT_DIRECTORY)/ember_endpoint_config.h
+APP_BUILDER_CONFIG_HEADER=$(APP_BUILDER_OUTPUT_DIRECTORY)/Z3GatewayHost_3_2.h
+APP_BUILDER_STORAGE_FILE=$(APP_BUILDER_OUTPUT_DIRECTORY)/Z3GatewayHost_3_2_endpoint_config.h
 
-PLATFORM_HEADER_FILE ?= \"../../../platform/base/hal/micro/unix/compiler/gcc.h\"
+PLATFORM_HEADER_FILE ?= \"../../..//platform/base/hal/micro/unix/compiler/gcc.h\"
 
 DEFINES = \
   $(COMPILER_DEFINES) \
   -DUNIX \
   -DUNIX_HOST \
   -DPHY_NULL \
-  -DCONFIGURATION_HEADER=\"../../../protocol/zigbee/app/framework/util/config.h\" \
+  -DCONFIGURATION_HEADER=\"../../..//protocol/zigbee/app/framework/util/config.h\" \
   -DEZSP_HOST \
   -DGATEWAY_APP \
   -DZA_GENERATED_HEADER=\"$(APP_BUILDER_CONFIG_HEADER)\" \
   -DATTRIBUTE_STORAGE_CONFIGURATION=\"$(APP_BUILDER_STORAGE_FILE)\" \
   -DPLATFORM_HEADER=$(PLATFORM_HEADER_FILE) \
     -DBOARD_HOST \
-  -DBOARD_HEADER=\"ember_board.h\" \
+  -DBOARD_HEADER=\"Z3GatewayHost_3_2_board.h\" \
+  -DEM_AF_TEST_HARNESS_CODE \
+  -DEM_AF_LINK_M \
+  -DEM_AF_LINK_PTHREAD \
   -DEMBER_AF_API_EMBER_TYPES=\"stack/include/ember-types.h\" \
   -DEMBER_AF_API_DEBUG_PRINT=\"app/framework/util/print.h\" \
   -DEMBER_AF_API_AF_HEADER=\"app/framework/include/af.h\" \
@@ -130,185 +146,192 @@ APPLICATION_FILES= \
   ./stack-handler-stub.c \
   ./znet-cli.c \
   ./ember_callbacks.c \
-  ../../../protocol/zigbee/app/framework/../util/common/library.c \
-  ../../../protocol/zigbee/app/framework/../util/serial/command-interpreter2.c \
-  ../../../protocol/zigbee/app/framework/../util/zigbee-framework/zigbee-device-common.c \
-  ../../../protocol/zigbee/app/framework/../util/zigbee-framework/zigbee-device-host.c \
-  ../../../protocol/zigbee/app/framework/../../stack/framework/event-control.c \
-  ../../../platform/base/hal/micro/generic/led-stub.c \
-  ../../../platform/base/hal/micro/generic/mem-util.c \
-  ../../../platform/base/hal/plugin/antenna-stub/antenna-stub.c \
-  ../../../platform/base/hal/plugin/buzzer-stub/buzzer-stub.c \
-  ../../../protocol/zigbee/app/framework/plugin/address-table/address-table.c \
-  ../../../protocol/zigbee/app/framework/plugin/address-table/address-table-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/concentrator/concentrator-support.c \
-  ../../../protocol/zigbee/app/framework/plugin/concentrator/concentrator-support-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/counters/counters-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/counters/counters-ota-host.c \
-  ../../../protocol/zigbee/app/framework/plugin/counters/counters-host.c \
-  ../../../protocol/zigbee/app/framework/plugin/device-database/device-database.c \
-  ../../../protocol/zigbee/app/framework/plugin/device-database/device-database-cli.c \
-  ../../../protocol/zigbee/app/util/ezsp/ezsp-callbacks.c \
-  ../../../protocol/zigbee/app/util/ezsp/ezsp-enum-decode.c \
-  ../../../protocol/zigbee/app/util/ezsp/ezsp-frame-utilities.c \
-  ../../../protocol/zigbee/app/util/ezsp/ezsp.c \
-  ../../../protocol/zigbee/app/ezsp-host/ezsp-host-io.c \
-  ../../../protocol/zigbee/app/ezsp-host/ezsp-host-queues.c \
-  ../../../protocol/zigbee/app/ezsp-host/ezsp-host-ui.c \
-  ../../../protocol/zigbee/app/util/ezsp/serial-interface-uart.c \
-  ../../../protocol/zigbee/app/ezsp-host/ash/ash-host-ui.c \
-  ../../../protocol/zigbee/app/ezsp-host/ash/ash-host.c \
-  ../../../platform/base/hal/micro/generic/ash-common.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/file-descriptor-dispatch/file-descriptor-dispatch.c \
-  ../../../protocol/zigbee/app/framework/plugin/find-and-bind-initiator/find-and-bind-initiator.c \
-  ../../../protocol/zigbee/app/framework/plugin/find-and-bind-initiator/find-and-bind-initiator-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/find-and-bind-target/find-and-bind-target.c \
-  ../../../protocol/zigbee/app/framework/plugin/find-and-bind-target/find-and-bind-target-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/form-and-join/form-and-join-afv2.c \
-  ../../../protocol/zigbee/app/util/common/form-and-join.c \
-  ../../../protocol/zigbee/app/util/common/form-and-join-host-adapter.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/gateway/gateway-support.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/gateway/backchannel-support.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/gateway/gateway-support-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/heartbeat/heartbeat.c \
-  ../../../protocol/zigbee/app/framework/plugin/ias-zone-client/ias-zone-client.c \
-  ../../../protocol/zigbee/app/framework/plugin/ias-zone-client/ias-zone-client-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/identify/identify.c \
-  ../../../protocol/zigbee/app/framework/plugin/identify/identify-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/identify-feedback/identify-feedback.c \
-  ../../../protocol/zigbee/app/framework/plugin/interpan/interpan.c \
-  ../../../protocol/zigbee/app/framework/plugin/interpan/interpan-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/interpan/interpan-host.c \
-  ../../../util/third_party/mbedtls/library/aes.c \
-  ../../../util/third_party/mbedtls/library/aesni.c \
-  ../../../util/third_party/mbedtls/library/arc4.c \
-  ../../../util/third_party/mbedtls/library/asn1parse.c \
-  ../../../util/third_party/mbedtls/library/asn1write.c \
-  ../../../util/third_party/mbedtls/library/base64.c \
-  ../../../util/third_party/mbedtls/library/bignum.c \
-  ../../../util/third_party/mbedtls/library/blowfish.c \
-  ../../../util/third_party/mbedtls/library/camellia.c \
-  ../../../util/third_party/mbedtls/library/ccm.c \
-  ../../../util/third_party/mbedtls/library/certs.c \
-  ../../../util/third_party/mbedtls/library/cipher.c \
-  ../../../util/third_party/mbedtls/library/cipher_wrap.c \
-  ../../../util/third_party/mbedtls/library/cmac.c \
-  ../../../util/third_party/mbedtls/library/ctr_drbg.c \
-  ../../../util/third_party/mbedtls/library/debug.c \
-  ../../../util/third_party/mbedtls/library/des.c \
-  ../../../util/third_party/mbedtls/library/dhm.c \
-  ../../../util/third_party/mbedtls/library/ecdh.c \
-  ../../../util/third_party/mbedtls/library/ecdsa.c \
-  ../../../util/third_party/mbedtls/library/ecjpake.c \
-  ../../../util/third_party/mbedtls/library/ecp.c \
-  ../../../util/third_party/mbedtls/library/ecp_curves.c \
-  ../../../util/third_party/mbedtls/library/entropy.c \
-  ../../../util/third_party/mbedtls/library/entropy_poll.c \
-  ../../../util/third_party/mbedtls/library/error.c \
-  ../../../util/third_party/mbedtls/library/gcm.c \
-  ../../../util/third_party/mbedtls/library/havege.c \
-  ../../../util/third_party/mbedtls/library/hmac_drbg.c \
-  ../../../util/third_party/mbedtls/library/md.c \
-  ../../../util/third_party/mbedtls/library/md2.c \
-  ../../../util/third_party/mbedtls/library/md4.c \
-  ../../../util/third_party/mbedtls/library/md5.c \
-  ../../../util/third_party/mbedtls/library/md_wrap.c \
-  ../../../util/third_party/mbedtls/library/memory_buffer_alloc.c \
-  ../../../util/third_party/mbedtls/library/net_sockets.c \
-  ../../../util/third_party/mbedtls/library/oid.c \
-  ../../../util/third_party/mbedtls/library/padlock.c \
-  ../../../util/third_party/mbedtls/library/pem.c \
-  ../../../util/third_party/mbedtls/library/pk.c \
-  ../../../util/third_party/mbedtls/library/pk_wrap.c \
-  ../../../util/third_party/mbedtls/library/pkcs11.c \
-  ../../../util/third_party/mbedtls/library/pkcs12.c \
-  ../../../util/third_party/mbedtls/library/pkcs5.c \
-  ../../../util/third_party/mbedtls/library/pkparse.c \
-  ../../../util/third_party/mbedtls/library/pkwrite.c \
-  ../../../util/third_party/mbedtls/library/ripemd160.c \
-  ../../../util/third_party/mbedtls/library/rsa.c \
-  ../../../util/third_party/mbedtls/library/rsa_internal.c \
-  ../../../util/third_party/mbedtls/library/sha1.c \
-  ../../../util/third_party/mbedtls/library/sha256.c \
-  ../../../util/third_party/mbedtls/library/sha512.c \
-  ../../../util/third_party/mbedtls/library/ssl_cache.c \
-  ../../../util/third_party/mbedtls/library/ssl_ciphersuites.c \
-  ../../../util/third_party/mbedtls/library/ssl_cli.c \
-  ../../../util/third_party/mbedtls/library/ssl_cookie.c \
-  ../../../util/third_party/mbedtls/library/ssl_srv.c \
-  ../../../util/third_party/mbedtls/library/ssl_ticket.c \
-  ../../../util/third_party/mbedtls/library/ssl_tls.c \
-  ../../../util/third_party/mbedtls/library/threading.c \
-  ../../../util/third_party/mbedtls/library/timing.c \
-  ../../../util/third_party/mbedtls/library/version.c \
-  ../../../util/third_party/mbedtls/library/version_features.c \
-  ../../../util/third_party/mbedtls/library/x509.c \
-  ../../../util/third_party/mbedtls/library/x509_create.c \
-  ../../../util/third_party/mbedtls/library/x509_crl.c \
-  ../../../util/third_party/mbedtls/library/x509_crt.c \
-  ../../../util/third_party/mbedtls/library/x509_csr.c \
-  ../../../util/third_party/mbedtls/library/x509write_crt.c \
-  ../../../util/third_party/mbedtls/library/x509write_csr.c \
-  ../../../util/third_party/mbedtls/library/xtea.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/ncp-configuration/ncp-configuration.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-creator/network-creator.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-creator/network-creator-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-find/network-find.c \
-  ../../../protocol/zigbee/app/framework/plugin/network-find/network-find-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/price-common/price-common.c \
-  ../../../protocol/zigbee/app/framework/plugin/price-common/price-common-time.c \
-  ../../../protocol/zigbee/app/framework/plugin/price-common/price-common-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/scan-dispatch/scan-dispatch.c \
-  ../../../protocol/zigbee/app/util/ezsp/secure-ezsp-stub.c \
-  ../../../protocol/zigbee/app/framework/plugin-host/security-support/security-support.c \
-  ../../../protocol/zigbee/tool/random/random-linux.c \
-  ../../../protocol/zigbee/app/framework/plugin/simple-main/simple-main.c \
-  ../../../protocol/zigbee/app/framework/plugin/trust-center-nwk-key-update-broadcast/trust-center-nwk-key-update-broadcast.c \
-  ../../../platform/base/hal/micro/generic/crc.c \
-  ../../../platform/base/hal/micro/generic/endian.c \
-  ../../../platform/base/hal/micro/generic/random.c \
-  ../../../platform/base/hal/micro/generic/system-timer.c \
-  ../../../platform/base/hal/micro/unix/host/micro.c \
-  ../../../platform/base/hal/micro/unix/host/token-def-unix.c \
-  ../../../platform/base/hal/micro/unix/host/token.c \
-  ../../../platform/base/hal/plugin/serial/ember-printf-convert.c \
-  ../../../protocol/zigbee/app/util/serial/linux-serial.c \
-  ../../../protocol/zigbee/app/framework/plugin/update-ha-tc-link-key/update-ha-tc-link-key.c \
-  ../../../protocol/zigbee/app/framework/cli/core-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/network-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/option-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/plugin-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/security-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/zcl-cli.c \
-  ../../../protocol/zigbee/app/framework/cli/zdo-cli.c \
-  ../../../protocol/zigbee/app/framework/security/af-node.c \
-  ../../../protocol/zigbee/app/framework/security/af-security-common.c \
-  ../../../protocol/zigbee/app/framework/security/af-trust-center.c \
-  ../../../protocol/zigbee/app/framework/security/crypto-state.c \
-  ../../../protocol/zigbee/app/framework/util/af-event.c \
-  ../../../protocol/zigbee/app/framework/util/af-main-common.c \
-  ../../../protocol/zigbee/app/framework/util/attribute-size.c \
-  ../../../protocol/zigbee/app/framework/util/attribute-storage.c \
-  ../../../protocol/zigbee/app/framework/util/attribute-table.c \
-  ../../../protocol/zigbee/app/framework/util/client-api.c \
-  ../../../protocol/zigbee/app/framework/util/message.c \
-  ../../../protocol/zigbee/app/framework/util/multi-network.c \
-  ../../../protocol/zigbee/app/framework/util/print.c \
-  ../../../protocol/zigbee/app/framework/util/print-formatter.c \
-  ../../../protocol/zigbee/app/framework/util/process-cluster-message.c \
-  ../../../protocol/zigbee/app/framework/util/process-global-message.c \
-  ../../../protocol/zigbee/app/framework/util/service-discovery-common.c \
-  ../../../protocol/zigbee/app/framework/util/time-util.c \
-  ../../../protocol/zigbee/app/framework/util/util.c \
-  ../../../protocol/zigbee/app/framework/util/af-main-host.c \
-  ../../../protocol/zigbee/app/framework/util/service-discovery-host.c \
-  ../../../protocol/zigbee/app/framework/plugin/zll-commissioning-common/zll-commissioning-common.c \
-  ../../../protocol/zigbee/app/framework/plugin/zll-commissioning-common/zll-commissioning-cli.c \
-  ../../../protocol/zigbee/app/framework/plugin/zll-commissioning-server/zll-commissioning-server.c \
-  ../../../protocol/zigbee/app/framework/plugin/zll-identify-server/zll-identify-server.c \
+  ../../..//protocol/zigbee/app/framework/../util/common/library.c \
+  ../../..//protocol/zigbee/app/framework/../util/serial/command-interpreter2.c \
+  ../../..//protocol/zigbee/app/framework/../util/zigbee-framework/zigbee-device-common.c \
+  ../../..//protocol/zigbee/app/framework/../util/zigbee-framework/zigbee-device-host.c \
+  ../../..//protocol/zigbee/app/framework/../../../../util/silicon_labs/silabs_core/event_control/event-control.c \
+  ../../..//platform/base/hal/micro/generic/led-stub.c \
+  ../../..//platform/base/hal/micro/generic/mem-util.c \
+  ../../..//platform/base/hal/plugin/antenna-stub/antenna-stub.c \
+  ../../..//platform/base/hal/plugin/buzzer-stub/buzzer-stub.c \
+  ../../..//protocol/zigbee/app/framework/plugin/address-table/address-table.c \
+  ../../..//protocol/zigbee/app/framework/plugin/address-table/address-table-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/basic/basic.c \
+  ../../..//protocol/zigbee/app/framework/plugin/color-control-server/color-control-server.c \
+  ../../..//protocol/zigbee/app/framework/plugin/concentrator/concentrator-support.c \
+  ../../..//protocol/zigbee/app/framework/plugin/concentrator/concentrator-support-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/counters/counters-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/counters/counters-ota-host.c \
+  ../../..//protocol/zigbee/app/framework/plugin/counters/counters-host.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ezmode-commissioning/ez-mode.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ezmode-commissioning/ez-mode-cli.c \
+  ../../..//protocol/zigbee/app/util/ezsp/ezsp-callbacks.c \
+  ../../..//protocol/zigbee/app/util/ezsp/ezsp-enum-decode.c \
+  ../../..//protocol/zigbee/app/util/ezsp/ezsp-frame-utilities.c \
+  ../../..//protocol/zigbee/app/util/ezsp/ezsp.c \
+  ../../..//protocol/zigbee/app/ezsp-host/ezsp-host-io.c \
+  ../../..//protocol/zigbee/app/ezsp-host/ezsp-host-queues.c \
+  ../../..//protocol/zigbee/app/ezsp-host/ezsp-host-ui.c \
+  ../../..//protocol/zigbee/app/util/ezsp/serial-interface-uart.c \
+  ../../..//protocol/zigbee/app/ezsp-host/ash/ash-host-ui.c \
+  ../../..//protocol/zigbee/app/ezsp-host/ash/ash-host.c \
+  ../../..//platform/base/hal/micro/generic/ash-common.c \
+  ../../..//protocol/zigbee/app/framework/plugin-host/file-descriptor-dispatch/file-descriptor-dispatch.c \
+  ../../..//protocol/zigbee/app/framework/plugin-host/gateway/gateway-support.c \
+  ../../..//protocol/zigbee/app/framework/plugin-host/gateway/backchannel-support.c \
+  ../../..//protocol/zigbee/app/framework/plugin-host/gateway/gateway-support-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/green-power-client/green-power-client.c \
+  ../../..//protocol/zigbee/app/framework/plugin/green-power-client/green-power-client-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/green-power-common/green-power-common.c \
+  ../../..//protocol/zigbee/stack/gp/gp-util.c \
+  ../../..//protocol/zigbee/app/framework/plugin/heartbeat/heartbeat.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ias-zone-client/ias-zone-client.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ias-zone-client/ias-zone-client-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/identify/identify.c \
+  ../../..//protocol/zigbee/app/framework/plugin/identify/identify-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/identify-feedback/identify-feedback.c \
+  ../../..//protocol/zigbee/app/framework/plugin/level-control/level-control.c \
+  ../../..//util/plugin/plugin-common/linked-list/linked-list.c \
+  ../../..//util/third_party/crypto/mbedtls/library/aes.c \
+  ../../..//util/third_party/crypto/mbedtls/library/asn1parse.c \
+  ../../..//util/third_party/crypto/mbedtls/library/asn1write.c \
+  ../../..//util/third_party/crypto/mbedtls/library/base64.c \
+  ../../..//util/third_party/crypto/mbedtls/library/bignum.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ccm.c \
+  ../../..//util/third_party/crypto/mbedtls/library/chacha20.c \
+  ../../..//util/third_party/crypto/mbedtls/library/chachapoly.c \
+  ../../..//util/third_party/crypto/mbedtls/library/cipher.c \
+  ../../..//util/third_party/crypto/mbedtls/library/cipher_wrap.c \
+  ../../..//util/third_party/crypto/mbedtls/library/cmac.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ctr_drbg.c \
+  ../../..//util/third_party/crypto/mbedtls/library/des.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ecdh.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ecdsa.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ecjpake.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ecp.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ecp_curves.c \
+  ../../..//util/third_party/crypto/mbedtls/library/entropy.c \
+  ../../..//util/third_party/crypto/mbedtls/library/error.c \
+  ../../..//util/third_party/crypto/mbedtls/library/gcm.c \
+  ../../..//util/third_party/crypto/mbedtls/library/md.c \
+  ../../..//util/third_party/crypto/mbedtls/library/md5.c \
+  ../../..//util/third_party/crypto/mbedtls/library/oid.c \
+  ../../..//util/third_party/crypto/mbedtls/library/pem.c \
+  ../../..//util/third_party/crypto/mbedtls/library/pk.c \
+  ../../..//util/third_party/crypto/mbedtls/library/pk_wrap.c \
+  ../../..//util/third_party/crypto/mbedtls/library/pkparse.c \
+  ../../..//util/third_party/crypto/mbedtls/library/platform_util.c \
+  ../../..//util/third_party/crypto/mbedtls/library/poly1305.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_cipher.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_client.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_driver_wrappers.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_ecp.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_hash.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_mac.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_slot_management.c \
+  ../../..//util/third_party/crypto/mbedtls/library/psa_crypto_storage.c \
+  ../../..//util/third_party/crypto/mbedtls/library/rsa.c \
+  ../../..//util/third_party/crypto/mbedtls/library/rsa_internal.c \
+  ../../..//util/third_party/crypto/mbedtls/library/sha1.c \
+  ../../..//util/third_party/crypto/mbedtls/library/sha256.c \
+  ../../..//util/third_party/crypto/mbedtls/library/sha512.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_cache.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_ciphersuites.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_cli.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_cookie.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_msg.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_srv.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_ticket.c \
+  ../../..//util/third_party/crypto/mbedtls/library/ssl_tls.c \
+  ../../..//util/third_party/crypto/mbedtls/library/threading.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509_create.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509_crl.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509_crt.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509_csr.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509write_crt.c \
+  ../../..//util/third_party/crypto/mbedtls/library/x509write_csr.c \
+  ../../..//protocol/zigbee/app/framework/plugin-host/ncp-configuration/ncp-configuration.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-creator/network-creator.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-creator/network-creator-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-steering/network-steering.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-steering/network-steering-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-steering/network-steering-v2.c \
+  ../../..//protocol/zigbee/app/framework/plugin/network-steering/network-steering-host.c \
+  ../../..//protocol/zigbee/app/framework/plugin/on-off/on-off.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-common/ota-common.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-server/ota-server.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-server/ota-server-page-request.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-server/ota-server-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-server/ota-server-dynamic-block-period.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-server-policy/ota-server-policy.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-storage-common/ota-storage-common.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-storage-common/ota-storage-common-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/ota-storage-posix-filesystem/ota-storage-linux.c \
+  ../../..//protocol/zigbee/app/framework/plugin/poll-control-client/poll-control-client.c \
+  ../../..//protocol/zigbee/app/framework/plugin/poll-control-client/poll-control-client-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/reporting/reporting.c \
+  ../../..//protocol/zigbee/app/framework/plugin/reporting/reporting-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/reporting/reporting-default-configuration.c \
+  ../../..//protocol/zigbee/app/framework/plugin/scan-dispatch/scan-dispatch.c \
+  ../../..//protocol/zigbee/app/util/ezsp/secure-ezsp-stub.c \
+  ../../..//protocol/zigbee/app/framework/plugin/simple-main/simple-main.c \
+  ../../..//protocol/zigbee/app/framework/plugin/simple-metering-client/simple-metering-client.c \
+  ../../..//protocol/zigbee/app/framework/plugin/simple-metering-client/simple-metering-client-cli.c \
+  ../../..//protocol/zigbee/app/framework/plugin/stack-diagnostics/stack-diagnostics.c \
+  ../../..//protocol/zigbee/app/framework/plugin/test-harness/test-harness.c \
+  ../../..//protocol/zigbee/app/framework/plugin/test-harness/read-write-attributes.c \
+  ../../..//protocol/zigbee/app/framework/plugin/test-harness/test-harness-host.c \
+  ../../..//protocol/zigbee/app/framework/plugin/time-server/time-server.c \
+  ../../..//protocol/zigbee/app/framework/plugin/trust-center-nwk-key-update-broadcast/trust-center-nwk-key-update-broadcast.c \
+  ../../..//protocol/zigbee/app/framework/plugin/trust-center-nwk-key-update-periodic/trust-center-nwk-key-update-periodic.c \
+  ../../..//protocol/zigbee/app/framework/plugin/trust-center-nwk-key-update-unicast/trust-center-nwk-key-update-unicast.c \
+  ../../..//platform/base/hal/micro/generic/crc.c \
+  ../../..//platform/base/hal/micro/generic/endian.c \
+  ../../..//platform/base/hal/micro/generic/random.c \
+  ../../..//platform/base/hal/micro/generic/system-timer.c \
+  ../../..//platform/base/hal/micro/unix/host/micro.c \
+  ../../..//platform/base/hal/micro/unix/host/token-def-unix.c \
+  ../../..//platform/base/hal/micro/unix/host/token.c \
+  ../../..//platform/base/hal/plugin/serial/ember-printf-convert.c \
+  ../../..//protocol/zigbee/app/util/serial/linux-serial.c \
+  ../../..//protocol/zigbee/app/framework/plugin/update-tc-link-key/update-tc-link-key.c \
+  ../../..//protocol/zigbee/app/framework/plugin/update-tc-link-key/update-tc-link-key-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/core-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/network-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/option-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/plugin-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/security-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/zcl-cli.c \
+  ../../..//protocol/zigbee/app/framework/cli/zdo-cli.c \
+  ../../..//protocol/zigbee/app/framework/security/af-node.c \
+  ../../..//protocol/zigbee/app/framework/security/af-security-common.c \
+  ../../..//protocol/zigbee/app/framework/security/af-trust-center.c \
+  ../../..//protocol/zigbee/app/framework/security/crypto-state.c \
+  ../../..//protocol/zigbee/app/framework/util/af-event.c \
+  ../../..//protocol/zigbee/app/framework/util/af-main-common.c \
+  ../../..//protocol/zigbee/app/framework/util/attribute-size.c \
+  ../../..//protocol/zigbee/app/framework/util/attribute-storage.c \
+  ../../..//protocol/zigbee/app/framework/util/attribute-table.c \
+  ../../..//protocol/zigbee/app/framework/util/client-api.c \
+  ../../..//protocol/zigbee/app/framework/util/message.c \
+  ../../..//protocol/zigbee/app/framework/util/multi-network.c \
+  ../../..//protocol/zigbee/app/framework/util/print.c \
+  ../../..//protocol/zigbee/app/framework/util/print-formatter.c \
+  ../../..//protocol/zigbee/app/framework/util/process-cluster-message.c \
+  ../../..//protocol/zigbee/app/framework/util/process-global-message.c \
+  ../../..//protocol/zigbee/app/framework/util/service-discovery-common.c \
+  ../../..//protocol/zigbee/app/framework/util/time-util.c \
+  ../../..//protocol/zigbee/app/framework/util/util.c \
+  ../../..//protocol/zigbee/app/framework/util/af-main-host.c \
+  ../../..//protocol/zigbee/app/framework/util/service-discovery-host.c \
 
+
+APPLICATION_FILES:=$(call removeSpaces, $(APPLICATION_FILES))
 
 LIBRARIES = \
  \
@@ -324,9 +347,9 @@ EXE_DIR=$(OUTPUT_DIR)/exe
 APPLICATION_OBJECTS= $(addprefix $(OUTPUT_DIR)/, $(notdir $(APPLICATION_FILES:.c=.o)))
 
 ifdef GENERATE_LIBRARY
-TARGET_FILE= $(EXE_DIR)/ember$(ARCHIVE_EXTENSION)
+TARGET_FILE= $(EXE_DIR)/Z3GatewayHost_3_2$(ARCHIVE_EXTENSION)
 else
-TARGET_FILE= $(EXE_DIR)/ember
+TARGET_FILE= $(EXE_DIR)/Z3GatewayHost_3_2
 endif
 
 # -MMD and -MF generates Makefile dependencies while at the same time compiling.
@@ -409,8 +432,8 @@ $(OUTPUT_DIR_CREATED):
 # the dependency rule itself (1st line) because we want this to be 
 # explicit for each target.
 define create-build-rules 
-$(OUTPUT_DIR)/$(notdir $(1:%.c=%.o)): $1 | $(OUTPUT_DIR_CREATED) 
-	$$(CC) $$(CPPFLAGS) -c $$< -o $$@
+$(OUTPUT_DIR)/$(notdir $(1:%.c=%.o)): $(call restoreSpaces, $1) | $(OUTPUT_DIR_CREATED) 
+	$$(CC) $$(CPPFLAGS) -c "$$<" -o $$@
 	$$(DEPENDENCY_POST_PROCESS)
 endef 
 

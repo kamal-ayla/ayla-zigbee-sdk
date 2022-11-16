@@ -486,52 +486,52 @@
 // Generated API headers
 
 // API ezsp-protocol from EZSP Common plugin
-#define EMBER_AF_API_EZSP_PROTOCOL "../../../protocol/zigbee/app/util/ezsp/ezsp-protocol.h"
+#define EMBER_AF_API_EZSP_PROTOCOL "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/util/ezsp/ezsp-protocol.h"
 
 // API ezsp from EZSP Common plugin
-#define EMBER_AF_API_EZSP "../../../protocol/zigbee/app/util/ezsp/ezsp.h"
+#define EMBER_AF_API_EZSP "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/util/ezsp/ezsp.h"
 
 // API green-power-common from Green Power Common plugin
-#define EMBER_AF_API_GREEN_POWER_COMMON "../../../protocol/zigbee/app/framework/plugin/green-power-common/green-power-common.h"
+#define EMBER_AF_API_GREEN_POWER_COMMON "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/green-power-common/green-power-common.h"
 
 // API linked-list from Linked List plugin
-#define EMBER_AF_API_LINKED_LIST "../../../util/plugin/plugin-common/linked-list/linked-list.h"
+#define EMBER_AF_API_LINKED_LIST "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/util/plugin/plugin-common/linked-list/linked-list.h"
 
 // API network-creator from Network Creator plugin
-#define EMBER_AF_API_NETWORK_CREATOR "../../../protocol/zigbee/app/framework/plugin/network-creator/network-creator.h"
+#define EMBER_AF_API_NETWORK_CREATOR "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/network-creator/network-creator.h"
 
 // API network-creator-security from Network Creator Security plugin
-#define EMBER_AF_API_NETWORK_CREATOR_SECURITY "../../../protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security.h"
+#define EMBER_AF_API_NETWORK_CREATOR_SECURITY "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/network-creator-security/network-creator-security.h"
 
 // API network-steering from Network Steering plugin
-#define EMBER_AF_API_NETWORK_STEERING "../../../protocol/zigbee/app/framework/plugin/network-steering/network-steering.h"
+#define EMBER_AF_API_NETWORK_STEERING "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/network-steering/network-steering.h"
 
 // API scan-dispatch from Scan Dispatch plugin
-#define EMBER_AF_API_SCAN_DISPATCH "../../../protocol/zigbee/app/framework/plugin/scan-dispatch/scan-dispatch.h"
+#define EMBER_AF_API_SCAN_DISPATCH "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/scan-dispatch/scan-dispatch.h"
 
 // API ezsp-secure from EZSP Secure Protocol Stub plugin
-#define EMBER_AF_API_EZSP_SECURE "../../../protocol/zigbee/app/util/ezsp/secure-ezsp-protocol.h"
+#define EMBER_AF_API_EZSP_SECURE "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/util/ezsp/secure-ezsp-protocol.h"
 
 // API crc from Unix Library plugin
-#define EMBER_AF_API_CRC "../../../platform/base/hal/micro/crc.h"
+#define EMBER_AF_API_CRC "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/platform/base/hal/micro/crc.h"
 
 // API endian from Unix Library plugin
-#define EMBER_AF_API_ENDIAN "../../../platform/base/hal/micro/endian.h"
+#define EMBER_AF_API_ENDIAN "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/platform/base/hal/micro/endian.h"
 
 // API hal from Unix Library plugin
-#define EMBER_AF_API_HAL "../../../platform/base/hal/hal.h"
+#define EMBER_AF_API_HAL "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/platform/base/hal/hal.h"
 
 // API random from Unix Library plugin
-#define EMBER_AF_API_RANDOM "../../../platform/base/hal/micro/random.h"
+#define EMBER_AF_API_RANDOM "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/platform/base/hal/micro/random.h"
 
 // API system-timer from Unix Library plugin
-#define EMBER_AF_API_SYSTEM_TIMER "../../../platform/base/hal/micro/system-timer.h"
+#define EMBER_AF_API_SYSTEM_TIMER "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/platform/base/hal/micro/system-timer.h"
 
 // API update-tc-link-key from Update TC Link Key plugin
-#define EMBER_AF_API_UPDATE_TC_LINK_KEY "../../../protocol/zigbee/app/framework/plugin/update-tc-link-key/update-tc-link-key.h"
+#define EMBER_AF_API_UPDATE_TC_LINK_KEY "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/framework/plugin/update-tc-link-key/update-tc-link-key.h"
 
 // API command-interpreter2 from ZCL Framework Core plugin
-#define EMBER_AF_API_COMMAND_INTERPRETER2 "../../../protocol/zigbee/app/util/serial/command-interpreter2.h"
+#define EMBER_AF_API_COMMAND_INTERPRETER2 "../../../../../SiliconLabs/SimplicityStudio/v5_4/developer/sdks/gecko_sdk_suite/v3.2/protocol/zigbee/app/util/serial/command-interpreter2.h"
 
 
 // Custom macros

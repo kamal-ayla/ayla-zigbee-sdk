@@ -8,10 +8,10 @@
 
 
 // Cluster domain specification levels:
-//   * General: zcl-8.0-07-5123-08
+//   * General: zcl-7.0-07-5123-07
 //   * Lighting & Occupancy: l&o-1.0-15-0014-04
 //   * HA: ha-1.2.1-05-3520-30
-//   * Closures: zcl-nfr-20-52431-003-door-lock-20200611
+//   * Closures: zcl-6.0-15-02018-001
 //   * HVAC: zcl-6.0-15-02018-001
 //   * Lighting: zcl6-errata-14-0129-15
 //   * Measurement & Sensing: zcl-6.0-15-02018-001

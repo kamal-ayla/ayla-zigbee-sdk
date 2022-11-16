@@ -15,8 +15,6 @@ void emAfInit(void);
 
 void emAfTick(void);
 
-void emAfMarkBuffers(void);
-
 void emAfResetAttributes(uint8_t endpointId);
 
 bool emAfPreCommandReceived(EmberAfClusterCommand* cmd);
