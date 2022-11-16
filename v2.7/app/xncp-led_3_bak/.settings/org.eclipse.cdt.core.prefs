@@ -1,6 +1,0 @@
-eclipse.preferences.version=1
-environment/project/com.silabs.ss.framework.project.toolchain.core.default\#com.silabs.ss.tool.ide.arm.toolchain.iar\:7.80.2.11947\ -\ EM3588/PATH/delimiter=;
-environment/project/com.silabs.ss.framework.project.toolchain.core.default\#com.silabs.ss.tool.ide.arm.toolchain.iar\:7.80.2.11947\ -\ EM3588/PATH/operation=prepend
-environment/project/com.silabs.ss.framework.project.toolchain.core.default\#com.silabs.ss.tool.ide.arm.toolchain.iar\:7.80.2.11947\ -\ EM3588/PATH/value=D\:\\SiliconLabs\\v4\\support\\common\\build\\msys\\1.0\\bin
-environment/project/com.silabs.ss.framework.project.toolchain.core.default\#com.silabs.ss.tool.ide.arm.toolchain.iar\:7.80.2.11947\ -\ EM3588/append=true
-environment/project/com.silabs.ss.framework.project.toolchain.core.default\#com.silabs.ss.tool.ide.arm.toolchain.iar\:7.80.2.11947\ -\ EM3588/appendContributed=true
