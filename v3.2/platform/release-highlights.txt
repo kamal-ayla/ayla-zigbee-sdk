@@ -1,0 +1,30 @@
+What's new in Gecko Platform 3.2.3.0
+* Selected quality improvements and bug fixes
+
+What's new in Gecko Platform 3.2.2.0
+* Introduced support for EFR32xG23 devices
+
+What's new in Gecko Platform 3.2.1.0
+* Selected quality improvements and bug fixes
+
+What's new in Gecko Platform 3.2.0.0
+* Peripherals
+  * EFP Voltage scaling and Direct mode on EFR32xG22 and EFM32xG22
+  * EFP Coulomb counter
+* Services
+  * Several fixes related to Power Manager
+* Middleware
+  * CSLIB can now be used with the Gecko SDK components
+* Security
+  * Mbed TLS library updated to v2.26.0
+* Operating System
+  * Added more NOR Flash options for Micrium OS FS
+* Examples
+  * Coulomb Counter
+  * CLI & I2C
+* Boards and External Devices
+  * Added support for several new boards
+* Other Platform Components
+  * Updated IAR compiler to version 8.50.9.
+  * Updated GCC compiler to version 10.2.
+  * Amazon FreeRTOS Libraries have been added to the Gecko SDK.

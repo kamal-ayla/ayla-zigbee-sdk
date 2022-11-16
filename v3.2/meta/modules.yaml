@@ -1,0 +1,647 @@
+root : ".."
+module :
+-
+  name      : "apache commons"
+  path      : "tool/apache_commons"
+  symbol    : "APACHE_COMMONS"
+  owner     : "Jason Perreault"
+  email     : "Jason.Perreault@silabs.com"
+  Atlassian : "japerrea"
+
+-
+  name      : "app internal"
+  path      : "app/internal"
+  symbol    : "APP_INTERNAL"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "apple homekit"
+  path      : "app/apple_homekit"
+  symbol    : "APPLE_HOMEKIT"
+  owner     : "Tamas Hornos"
+  eamil     : "Tamas.Hornos@silabs.com"
+  Atlassian : "tahornos"
+
+-
+  name      : "homekit"
+  path      : "app/homekit"
+  symbol    : "HOMEKIT"
+  owner     : "Tamas Hornos"
+  eamil     : "Tamas.Hornos@silabs.com"
+  Atlassian : "tahornos"
+
+-
+  name      : "base"
+  path      : "platform/base"
+  symbol    : "BASE"
+  owner     : "Bryan Murawski"
+  email     : "Bryan.Murawski@silabs.com"
+  Atlassian : "bkmuraws"
+
+-
+  name      : "beanshell"
+  path      : "tool/beanshell"
+  symbol    : "BEANSHELL"
+  owner     : "Jason Perreault"
+  email     : "Jason.Perreault@silabs.com"
+  Atlassian : "japerrea"
+
+-
+  name      : "bluetooth app"
+  path      : "app/bluetooth"
+  symbol    : "BLUETOOTH_APP"
+  owner     : "Tamas Hornos"
+  eamil     : "Tamas.Hornos@silabs.com"
+  Atlassian : "tahornos"
+
+-
+  name      : "bluetooth protocol"
+  path      : "protocol/bluetooth"
+  symbol    : "BLUETOOTH_PROTOCOL"
+  owner     : "Yongjiang Yu﻿"
+  email     : "Yongjiang.Yu﻿@silabs.com"
+  Atlassian : "yoyu"
+
+-
+  name      : "bootloader"
+  path      : "platform/bootloader"
+  symbol    : "BOOTLOADER"
+  owner     : "Henrik Kirkeby"
+  email     : "Henrik.Kirkeby@silabs.com"
+  Atlassian : "hekirkeb"
+
+-
+  name      : "cjson"
+  path      : "util/third_party/cjson"
+  symbol    : "CJSON"
+  owner     : "Preston Fick"
+  email     : "Preston.Fick@silabs.com"
+  Atlassian : "pfick"
+
+-
+  name      : "CMSIS"
+  path      : "platform/CMSIS"
+  symbol    : "CMSIS"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "App Common"
+  path      : "app/common"
+  symbol    : "APP COMMON"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "code generator"
+  path      : "tool/code_generator"
+  symbol    : "CODE_GENERATOR"
+  owner     : "Mate Perjesi"
+  eamil     : "Mate.Perjesi@silabs.com"
+  Atlassian : "maperjes"
+
+-
+  name      : "cslib"
+  path      : "platform/middleware/cslib"
+  symbol    : "CSLIB"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "cslib_src"
+  path      : "platform/middleware/cslib_src"
+  symbol    : "CSLIB_SRC"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "customer board"
+  path      : "hardware/customer_board"
+  symbol    : "CUSTOMER_BOARD"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "Device"
+  path      : "platform/Device"
+  symbol    : "DEVICE"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "Platform Driver"
+  path      : "platform/driver"
+  symbol    : "PLATFORM_DRIVER"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "emdrv"
+  path      : "platform/emdrv"
+  symbol    : "EMDRV"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "emlib"
+  path      : "platform/emlib"
+  symbol    : "EMLIB"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "emtool"
+  path      : "tool/emtool"
+  symbol    : "EMTOOL"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "esf common"
+  path      : "app/esf_common"
+  symbol    : "ESF_COMMON"
+  owner     : "Jason Perreault"
+  email     : "Jason.Perreault@silabs.com"
+  Atlassian : "japerrea"
+
+-
+  name      : "experimental"
+  path      : "app/experimental"
+  symbol    : "EXPERIMENTAL"
+  owner     : "Marius Grannaes"
+  email     : "Marius.Grannaes@silabs.com"
+  Atlassian : "magranna"
+
+-
+  name      : "fatfs"
+  path      : "util/third_party/fatfs/"
+  symbol    : "FATFS"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "flex"
+  path      : "protocol/flex"
+  symbol    : "FLEX"
+  owner     : "David LeGoff"
+  email     : "David.LeGoff@silabs.com"
+  Atlassina : "dlegoff"
+
+-
+  name      : "freertos"
+  path      : "util/third_party/freertos"
+  symbol    : "FREERTOS"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "glib"
+  path      : "platform/middleware/glib"
+  symbol    : "GLIB"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "hal config"
+  path      : "platform/halconfig"
+  symbol    : "HALCONFIG"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "hardware module"
+  path      : "hardware/module"
+  symbol    : "HARDWARE_MODULE"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "hwconf data"
+  path      : "platform/hwconf_data"
+  symbol    : "HWCONFDATA"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "ide_support"
+  path      : "tool/ide_support"
+  symbol    : "IDE_SUPPORT"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "jam"
+  path      : "tool/jam"
+  symbol    : "JAM"
+  owner     : "Nathaniel Ting"
+  email     : "Nathaniel.Ting@silabs.com"
+  Atlassian : "nating"
+
+-
+  name      : "jenkins"
+  path      : "tool/jenkins"
+  symbol    : "JENKINS"
+  owner     : "Gabe Ash"
+  email     : "Gabriel.Ash@silabs.com"
+  Atlassian : "gbash"
+
+-
+  name      : "kit"
+  path      : "hardware/kit"
+  symbol    : "KIT"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "driver"
+  path      : "hardware/driver"
+  symbol    : "DRIVER"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "libcoap"
+  path      : "util/third_party/libcoap"
+  symbol    : "LIBCOAP"
+  owner     : "DC Seward"
+  email     : "Dewitt.Seward@silabs.com"
+  Atlassian : "dcseward"
+
+-
+  name      : "lwip"
+  path      : "util/third_party/lwip"
+  symbol    : "LWIP"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "mbedtls"
+  path      : "util/third_party/crypto/mbedtls"
+  symbol    : "MBEDTLS"
+  owner     : "Henrik Kirkeby"
+  email     : "Henrik.Kirkeby@silabs.com"
+  Atlassian : "hekirkeb"
+
+-
+  name      : "mcu example"
+  path      : "app/mcu_example"
+  symbol    : "MCU_EXAMPLE"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "micrium OS"
+  path      : "platform/micrium_os"
+  symbol    : "MICRIUM_OS"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "micrium OS example"
+  path      : "app/micrium_os_example"
+  symbol    : "MICRIUM_OS_EXAMPLE"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "Service"
+  path      : "platform/service"
+  symbol    : "SERVICE"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "Common Platform Components"
+  path      : "platform/common"
+  symbol    : "COMMON"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "efr32 multi phy radio configurator"
+  path      : "platform/radio/efr32_multiphy_configurator"
+  symbol    : "MULTIPHY_RADIO_CONFIGURATOR"
+  owner     : "Attila Kenyhercz"
+  email     : "Attila.Kenyhercz@silabs.com"
+  Atlassian : "atkenyha"
+
+-
+  name      : "paho.mqtt.c"
+  path      : "util/third_party/paho.mqtt.c"
+  symbol    : "PAHOMQTT"
+  owner     : "Preston Fick"
+  email     : "Preston.Fick@silabs.com"
+  Atlassian : "pfick"
+
+-
+  name      : "segger"
+  path      : "util/third_party/segger"
+  symbol    : "SEGGER"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name     : "peripheral"
+  path     : "platform/peripheral"
+  symbol   : "PERIPHERAL"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "plugin"
+  path      : "util/plugin"
+  symbol    : "PLUGIN"
+  owner     : "Nathaniel Ting"
+  email     : "Nathaniel.Ting@silabs.com"
+  Atlassian : "nating"
+
+-
+  name      : "production bootloader"
+  path      : "platform/production_bootloader"
+  symbol    : "PRODUCTION_BOOTLOADER"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "efr32 radio configurator"
+  path      : "platform/tool/efr32_radio_configurator"
+  symbol    : "RADIO_CONFIGURATOR"
+  owner     : "Bryan Murawski"
+  email     : "Bryan.Murawski@silabs.com"
+  Atlassian : "bkmuraws"
+
+-
+  name      : "efr32 multi phy radio configurator"
+  path      : "platform/tool/efr32_multi_phy_radio_configurator"
+  symbol    : "MULTIPHY_RADIO_CONFIGURATOR"
+  owner     : "Bryan Murawski"
+  email     : "Bryan.Murawski@silabs.com"
+  Atlassian : "bkmuraws"
+
+-
+  name      : "rail lib"
+  path      : "platform/radio/rail_lib"
+  symbol    : "RAIL_LIB"
+  owner     : "Bryan Murawski"
+  email     : "Bryan.Murawski@silabs.com"
+  Atlassian : "bkmuraws"
+
+-
+  name      : "reference design"
+  path      : "hardware/reference_design"
+  symbol    : "REFERENCE_DESIGN"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "runtest"
+  path      : "tool/runtest"
+  symbol    : "RUNTEST"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "script"
+  path      : "tool/script"
+  symbol    : "SCRIPT"
+  owner     : "Suvesh Pratapa"
+  email     : "Suvesh.Pratapa@silabs.com"
+  Atlassian : "supratap"
+
+-
+  name      : "scripted test framework"
+  path      : "tool/scripted_test_framework"
+  symbol    : "SCRIPTED_TEST_FRAMEWORK"
+  owner     : "???"
+  email     : "???"
+  Atlassian : "???"
+
+-
+  name      : "silabs core"
+  path      : "util/silicon_labs/silabs_core"
+  symbol    : "SILABS_CORE"
+  owner     : "???"
+  email     : "???"
+  Atlassian : "???"
+
+-
+  name      : "silabs aox"
+  path      : "util/silicon_labs/aox"
+  symbol    : "SILABS_AOX"
+  owner     : "Sauli Lehtimaki"
+  email     : "Sauli.Lehtimaki@silabs.com"
+  Atlassian : "salehtim"
+
+-
+  name      : "studio"
+  path      : ".studio"
+  symbol    : "STUDIO"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "toolchain manager"
+  path      : "tool/tcmgr"
+  symbol    : "TCMGR"
+  owner     : "Gabe Ash"
+  email     : "Gabriel.Ash@silabs.com"
+  Atlassian : "gbash"
+
+-
+  name      : "thread"
+  path      : "protocol/thread"
+  symbol    : "THREAD"
+  owner     : "Bob MacDonald"
+  email     : "Robert.MacDonald@silabs.com"
+  Atlassian : "romacdon"
+
+-
+  name      : "openthread"
+  path      : "protocol/openthread"
+  symbol    : "OPENTHREAD"
+  owner     : "Bob MacDonald"
+  email     : "Robert.MacDonald@silabs.com"
+  Atlassian : "romacdon"
+
+-
+  name     : "ot-br-posix"
+  path     : "util/third_party/ot-br-posix"
+  symbol   : "OT_BR_POSIX"
+  owner    : "Bob MacDonald"
+  email     : "Robert.MacDonald@silabs.com"
+  Atlassian : "romacdon"
+
+-
+  name      : "timac"
+  path      : "util/third_party/timac"
+  symbol    : "TIMAC"
+  owner     : "Marius Grannaes"
+  email     : "Marius.Grannaes@silabs.com"
+  Atlassian : "magranna"
+
+-
+  name      : "unity"
+  path      : "util/third_party/unity"
+  symbol    : "UNITY"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+-
+  name      : "unity_test_framework"
+  path      : "util/third_party/unity_test_framework"
+  symbol    : "UNITY_TEST_FRAMEWORK"
+  owner     : "Alexandre Autotte"
+  email     : "Alexandre.Autotte@silabs.com"
+  Atlassian : "alautott"
+-
+  name      : "usb gecko"
+  path      : "platform/middleware/usb_gecko"
+  symbol    : "USB_GECKO"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "usbxpress"
+  path      : "platform/middleware/usbxpress"
+  symbol    : "USBXPRESS"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "zcl"
+  path      : "app/zcl"
+  symbol    : "ZCL"
+  owner     : "Jason Perreault"
+  email     : "Jason.Perreault@silabs.com"
+  Atlassian : "japerrea"
+
+-
+  name      : "zigbee"
+  path      : "protocol/zigbee"
+  symbol    : "ZIGBEE"
+  owner     : "Nathaniel Ting"
+  email     : "Nathaniel.Ting@silabs.com"
+  Atlassian : "nating"
+
+-
+  name      : "vsrpc-lib"
+  path      : "tool/vsrpc-lib"
+  symbol    : "VSRPC-LIB"
+  owner     : "Logan Lucas"
+  email     : "Logan.Lucas@silabs.com"
+  Atlassian : "lolucas"
+
+-
+  name      : "crypto"
+  path      : "util/third_party/crypto"
+  symbol    : "CRYPTO"
+  owner     : "Henrik Kirkeby"
+  email     : "Henrik.Kirkeby@silabs.com"
+  Atlassian : "hekirkeb"
+
+-
+  name      : "printf"
+  path      : "util/third_party/printf"
+  symbol    : "PRINTF"
+  owner     : "Olivier Deschambault"
+  email     : "Olivier.Deschambault@silabs.com"
+  Atlassian : "oldescha"
+
+-
+  name      : "hardware board"
+  path      : "hardware/board"
+  symbol    : "HARDWARE_BOARD"
+  owner     : "Rasmus Larsen"
+  email     : "Rasmus.Larsen@silabs.com"
+  Atlassian : "rclarsen" 
+
+-
+  name      : "app flex"
+  path      : "app/flex"
+  symbol    : "APP_FLEX"
+  owner     : "Istvan Reti"
+  email     : "Istvan.Reti@silabs.com"
+  Atlassian : "isreti" 
+
+-
+  name      : "radio mac"
+  path      : "platform/radio/mac"
+  symbol    : "RADIO_MAC"
+  owner     : "Jeffrey Rosenberger"
+  email     : "Jeffrey.Rosenberger@silabs.com"
+  Atlassian : "jerosenb"
+
+-
+  name      : "z-wave"
+  path      : "protocol/z-wave"
+  symbol    : "Z-WAVE"
+  owner     : "Asbjorn Laurberg"
+  email     : "Asbjorn.Laurberg@silabs.com"
+  Atlassian : "aslaurbe"
+
+-
+  name      : "homekit protocol"
+  path      : "protocol/homekit"
+  symbol    : "HOMEKIT_PROTOCOL"
+  owner     : "Tamas Hornos"
+  email     : "Tamas.Hornosg@silabs.com"
+  Atlassian : "tahornos"
+
+-
+  name      : "homekit util"
+  path      : "util/third_party/homekit"
+  symbol    : "HOMEKIT_UTIL"
+  owner     : "Tamas Hornos"
+  email     : "Tamas.Hornosg@silabs.com"
+  Atlassian : "tahornos"
+
+-
+  name      : "wfx_fmac_driver"
+  path      : "platform/radio/wifi/wfx_fmac_driver"
+  symbol    : "WFX_FMAC_DRIVER"
+  owner     : "Hadrien Hoyer"
+  email     : "Hadrien.Hoyer@silabs.com"
+  Atlassian : "hahoyer"
+
+-
+  name      : "wi-sun"
+  path      : "protocol/wisun"
+  symbol    : "WISUN"
+  owner     : "Thibaut Colin"
+  email     : "thibaut.colin@silabs.com"
+  Atlassian : "thcolin"

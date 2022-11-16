@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='ASCII'?>
+<module:DocumentRoot xmlns:module="http://www.silabs.com/ss/hwconfig/module.ecore">
+  <module id="efr32.efr32mg14p.rssi" label="RSSI" name="RSSI" description="RSSI management options for the radio." version="efr">
+    <properties>
+      <enumProperty label="SDK is taking control over this module" id="RSSI.usedbysdk.BOOL" defaultValueIndex="0" hidden="true" readonly="false">
+        <enumValue label="False" value="0"/>
+        <enumValue label="True" value="1"/>
+      </enumProperty>
+      <enumProperty label="SDK is hiding this module" id="RSSI.hiddenbysdk.BOOL" defaultValueIndex="0" hidden="true" readonly="false">
+        <enumValue label="False" value="0"/>
+        <enumValue label="True" value="1"/>
+      </enumProperty>
+      <enumProperty label="Show advanced options" id="RSSI.showadvanced.BOOL" defaultValueIndex="0" hidden="true" readonly="false">
+        <enumValue label="False" value="0"/>
+        <enumValue label="True" value="1"/>
+      </enumProperty>
+      <enumProperty label="Forcefully enabled in model" id="RSSI.forceenable.BOOL" defaultValueIndex="0" hidden="true" readonly="false">
+        <enumValue label="False" value="0"/>
+        <enumValue label="True" value="1"/>
+      </enumProperty>
+      <stringProperty label="Owned by" id="RSSI.owner.STRING" defaultValue="" hidden="false" readonly="true" transient="true"/>
+      <integerProperty label="Radio RSSI Offset" description="Radio RSSI Offset (-35 to 35)" id="RSSI.SL_RAIL_UTIL_RSSI_OFFSET.INT" minValue="-35" maxValue="35" defaultValue="-8" hidden="false" readonly="false"/>
+    </properties>
+    <propertyCategories>
+      <category label="RSSI">
+        <subCategory label="">
+          <propertyRef refId="RSSI.usedbysdk.BOOL"/>
+          <propertyRef refId="RSSI.hiddenbysdk.BOOL"/>
+          <propertyRef refId="RSSI.showadvanced.BOOL"/>
+          <propertyRef refId="RSSI.forceenable.BOOL"/>
+          <propertyRef refId="RSSI.owner.STRING"/>
+        </subCategory>
+        <subCategory label="RSSI">
+          <propertyRef refId="RSSI.SL_RAIL_UTIL_RSSI_OFFSET.INT"/>
+        </subCategory>
+      </category>
+    </propertyCategories>
+    <signals/>
+  </module>
+</module:DocumentRoot>

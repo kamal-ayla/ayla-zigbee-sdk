@@ -1,0 +1,256 @@
+<?xml version='1.0' encoding='ASCII'?>
+<model:MDescriptors xmlns:model="http://www.silabs.com/ss/Studio.ecore">
+  <descriptors id="EFR32ZG23A010F512GM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23a010f512gm40"/>
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm40/EFR32ZG23A010F512GM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23a010f512gm40.extension">
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm40/EFR32ZG23A010F512GM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23a010f512gm40.portio">
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23A010F512GM48">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23a010f512gm48"/>
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm48/EFR32ZG23A010F512GM48.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23a010f512gm48.extension">
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm48/EFR32ZG23A010F512GM48.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23a010f512gm48.portio">
+    <property key="hardwareConfigData" value="efr32zg23a010f512gm48/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23A020F512GM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23a020f512gm40"/>
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm40/EFR32ZG23A020F512GM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23a020f512gm40.extension">
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm40/EFR32ZG23A020F512GM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23a020f512gm40.portio">
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23A020F512GM48">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23a020f512gm48"/>
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm48/EFR32ZG23A020F512GM48.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23a020f512gm48.extension">
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm48/EFR32ZG23A020F512GM48.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23a020f512gm48.portio">
+    <property key="hardwareConfigData" value="efr32zg23a020f512gm48/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B010F512IM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b010f512im40"/>
+    <property key="hardwareConfigData" value="efr32zg23b010f512im40/EFR32ZG23B010F512IM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b010f512im40.extension">
+    <property key="hardwareConfigData" value="efr32zg23b010f512im40/EFR32ZG23B010F512IM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b010f512im40.portio">
+    <property key="hardwareConfigData" value="efr32zg23b010f512im40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B010F512IM48">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b010f512im48"/>
+    <property key="hardwareConfigData" value="efr32zg23b010f512im48/EFR32ZG23B010F512IM48.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b010f512im48.extension">
+    <property key="hardwareConfigData" value="efr32zg23b010f512im48/EFR32ZG23B010F512IM48.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b010f512im48.portio">
+    <property key="hardwareConfigData" value="efr32zg23b010f512im48/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B011F512IM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b011f512im40"/>
+    <property key="hardwareConfigData" value="efr32zg23b011f512im40/EFR32ZG23B011F512IM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b011f512im40.extension">
+    <property key="hardwareConfigData" value="efr32zg23b011f512im40/EFR32ZG23B011F512IM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b011f512im40.portio">
+    <property key="hardwareConfigData" value="efr32zg23b011f512im40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B020F512IM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b020f512im40"/>
+    <property key="hardwareConfigData" value="efr32zg23b020f512im40/EFR32ZG23B020F512IM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b020f512im40.extension">
+    <property key="hardwareConfigData" value="efr32zg23b020f512im40/EFR32ZG23B020F512IM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b020f512im40.portio">
+    <property key="hardwareConfigData" value="efr32zg23b020f512im40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B020F512IM48">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b020f512im48"/>
+    <property key="hardwareConfigData" value="efr32zg23b020f512im48/EFR32ZG23B020F512IM48.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b020f512im48.extension">
+    <property key="hardwareConfigData" value="efr32zg23b020f512im48/EFR32ZG23B020F512IM48.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b020f512im48.portio">
+    <property key="hardwareConfigData" value="efr32zg23b020f512im48/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="EFR32ZG23B021F512IM40">
+    <property key="partCompatibility" value="mcu.arm.efr32.zg23.efr32zg23b021f512im40"/>
+    <property key="hardwareConfigData" value="efr32zg23b021f512im40/EFR32ZG23B021F512IM40.device"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23b021f512im40.extension">
+    <property key="hardwareConfigData" value="efr32zg23b021f512im40/EFR32ZG23B021F512IM40.deviceextension"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.efr32zg23b021f512im40.portio">
+    <property key="hardwareConfigData" value="efr32zg23b021f512im40/PORTIO.portio"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.port">
+    <property key="hardwareConfigData" value="modules/PORT/PORT.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.portio">
+    <property key="hardwareConfigData" value="modules/PORTIO/PORTIO.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.pin">
+    <property key="hardwareConfigData" value="modules/PIN/PIN.pin"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.acmp0">
+    <property key="hardwareConfigData" value="modules/ACMP0/ACMP0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.acmp1">
+    <property key="hardwareConfigData" value="modules/ACMP1/ACMP1.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.antdiv">
+    <property key="hardwareConfigData" value="modules/ANTDIV/ANTDIV.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.btl_button">
+    <property key="hardwareConfigData" value="modules/BTL_BUTTON/BTL_BUTTON.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.button">
+    <property key="hardwareConfigData" value="modules/BUTTON/BUTTON.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.cmu">
+    <property key="hardwareConfigData" value="modules/CMU/CMU.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.coex">
+    <property key="hardwareConfigData" value="modules/COEX/COEX.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.dcdc">
+    <property key="hardwareConfigData" value="modules/DCDC/DCDC.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.emu">
+    <property key="hardwareConfigData" value="modules/EMU/EMU.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.eusart0">
+    <property key="hardwareConfigData" value="modules/EUSART0/EUSART0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.eusart1">
+    <property key="hardwareConfigData" value="modules/EUSART1/EUSART1.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.eusart2">
+    <property key="hardwareConfigData" value="modules/EUSART2/EUSART2.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.extflash">
+    <property key="hardwareConfigData" value="modules/EXTFLASH/EXTFLASH.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.ezradiopro">
+    <property key="hardwareConfigData" value="modules/EZRADIOPRO/EZRADIOPRO.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.fem">
+    <property key="hardwareConfigData" value="modules/FEM/FEM.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.gpio">
+    <property key="hardwareConfigData" value="modules/GPIO/GPIO.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.hfxo0">
+    <property key="hardwareConfigData" value="modules/HFXO0/HFXO0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.i2c0">
+    <property key="hardwareConfigData" value="modules/I2C0/I2C0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.i2c1">
+    <property key="hardwareConfigData" value="modules/I2C1/I2C1.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.i2csensor">
+    <property key="hardwareConfigData" value="modules/I2CSENSOR/I2CSENSOR.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.iadc0">
+    <property key="hardwareConfigData" value="modules/IADC0/IADC0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.ioexp">
+    <property key="hardwareConfigData" value="modules/IOEXP/IOEXP.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.keyscan">
+    <property key="hardwareConfigData" value="modules/KEYSCAN/KEYSCAN.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.lcd">
+    <property key="hardwareConfigData" value="modules/LCD/LCD.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.led">
+    <property key="hardwareConfigData" value="modules/LED/LED.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.lesense">
+    <property key="hardwareConfigData" value="modules/LESENSE/LESENSE.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.letimer0">
+    <property key="hardwareConfigData" value="modules/LETIMER0/LETIMER0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.lfxo">
+    <property key="hardwareConfigData" value="modules/LFXO/LFXO.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.modem">
+    <property key="hardwareConfigData" value="modules/MODEM/MODEM.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.pa">
+    <property key="hardwareConfigData" value="modules/PA/PA.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.pcnt0">
+    <property key="hardwareConfigData" value="modules/PCNT0/PCNT0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.prs">
+    <property key="hardwareConfigData" value="modules/PRS/PRS.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.pti">
+    <property key="hardwareConfigData" value="modules/PTI/PTI.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.rssi">
+    <property key="hardwareConfigData" value="modules/RSSI/RSSI.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.serial">
+    <property key="hardwareConfigData" value="modules/SERIAL/SERIAL.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.spidisplay">
+    <property key="hardwareConfigData" value="modules/SPIDISPLAY/SPIDISPLAY.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.spincp">
+    <property key="hardwareConfigData" value="modules/SPINCP/SPINCP.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.timer0">
+    <property key="hardwareConfigData" value="modules/TIMER0/TIMER0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.timer1">
+    <property key="hardwareConfigData" value="modules/TIMER1/TIMER1.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.timer2">
+    <property key="hardwareConfigData" value="modules/TIMER2/TIMER2.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.timer3">
+    <property key="hardwareConfigData" value="modules/TIMER3/TIMER3.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.timer4">
+    <property key="hardwareConfigData" value="modules/TIMER4/TIMER4.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.uartncp">
+    <property key="hardwareConfigData" value="modules/UARTNCP/UARTNCP.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.usart0">
+    <property key="hardwareConfigData" value="modules/USART0/USART0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.vcom">
+    <property key="hardwareConfigData" value="modules/VCOM/VCOM.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.vdac0">
+    <property key="hardwareConfigData" value="modules/VDAC0/VDAC0.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.vuart">
+    <property key="hardwareConfigData" value="modules/VUART/VUART.module"/>
+  </descriptors>
+  <descriptors id="efr32.efr32zg23.wdog">
+    <property key="hardwareConfigData" value="modules/WDOG/WDOG.module"/>
+  </descriptors>
+</model:MDescriptors>

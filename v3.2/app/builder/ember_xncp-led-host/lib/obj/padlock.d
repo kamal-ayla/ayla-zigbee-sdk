@@ -1,0 +1,7 @@
+lib/obj/padlock.o: ../../../util/third_party/mbedtls/library/padlock.c \
+ mbedtls-config-generated.h \
+ ../../../util/third_party/mbedtls/include/mbedtls/check_config.h
+
+mbedtls-config-generated.h:
+
+../../../util/third_party/mbedtls/include/mbedtls/check_config.h:

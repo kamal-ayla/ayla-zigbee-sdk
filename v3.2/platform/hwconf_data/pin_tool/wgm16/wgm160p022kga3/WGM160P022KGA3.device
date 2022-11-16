@@ -1,0 +1,214 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<device:DocumentRoot xmlns:device="http://www.silabs.com/ss/hwconfig/device.ecore">
+  <device description="" label="WGM160P022KGA3" name="pin_tool.WGM160P022KGA3" partId="mcu.arm.wf.wgm160p022kga3" deviceExtensionIdRef="pin_tool.wf.wgm16.wgm160p022kga3.extension" revision="A" singleMode="true">
+    <powerModel/>
+    <portIo componentIdRef="pin_tool.wf.wgm16.wgm160p022kga3.portio" name="PORTIO" revision="A">
+      <crossBars/>
+      <interfaceToPinLists/>
+      <portBanks>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port A" name="gpioPortA" revision="A" index="0">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA0" name="PA0" index="0"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA1" name="PA1" index="1"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA2" name="PA2" index="2"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA3" name="PA3" index="3"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA4" name="PA4" index="4"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA5" name="PA5" index="5"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA6" name="PA6" index="6"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PA15" name="PA15" index="15"/>
+        </portBank>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port B" name="gpioPortB" revision="A" index="1">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB3" name="PB3" index="3"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB4" name="PB4" index="4"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB5" name="PB5" index="5"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB6" name="PB6" index="6"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB11" name="PB11" index="11"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB12" name="PB12" index="12"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB13" name="PB13" index="13"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PB14" name="PB14" index="14"/>
+        </portBank>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port C" name="gpioPortC" revision="A" index="2">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PC4" name="PC4" index="4"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PC5" name="PC5" index="5"/>
+        </portBank>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port D" name="gpioPortD" revision="A" index="3">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PD6" name="PD6" index="6"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PD8" name="PD8" index="8"/>
+        </portBank>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port E" name="gpioPortE" revision="A" index="4">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PE5" name="PE5" index="5"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PE6" name="PE6" index="6"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PE7" name="PE7" index="7"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PE14" name="PE14" index="14"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PE15" name="PE15" index="15"/>
+        </portBank>
+        <portBank componentIdRef="pin_tool.wf.wgm16.port" displayName="Port F" name="gpioPortF" revision="A" index="5">
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF0" name="PF0" index="0"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF1" name="PF1" index="1"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF2" name="PF2" index="2"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF5" name="PF5" index="5"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF10" name="PF10" index="10"/>
+          <pin componentIdRef="pin_tool.wf.wgm16.pin" displayName="PF11" name="PF11" index="11"/>
+        </portBank>
+      </portBanks>
+    </portIo>
+    <pinOut description="55-pin LGA, 14x24" indicatorLocation="topleft" package="RECTS" padDescription="NONE" subtitle="(top view)">
+      <pin defaultLabel="ANT_GND" location="4500,5500,17000,6000" number="1"/>
+      <pin defaultLabel="ANT_GND" location="4500,15500,17000,6000" number="2"/>
+      <pin defaultLabel="NC" location="4500,25500,17000,6000" number="3"/>
+      <pin defaultLabel="GND" location="4500,35500,17000,6000" number="4"/>
+      <pin defaultLabel="NC" location="4500,45500,17000,6000" number="5"/>
+      <pin defaultLabel="NC" location="4500,55500,17000,6000" number="6"/>
+      <pin defaultLabel="NC" location="4500,65500,17000,6000" number="7"/>
+      <pin defaultLabel="GND" location="4500,75500,17000,6000" number="8"/>
+      <pin defaultLabel="GND" location="4500,85500,17000,6000" number="9"/>
+      <pin defaultLabel="GND" location="4500,95500,17000,6000" number="10"/>
+      <pin defaultLabel="GND" location="4500,105500,17000,6000" number="11"/>
+      <pin defaultLabel="NC" location="4500,115500,17000,6000" number="12"/>
+      <pin defaultLabel="NC" location="4500,125500,17000,6000" number="13"/>
+      <pin defaultLabel="PE14" location="4500,135500,17000,6000" number="14" portBankIndex="4" pinIndex="14"/>
+      <pin defaultLabel="PE15" location="4500,145500,17000,6000" number="15" portBankIndex="4" pinIndex="15"/>
+      <pin defaultLabel="PA0" location="4500,155500,17000,6000" number="16" portBankIndex="0" pinIndex="0"/>
+      <pin defaultLabel="PA1" location="4500,165500,17000,6000" number="17" portBankIndex="0" pinIndex="1"/>
+      <pin defaultLabel="PA2" location="4500,175500,17000,6000" number="18" portBankIndex="0" pinIndex="2"/>
+      <pin defaultLabel="PA3" location="4500,185500,17000,6000" number="19" portBankIndex="0" pinIndex="3"/>
+      <pin defaultLabel="PA4" location="4500,195500,17000,6000" number="20" portBankIndex="0" pinIndex="4"/>
+      <pin defaultLabel="PA5" location="4500,205500,17000,6000" number="21" portBankIndex="0" pinIndex="5"/>
+      <pin defaultLabel="PB3" location="4500,215500,17000,6000" number="22" portBankIndex="1" pinIndex="3"/>
+      <pin defaultLabel="GND" location="4500,225500,17000,6000" number="23"/>
+      <pin defaultLabel="PB4" location="28000,216500,6000,17000" number="24" portBankIndex="1" pinIndex="4"/>
+      <pin defaultLabel="PB5" location="38000,216500,6000,17000" number="25" portBankIndex="1" pinIndex="5"/>
+      <pin defaultLabel="PB6" location="48000,216500,6000,17000" number="26" portBankIndex="1" pinIndex="6"/>
+      <pin defaultLabel="GND" location="58000,216500,6000,17000" number="27"/>
+      <pin defaultLabel="PB13" location="68000,216500,6000,17000" number="28" portBankIndex="1" pinIndex="13"/>
+      <pin defaultLabel="PB14" location="78000,216500,6000,17000" number="29" portBankIndex="1" pinIndex="14"/>
+      <pin defaultLabel="GND" location="88000,216500,6000,17000" number="30"/>
+      <pin defaultLabel="PB11" location="98000,216500,6000,17000" number="31" portBankIndex="1" pinIndex="11"/>
+      <pin defaultLabel="PB12" location="108000,216500,6000,17000" number="32" portBankIndex="1" pinIndex="12"/>
+      <pin defaultLabel="GND" location="120500,225500,17000,6000" number="33"/>
+      <pin defaultLabel="RESETn" location="120500,215500,17000,6000" number="34"/>
+      <pin defaultLabel="PD6" location="120500,205500,17000,6000" number="35" portBankIndex="3" pinIndex="6"/>
+      <pin defaultLabel="PD8" location="120500,195500,17000,6000" number="36" portBankIndex="3" pinIndex="8"/>
+      <pin defaultLabel="PF2" location="120500,185500,17000,6000" number="37" portBankIndex="5" pinIndex="2"/>
+      <pin defaultLabel="PF5" location="120500,175500,17000,6000" number="38" portBankIndex="5" pinIndex="5"/>
+      <pin defaultLabel="PC5" location="120500,165500,17000,6000" number="39" portBankIndex="2" pinIndex="5"/>
+      <pin defaultLabel="VBUS" location="120500,155500,17000,6000" number="40"/>
+      <pin defaultLabel="PF10" location="120500,145500,17000,6000" number="41" portBankIndex="5" pinIndex="10"/>
+      <pin defaultLabel="PF11" location="120500,135500,17000,6000" number="42" portBankIndex="5" pinIndex="11"/>
+      <pin defaultLabel="GND" location="120500,125500,17000,6000" number="43"/>
+      <pin defaultLabel="PF0" location="120500,115500,17000,6000" number="44" portBankIndex="5" pinIndex="0"/>
+      <pin defaultLabel="PF1" location="120500,105500,17000,6000" number="45" portBankIndex="5" pinIndex="1"/>
+      <pin defaultLabel="PE7" location="120500,95500,17000,6000" number="46" portBankIndex="4" pinIndex="7"/>
+      <pin defaultLabel="PE6" location="120500,85500,17000,6000" number="47" portBankIndex="4" pinIndex="6"/>
+      <pin defaultLabel="PE5" location="120500,75500,17000,6000" number="48" portBankIndex="4" pinIndex="5"/>
+      <pin defaultLabel="PC4" location="120500,65500,17000,6000" number="49" portBankIndex="2" pinIndex="4"/>
+      <pin defaultLabel="PA6" location="120500,55500,17000,6000" number="50" portBankIndex="0" pinIndex="6"/>
+      <pin defaultLabel="PA15" location="120500,45500,17000,6000" number="51" portBankIndex="0" pinIndex="15"/>
+      <pin defaultLabel="GND" location="120500,35500,17000,6000" number="52"/>
+      <pin defaultLabel="NC" location="120500,25500,17000,6000" number="53"/>
+      <pin defaultLabel="ANT_GND" location="120500,15500,17000,6000" number="54"/>
+      <pin defaultLabel="ANT_GND" location="120500,5500,17000,6000" number="55"/>
+    </pinOut>
+    <peripherals>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.acmp" displayName="ACMP0" name="ACMP0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.acmp" displayName="ACMP1" name="ACMP1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.acmp" displayName="ACMP2" name="ACMP2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.acmp" displayName="ACMP3" name="ACMP3" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.adc" displayName="ADC0" name="ADC0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.adc" displayName="ADC1" name="ADC1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.aport" displayName="APORT" name="APORT" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.bu" displayName="BU" name="BU" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.can" displayName="CAN0" name="CAN0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.can" displayName="CAN1" name="CAN1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.cmu" displayName="CMU" name="CMU" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.cryotimer" displayName="CRYOTIMER" name="CRYOTIMER" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.crypto" displayName="CRYPTO0" name="CRYPTO0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.csen" displayName="CSEN" name="CSEN" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.dbg" displayName="DBG" name="DBG" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.ebi" displayName="EBI" name="EBI" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.emu" displayName="EMU" name="EMU" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.eth" displayName="ETH" name="ETH" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.etm" displayName="ETM" name="ETM" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.gpcrc" displayName="GPCRC" name="GPCRC" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.gpio" displayName="GPIO" name="GPIO" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.i2c" displayName="I2C0" name="I2C0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.i2c" displayName="I2C1" name="I2C1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.i2c" displayName="I2C2" name="I2C2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.idac" displayName="IDAC0" name="IDAC0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.lcd" displayName="LCD" name="LCD" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.ldma" displayName="LDMA" name="LDMA" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.lesense" displayName="LESENSE" name="LESENSE" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.letimer" displayName="LETIMER0" name="LETIMER0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.letimer" displayName="LETIMER1" name="LETIMER1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.leuart" displayName="LEUART0" name="LEUART0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.leuart" displayName="LEUART1" name="LEUART1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.lfxo" displayName="LFXO" name="LFXO" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.opa0" displayName="OPA0" name="OPA0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.opa1" displayName="OPA1" name="OPA1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.opa2" displayName="OPA2" name="OPA2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.opa3" displayName="OPA3" name="OPA3" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.pcnt" displayName="PCNT0" name="PCNT0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.pcnt" displayName="PCNT1" name="PCNT1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.pcnt" displayName="PCNT2" name="PCNT2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch0" displayName="PRS Channel CH0" name="PRS.CH0" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch1" displayName="PRS Channel CH1" name="PRS.CH1" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch2" displayName="PRS Channel CH2" name="PRS.CH2" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch3" displayName="PRS Channel CH3" name="PRS.CH3" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch4" displayName="PRS Channel CH4" name="PRS.CH4" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch5" displayName="PRS Channel CH5" name="PRS.CH5" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch6" displayName="PRS Channel CH6" name="PRS.CH6" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch7" displayName="PRS Channel CH7" name="PRS.CH7" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch8" displayName="PRS Channel CH8" name="PRS.CH8" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch9" displayName="PRS Channel CH9" name="PRS.CH9" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch10" displayName="PRS Channel CH10" name="PRS.CH10" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch11" displayName="PRS Channel CH11" name="PRS.CH11" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch12" displayName="PRS Channel CH12" name="PRS.CH12" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch13" displayName="PRS Channel CH13" name="PRS.CH13" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch14" displayName="PRS Channel CH14" name="PRS.CH14" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch15" displayName="PRS Channel CH15" name="PRS.CH15" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch16" displayName="PRS Channel CH16" name="PRS.CH16" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch17" displayName="PRS Channel CH17" name="PRS.CH17" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch18" displayName="PRS Channel CH18" name="PRS.CH18" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch19" displayName="PRS Channel CH19" name="PRS.CH19" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch20" displayName="PRS Channel CH20" name="PRS.CH20" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch21" displayName="PRS Channel CH21" name="PRS.CH21" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch22" displayName="PRS Channel CH22" name="PRS.CH22" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.prs.ch23" displayName="PRS Channel CH23" name="PRS.CH23" revision="A" category="PRS" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.qspi" displayName="QSPI0" name="QSPI0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.rtc" displayName="RTC" name="RTC" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.rtcc" displayName="RTCC" name="RTCC" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.sdio" displayName="SDIO" name="SDIO" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.smu" displayName="SMU" name="SMU" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER0" name="TIMER0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER1" name="TIMER1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER2" name="TIMER2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER3" name="TIMER3" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER4" name="TIMER4" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER5" name="TIMER5" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="TIMER6" name="TIMER6" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.trng" displayName="TRNG0" name="TRNG0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="UART0" name="UART0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="UART1" name="UART1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART0" name="USART0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART1" name="USART1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART2" name="USART2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART3" name="USART3" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART4" name="USART4" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usart" displayName="USART5" name="USART5" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.usb" displayName="USB" name="USB" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.vdac" displayName="VDAC0" name="VDAC0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.wdog" displayName="WDOG0" name="WDOG0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.wdog" displayName="WDOG1" name="WDOG1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.wfxo" displayName="WFXO" name="WFXO" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="WTIMER0" name="WTIMER0" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="WTIMER1" name="WTIMER1" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="WTIMER2" name="WTIMER2" revision="A" category="Other" hidden="false"/>
+      <peripheral componentIdRef="pin_tool.wf.wgm16.timer" displayName="WTIMER3" name="WTIMER3" revision="A" category="Other" hidden="false"/>
+    </peripherals>
+    <script uri="../../script/entrypoint.py">
+      <path>../../script</path>
+    </script>
+    <sourceMappings initialGroup="main_template">
+      <sourceMapping uri="../../script/generator/source_generator.srcmap"/>
+    </sourceMappings>
+  </device>
+</device:DocumentRoot>

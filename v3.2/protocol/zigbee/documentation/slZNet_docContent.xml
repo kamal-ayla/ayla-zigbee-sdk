@@ -1,0 +1,182 @@
+<?xml version="1.0" ?>
+<contentItems>
+	<contentItemData category="Application Notes" description="Provides an overview and hyperlinks to all packaged documentation." itemURI="file:slZNet-index.html" label="Documentation Index" priority="9"/>
+	<contentItemData category="Application Notes" description="Includes updating ZCL clusters, new and removed plugins, and generating and rebuilding Zigbee 3.0 projects.  Interoperability with legacy devices is also discussed.
+" itemURI="file:an1117-migrating-zigbee-profiles-to-z30.pdf" label="AN1117: Migrating Zigbee Profiles to Zigbee 3.0" priority="6"/>
+	<contentItemData category="Application Notes" description="Provides instructions for configuring various aspects of an NCP application image using the Application  Builder tool within Simplicity Studio.
+" itemURI="file:an1010-customized-ncp.pdf" label="AN1010: Building a Customized NCP Application" priority="9"/>
+	<contentItemData category="Application Notes" description="Explains how to use Simplicity Commander to check, write, verify, and erase installation codes on  Silicon Labs Wireless Gecko (EFR32) devices. 
+" itemURI="file:an1089-using-installation-codes-with-zigbee-devices.pdf" label="AN1089: Using Installation Codes with Zigbee Devices" priority="9"/>
+	<contentItemData category="Application Notes" description="Explains how NVM3 can be used as non-volatile data storage in various protocol implementations.
+" itemURI="file:an1135-using-third-generation-nonvolatile-memory.pdf" label="AN1135: Using Third Generation Non-Volatile Memory (NVM3) Data Storage" priority="8">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="Quick Start Guides" description="Provides basic information on configuring, building, and installing applications for the EFR32MG family using the EmberZNet PRO stack and Simplicity Studio.
+" itemURI="file:qsg106-efr32-zigbee-pro.pdf" label="QSG106: Zigbee EmberZNet PRO Quick-Start Guide" priority="2"/>
+	<contentItemData category="Application Notes" description="Provides instructions for creating Zigbee Over-the-air (OTA) bootloader files with Image Builder, which takes  an existing file (or multiple files) and wraps them in the file format as declared in the Zigbee specification. 
+" itemURI="file:an716-image-builder-instructions.pdf" label="AN716:  Instructions for Using Image Builder" priority="9"/>
+	<contentItemData category="Reference Manuals" description="Describes Zigbee Application Framework APIs, the CLI interface, and callbacks. 
+" itemURI="file:120-3023-000_AF_API/index.html" label="Zigbee Application Framework API Reference" priority="1"/>
+	<contentItemData category="User's Guides" description="Describes the key features and characteristics of a Zigbee solution. It also includes a  section on Zigbee 3.0.
+" itemURI="file:ug103-02-fundamentals-zigbee.pdf" label="UG103.02: Zigbee Fundamentals" priority="1"/>
+	<contentItemData category="User's Guides" description="Describes the four multiprotocol modes, discusses considerations when selecting protocols for  multiprotocol implementations, and reviews the Radio Scheduler, a required component of a  dynamic multiprotocol solution.
+" itemURI="file:ug103-16-multiprotocol-fundamentals.pdf" label="UG103.16: Multiprotocol Fundamentals" priority="10">
+		<property key="sdkAndProtocolTags" value="Bluetooth Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Describes the high-level implementation of the Silicon Labs Gecko Bootloader for EFR32 SoCs and NCPs,  and provides information on how to get started using the Gecko Bootloader with Silicon Labs wireless protocol stacks. 
+" itemURI="file:ug266-gecko-bootloader-users-guide.pdf" label="UG266: Silicon Labs Gecko Bootloader User's Guide" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Includes guidelines for certifying Zigbee 3.0 devices, instructions on setting up and using the Zigbee test harness and Zigbee test tool, and troubleshooting tips. 
+" itemURI="file:an1118-certifying-zigbee-30-devices.pdf" label="AN1118: Certifying Zigbee 3.0 Devices" priority="5"/>
+	<contentItemData category="User's Guides" description="Describes strategies for testing and debugging  applications, including:  hardware and application considerations, initial development testing, and lab  testing. For additional information about later stages of programming and testing see application  notes AN700.1: Manufacturing Test Guidelines and AN718: Manufacturing Test Overview.
+" itemURI="file:ug104-test-debug-apps.pdf" label="UG104: Testing and Debugging Applications for the Silicon Labs EFR32MG Platform" priority="1"/>
+	<contentItemData category="Application Notes" description="Describes how to integrate crypto functionality into applications using PSA Crypto  compared to Mbed TLS. 
+        
+" itemURI="file:an1311-mbedtls-psa-crypto-porting-guide.pdf" label="AN1311: Integrating Crypto Functionality Using PSA Crypto Compared to Mbed TLS" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Introduces the security concepts that must be considered when implementing an Internet of Things (IoT)  system. Using the ioXt Alliance's eight security principles as a structure, it clearly delineates  the solutions Silicon Labs provides to support endpoint security and what you must do outside of  the Silicon Labs framework. 
+" itemURI="file:ug103-05-fundamentals-security.pdf" label="UG103.05: IoT Endpoint Security Fundamentals" priority="4">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread Z-Wave HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes how to provision and configure Series 2 devices through the DCI and SWD.  
+" itemURI="file:an1303-efr32-dci-swd-programming.pdf" label="AN1303: Programming Series 2 Devices Using the Debug Challenge Interface (DCI) and Serial Wire Debug (SWD)" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Discusses the major decisions that must be made about which wireless protocol you should use,  as well as additional decisions to be made if you are designing a Zigbee solution.
+" itemURI="file:ug103-03-fundamentals-design-choices.pdf" label="UG103.03: Design Choices Fundamentals" priority="2"/>
+	<contentItemData category="Reference Manuals" description="Lists SoC Platform APIs used to interface to the EmberZNet PRO stack, HAL, and status of  the application-controlled network. These APIs concern network management, device and stack management,  messaging, fragmentation, serial communication, token access, peripheral access, bootload utilities, and  others. They are independent of the Application Framework and therefore can be used to develop applications  that do not rely on the Zigbee Cluster Library.
+" itemURI="file:120-3022-000_API_SoC/index.html" label="API Reference for the EmberZNet SOC Platform" priority="2"/>
+	<contentItemData category="Release Notes" description="Lists compatibility requirements and sources for all software components  in the development environment. Discusses the latest changes to the EmberZNet PRO   stack (and associated utilities) including added/deleted/deprecated  features/API, and lists bugs that have been fixed  since the last release and any pending ones.
+" itemURI="file:EmberZNet_Release_Notes.pdf" label="EmberZNet PRO Release Notes" priority="1"/>
+	<contentItemData category="User's Guides" description="Introduces non-volatile data storage using flash and the three different storage implementations offered  for Silicon Labs microcontrollers and SoCs: Simulated EEPROM, PS Store, and NVM3.  
+" itemURI="file:ug103-07-non-volatile-data-storage-fundamentals.pdf" label="UG103.07: Non-Volatile Data Storage Fundamentals" priority="6">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Describes methods to improve the coexistence of 2.4 GHz IEEE 802.11b/g/n Wi-Fi and other 2.4 GHz radios such as Bluetooth, Bluetooth Mesh, Bluetooth Low Energy, and IEEE 802.15.4-based radios such as Zigbee and OpenThread
+" itemURI="file:ug103-17-wi-fi-coexistence-fundamentals.pdf" label="UG103.17: Wi-Fi Coexistence Fundamentals" priority="10">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Thread"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Contains three complete PICS documents for Z3ColorControlLight, Z3Gateway and Z3SmartOutlet reference designs, along with XML files for Z3ColorControlLight clusters. 
+" itemURI="file:an1118-supporting-materials.zip" label="AN1118S: Supplemental Information for Certifying Zigbee 3.0 Devices" priority="5"/>
+	<contentItemData category="Application Notes" description="Describes how to initialize and customize peripherals for 32-bit devices using Hardware Configurator. Does not apply to the Bluetooth SDK or the 32-Bit MCU SDK. Beginning with Gecko SDK Suite v3.x and Simplicity Studio 5, a new Pin Tool provides similar functionality for SDKs that have migrated to the new underlying framework.
+" itemURI="file:an1115-32-bit-device-peripheral-configuration-in-simplicity-studio.pdf" label="AN1115: Configuring Peripherals for 32-Bit Devices Using Hardware Configurator" priority="9"/>
+	<contentItemData category="Application Notes" description="Describes how to perform a Zigbee over-the-air (OTA) bootload cluster download between a client and server device.  The instructions are for Smart Energy 1.x devices using Ember EM35x development kits.  Users can also refer to this  procedure when setting up or testing Zigbee OTA bootload cluster download in their own development environments with  their own hardware.
+" itemURI="file:an728-ota-client-server-setup.pdf" label="AN728: Zigbee OTA Bootload Cluster Server and Client Setup" priority="9"/>
+	<contentItemData category="Reference Manuals" description="Covers the framework structure and usage. Topics  include the  callback interface, time handling, event management, attributes management, multinetwork management,  plugin management, sleepy Device management, and ZCL command handling.  
+" itemURI="file:ug391-zigbee-app-framework-dev-guide.pdf" label="UG391: Zigbee Application Framework Developer's Guide" priority="1"/>
+	<contentItemData category="User's Guides" description="Describes how to implement a dynamic multiprotocol solution. 
+" itemURI="file:ug305-dynamic-multiprotocol-users-guide.pdf" label="UG305: Dynamic Multiprotocol User's Guide" priority="10">
+		<property key="sdkAndProtocolTags" value="Bluetooth Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes the Secure EZSP protocol and how to configure the hardware and required  software to construct a secure EZSP Host-to-NCP interface. 
+ 
+" itemURI="file:an1125-creating-and-using-a-secure-ezsp-host-to-ncp-interface.pdf" label="AN1125: Creating and Using a Secure EZSP Host-to-NCP Interface" priority="9"/>
+	<contentItemData category="User's Guides" description="Describes how and when to use Simplicity Commander's Command-Line Interface with EFR32 parts. 
+" itemURI="file:ug162-simplicity-commander-reference-guide.pdf" label="UG162: Simplicity Commander Reference Guide" priority="6">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="How to program, provision, and configure the anti-tamper module on EFR32 Series 2 devices with  Secure Vault.
+        
+" itemURI="file:an1247-efr32-secure-vault-tamper.pdf" label="AN1247: Anti-Tamper Protection Configuration and Use" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Introduces some basic security concepts, including  network layer security, trust centers, and application support layer security features.  It then discusses the types of standard security protocols available in EmberZNet PRO.  Coding requirements for implementing security are reviewed in summary. Finally, information on  implementing Zigbee Smart Energy security is provided.
+" itemURI="file:an1233-zigbee-security.pdf" label="AN1233: Zigbee Security" priority="9"/>
+	<contentItemData category="Application Notes" description="Provides a high-level description of the different options for integrating RF testing and characterization  into your standard test flows. It is intended for customers who are moving from the early prototype  development stage to the manufacturing production environment and need assistance with manufacturing test. 
+" itemURI="file:an718-mfg-test-overview.pdf" label="AN718: Manufacturing Test Overview" priority="9">
+		<property key="sdkAndProtocolTags" value="Zigbee Thread"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes how to use the manufacturing library and its associated plugins in Simplicity Studio to perform  RF tests during the manufacturing phase.
+" itemURI="file:an1162-using-manufacturing-library.pdf" label="AN1162: Using the Manufacturing Test Library for EmberZNet" priority="9"/>
+	<contentItemData category="User's Guides" description="Describes the EmberZNet Serial Protocol (EZSP), used by a host application processor to interact with the EmberZNet PRO stack running on an NCP over either a SPI or a UART interface. Describes the frame formats  for different EZSP-bound stack activities such as network management, messaging, bootloading, and token  access. 
+" itemURI="file:ug100-ezsp-reference-guide.pdf" label="UG100: EZSP Protocol Reference Guide" priority="7"/>
+	<contentItemData category="User's Guides" description="Provides an overview of the toolchain used to develop, build, and deploy EmberZNet applications, and discusses some addition tools and utilities.  
+" itemURI="file:ug103-08-fundamentals-tools.pdf" label="UG103.08: Tools Fundamentals" priority="7"/>
+	<contentItemData category="Application Notes" description="Details the EZSP-SPI Protocol used by a host microcontroller to communicate with an Ember network  co-processor (NCP) running the EmberZNet PRO stack. It includes recommended procedures for developing  and testing a driver for the EZSP-SPI Protocol on a new host microcontroller.
+" itemURI="file:an711-ezsp-spi-host-interfacing-guide.pdf" label="AN711: EZSP-SPI Host Interfacing Guide" priority="9"/>
+	<contentItemData category="Application Notes" description="Describes procedures for initial tests of a host connected to a Zigbee processor using EZSP-UART. It  assumes that you have already read  UG101, the UART Gateway Protocol Reference Guide. You should have a basic  understanding of the UART Gateway protocol, as well as the signals needed by the UART interface.
+" itemURI="file:an706-ezsp-uart-host-interfacing-guide.pdf" label="AN706: EZSP-UART Host Interfacing Guide" priority="9"/>
+	<contentItemData category="Application Notes" description="Describes how to set up a device with the security resources required to support Smart Energy (SE) security,  which is based on certificate-based key establishment (CBKE) using Elliptic-Curve Cryptography (ECC). You  should be familiar the Zigbee Smart Energy Profile specification.
+" itemURI="file:an714-smart-energy-ecc-enabled-device-setup.pdf" label="AN714: Smart Energy ECC-Enabled Device Setup Process" priority="9"/>
+	<contentItemData category="Application Notes" description="Provides an overview of the use of install codes and certificates in a Smart Energy network. Describes the  components of a Smart Energy certificate and the differences between test certificates and production  certificates. Explains how to use Silicon Labs utilities to program, verify and erase install codes and  certificates.
+" itemURI="file:an708-setting-manufacturing-certificates.pdf" label="AN708: Setting Manufacturing Certificates and Installation Codes" priority="9"/>
+	<contentItemData category="Application Notes" description="How to authenticate an EFR32 Series 2 device with Secure Vault, using secure device certificates  and signatures.
+" itemURI="file:an1268-efr32-secure-identity.pdf" label="AN1268: Authenticating Silicon Labs Devices using Device Certificates" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Details methods for testing Zigbee mesh network performance; results are intended to provide guidance  on design practices and principles as well as expected field performance results.
+" itemURI="file:an1138-zigbee-mesh-network-performance.pdf" label="AN1138: Zigbee Mesh Network Performance" priority="11"/>
+	<contentItemData category="Application Notes" description="Provides details on developing Dynamic Multiprotocol applications using Bluetooth and Zigbee.
+" itemURI="file:an1133-dynamic-multiprotocol-bluetooth-zigbee.pdf" label="AN1133: Dynamic Multiprotocol Development with Bluetooth and Zigbee" priority="8"/>
+	<contentItemData category="Application Notes" description="Describes the impact of Wi-Fi on Zigbee and Thread, and methods to improve coexistence. First, methods to improve coexistence without direct  interaction between Zigbee/Thread and Wi-Fi radios are described. Second, Silicon Labs's Packet Traffic  Arbitration (PTA) support to coordinate 2.5 GHz RF traffic for co-located Zigbee/Thread and Wi-Fi radios is described (for the EFR32MG only).
+" itemURI="file:an1017-coexistence-with-WiFi.pdf" label="AN1017: Zigbee and Thread Coexistence with WiFi" priority="9">
+		<property key="sdkAndProtocolTags" value="Zigbee Thread"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Introduces some fundamental concepts of wireless networking. These concepts are referred to in other  Fundamentals documents. If you are new to wireless networking, read this document first.
+" itemURI="file:ug103-01-fundamentals-wireless-network.pdf" label="UG103.01: Wireless Networking Fundamentals" priority="1">
+		<property key="sdkAndProtocolTags" value="Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Compares the ZLL stack and network with the EmberZNet PRO stack and network, with notes about considerations  when implementing a ZLL solution. Includes a basic description of ZLL configuration and commissioning, and  notes about the interoperability of ZLL and non-ZLL devices.
+" itemURI="file:ug103-09-fundamentals-zll.pdf" label="UG103.09: ZLL Fundamentals" priority="8"/>
+	<contentItemData category="User's Guides" description="Introduces Silicon Labs Green Power components within the EmberZNet PRO stack and explains how  to enable your network for Green Power. 
+" itemURI="file:ug392-using-sl-green-power-with-ezp.pdf" label="UG392: Using Silicon Labs Green Power with EmberZNet PRO" priority="10"/>
+	<contentItemData category="Application Notes" description="Describes how to use Application Builder plugins and the Hardware Configurator to configure both transmit and receive Antenna Diversity.
+" itemURI="file:an1181-configuring-antenna-diversity-for-wireless.pdf" label="AN1181: Configuring Antenna Diversity for EmberZNet" priority="11"/>
+	<contentItemData category="User's Guides" description="Describes the protocol used by EZSP-UART to reliably carry commands and responses between a host processor  and a network co-processor. The topics discussed include a brief overview of Ember-designed ASH (Asynchronus  Serial Host) protocol, general ASH frame format, different ASH frames, and their operation. 
+" itemURI="file:ug101-uart-gateway-protocol-reference.pdf" label="UG101: UART Protocol Reference Guide" priority="8"/>
+	<contentItemData category="User's Guides" description="Silicon Labs HAL (Hardware Abstraction Layer) is program code between a  system's hardware and its software that provides a consistent interface  for applications that can run on several different hardware platforms. The HAL is designed for developers using EmberZNet PRO  on the  Wireless Gecko (EFR32) products. 
+" itemURI="file:ug103-04-fundamentals-hal.pdf" label="UG103.04: HAL Fundamentals" priority="3"/>
+	<contentItemData category="User's Guides" description="Describes the main features and functions of Zigbee Green Power (ZGP) and a basic ZGP network,  including its device types and commissioning process, and how EmberZNet supports the ZGP device types.
+" itemURI="file:ug103-15-green-power-fundamentals.pdf" label="UG103.15: Green Power Fundamentals" priority="9"/>
+	<contentItemData category="Application Notes" description="Describes the multi-network stack feature that allows a single-radio chip to be concurrently part of more than one  distinct network. Some limitations and restrictions are enforced by the multi-network stack and should be taken  into account during the design of a multi-network application. These limitations are mostly related to the role  the node assumes on the networks and are discussed here in detail.
+" itemURI="file:an724-multi-network.pdf" label="AN724: Designing for Multiple Networks on a Single Zigbee Chip" priority="9"/>
+	<contentItemData category="Application Notes" description="Describes how to initialize a piece of custom hardware (a 'device') based on the EFR32MG and EFR32FG  families so that it interfaces correctly with a network stack. The same procedures can be used to  restore devices whose settings have been corrupted or erased.
+" itemURI="file:an961-custom-nodes-efr32.pdf" label="AN961: Bringing Up Custom Devices for the EFR32MG and EFR32FG Families" priority="9"/>
+	<contentItemData category="Application Notes" description="Contains detailed information on configuring and using the Secure Boot with hardware Root of Trust and Secure Loader on  Series 2 devices, including how to provision the signing key. This is a companion document to UG266: Silicon Labs Gecko  Bootloader User's Guide.
+" itemURI="file:an1218-secure-boot-with-rtsl.pdf" label="AN1218: Series 2 Secure Boot with RTSL" priority="11">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Release Notes" description="A detailed overview of all the changes, additions, and fixes in the Gecko Platform components.  The Gecko Platform consists of: EMLIB, EMDRV, RAIL Library, NVM3, and the mbedTLS Plugin.
+" itemURI="file:gecko-platform-release-notes.pdf" label="Gecko Platform Release Notes" priority="3">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread Z-Wave 32-bit\ MCU HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="User's Guides" description="Introduces bootloading for Silicon Labs networking devices. Discusses the Gecko Bootloader and describes the file formats used by each. 
+" itemURI="file:ug103-06-fundamentals-bootloading.pdf" label="UG103.06: Bootloader Fundamentals" priority="5">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit Wi-SUN"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="How to securely &quot;wrap&quot; keys in EFR32 Series 2 devices with Secure Vault, so they can be stored in  non-volatile storage.
+" itemURI="file:an1271-efr32-secure-key-storage.pdf" label="AN1271: Secure Key Storage" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes how to use the simulated EEPROM in Silicon Labs' EFR32 Series 1 platform, gives an  overview of the internal design, and discusses design considerations. You should already be familiar with  the token system in the HAL. For more information on HAL and the token system, see the online HAL API documentation.
+" itemURI="file:an703-simulated-eeprom.pdf" label="AN703: Using Simulated EEPROM Version 1 and Version 2 for the EFR32 Series 1 SoC Platform" priority="9">
+		<property key="sdkAndProtocolTags" value="Zigbee Proprietary"/>
+	</contentItemData>
+	<contentItemData category="Reference Manuals" description="A companion to the EmberZNet API references, for developers whose applications require functionality not available through AppBuilder and the  application framework, or who prefer working with an API. Includes an introduction to the stack API, a  discussion of advanced design issues to consider when developing an application using the API, and  provides an example application. 
+" itemURI="file:ug105-adv-app-programming.pdf" label="UG105: Advanced Application Programming with the Stack and HAL APIs" priority="7"/>
+	<contentItemData category="Application Notes" description="Details the different options for integrating RF testing and characterization into standard test flows for the EFR32.
+" itemURI="file:an700-1-mfg-test-guidelines-efr32.pdf" label="AN700.1: Manufacturing Test Guidelines for the EFR32" priority="9">
+		<property key="sdkAndProtocolTags" value="Zigbee Thread"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Reviews the Zigbee, Thread, and Bluetooth mesh networks to evaluate their differences in performance and behavior.
+" itemURI="file:an1142-mesh-network-performance-comparison.pdf" label="AN1142: Mesh Network Performance Comparison" priority="11">
+		<property key="sdkAndProtocolTags" value="Bluetooth\ Mesh Zigbee Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes tokens and shows how to use them for non-volatile data storage in EmberZNet PRO and Silicon Labs Flex  applications.  
+" itemURI="file:an1154-tokens-for-non-volatile-storage.pdf" label="AN1154: Using Tokens for Non-Volatile Data Storage" priority="8">
+		<property key="sdkAndProtocolTags" value="Zigbee Proprietary"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Describes how to lock and unlock the debug access of EFR32 Gecko Series 2  devices. Many aspects of the debug access, including the secure debug unlock are described. The Debug  Challenge Interface (DCI) and Secure Engine (SE) Mailbox Interface for locking and unlocking debug  access are also included.
+" itemURI="file:an1190-efr32-secure-debug.pdf" label="AN1190: Series 2 Secure Debug" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+	<contentItemData category="Application Notes" description="Includes detailed information on using the Silicon Labs Gecko Bootloader with EmberZNet.  It supplements the general Gecko Bootloader implementation information provided in UG266: Silicon Labs Gecko Bootloader User's Guide. 
+" itemURI="file:an1084-gecko-bootloader-emberznet-silicon-labs-thread.pdf" label="AN1084: Using the Gecko Bootloader with EmberZNet" priority="1"/>
+	<contentItemData category="Application Notes" description="Details on programming, provisioning, and configuring Series 2 devices in production environments.  Covers Secure Engine Subsystem of Series 2 devices, which runs easily upgradeable Secure Engine (SE) or Virtual Secure Engine (VSE) firmware.
+  
+" itemURI="file:an1222-efr32xg2x-production-programming.pdf" label="AN1222: Production Programming of Series 2 Devices" priority="9">
+		<property key="sdkAndProtocolTags" value="Bluetooth Bluetooth\ Mesh Zigbee Proprietary Thread HomeKit"/>
+	</contentItemData>
+</contentItems>
