@@ -10,7 +10,7 @@
 #ifndef __ATT_INTERFACE_H__
 #define __ATT_INTERFACE_H__
 
-#define VNODE_OEM_MODEL 	       "linuxevb"
+#define VNODE_OEM_MODEL 	       "virtualnode"
 
 #define ATT_POC_ACTIVE                 "Active"
 #define ATT_POC_MACADDRESS             "MACAddress"
