@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.8";
+const char *appd_template_version = "zigbee_gateway_demo_v2.9";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -71,7 +71,11 @@ static u8 zb_join_status;
 static u8 zb_network_up;
 static char zb_bind_cmd[PROP_STRING_LEN + 1];
 static char zb_bind_result[PROP_STRING_LEN + 1];
+static unsigned int zb_num_nodes;
+
+/* add info*/
 static unsigned int num_nodes;
+static unsigned int bh_num_nodes;
 
 
 /* system info*/
@@ -1603,7 +1607,51 @@ static enum err_t appd_ram_usage_send(struct prop *prop, int req_id,
 	return prop_arg_send(prop, req_id, opts);
 }
 
+/*
+ * node number structure
+ */
+struct tag_num_nodes {
+	unsigned int zb_num_nodes;
+	unsigned int bh_num_nodes;
+	unsigned int all_num_nodes;
+};
 
+/*
+ * Check node type
+ */
+static int appd_check_node_type(struct node *node, void *arg)
+{
+	struct tag_num_nodes *num;
+
+	ASSERT(node != NULL);
+	ASSERT(arg != NULL);
+
+	num = (struct tag_num_nodes *)arg;
+
+	if (node->interface == GI_WIFI) {
+		;
+	} else if (node->interface == GI_ZIGBEE) {
+		num->zb_num_nodes++;
+	} else if (node->interface == GI_VT) {
+		num->bh_num_nodes++;
+	} else {
+		;
+	}
+	num->all_num_nodes++;
+	return 0;
+}
+
+/*
+ * Update node number
+ */
+static void appd_update_num_nodes(struct tag_num_nodes *num)
+{
+	ASSERT(num != NULL);
+	num->zb_num_nodes = 0;
+	num->bh_num_nodes = 0;
+	num->all_num_nodes = 0;
+	node_foreach(appd_check_node_type, num);
+}
 /*
  * Bind a node with another node
  */
@@ -1649,7 +1697,7 @@ static int appd_gw_join_enable_send(struct prop *prop, int req_id,
 static enum err_t appd_num_nodes_send(struct prop *prop, int req_id,
 			const struct op_options *opts)
 {
-	num_nodes = node_count();
+	//num_nodes = node_count();
 	return prop_arg_send(prop, req_id, opts);
 }
 
@@ -1681,11 +1729,25 @@ static struct prop appd_gw_prop_table[] = {
 		.len = sizeof(zb_change_channel)
         },
 	{
+		.name = "zb_num_nodes",
+		.type = PROP_INTEGER,
+		.send = appd_num_nodes_send,
+		.arg = &zb_num_nodes,
+		.len = sizeof(zb_num_nodes),
+	},
+	{
 		.name = "num_nodes",
 		.type = PROP_INTEGER,
 		.send = appd_num_nodes_send,
 		.arg = &num_nodes,
 		.len = sizeof(num_nodes),
+	},
+	{
+		.name = "bh_num_nodes",
+		.type = PROP_INTEGER,
+		.send = appd_num_nodes_send,
+		.arg = &bh_num_nodes,
+		.len = sizeof(bh_num_nodes),
 	},
 	{
 		.name = "zb_join_status",
@@ -2172,11 +2234,27 @@ static void vnode_poll_thread_fun(void)
  */
 void appd_poll(void)
 {
+	struct tag_num_nodes num;
+
 	/* Handle network stack events */
 	zb_poll();
 
+	appd_update_num_nodes(&num);
+
 	/* Post accurate node count to cloud */
-	if (num_nodes != node_count()) {
+	/*if (num_nodes != node_count()) {
+		prop_send_by_name("num_nodes");
+	}*/
+	if (zb_num_nodes != num.zb_num_nodes) {
+		zb_num_nodes = num.zb_num_nodes;
+		prop_send_by_name("zb_num_nodes");
+	}
+	if (bh_num_nodes != num.bh_num_nodes) {
+		bh_num_nodes = num.bh_num_nodes;
+		prop_send_by_name("bh_num_nodes");
+	}
+	if (num_nodes != num.all_num_nodes) {
+		num_nodes = num.all_num_nodes;
 		prop_send_by_name("num_nodes");
 	}
 
