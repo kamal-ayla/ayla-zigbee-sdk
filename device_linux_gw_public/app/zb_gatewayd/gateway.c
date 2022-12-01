@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.9";
+const char *appd_template_version = "zigbee_gateway_demo_v2.10";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -160,6 +160,7 @@ static char auth_command[AUTH_COMMAND_LEN];
 static u8 ngrok_enable;
 static int ngrok_port;
 static char ngrok_status[NGROK_STATUS_LEN];
+static char ngrok_error_status[NGROK_STATUS_LEN];
 static char ngrok_hostname[NGROK_STATUS_LEN];
 static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 #define GET_AUTHTOKEN					"ngrok-cli -get_authtoken"
@@ -167,6 +168,7 @@ static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 #define GET_NGROK_START					"ngrok-cli -start"
 #define GET_NGROK_STOP					"ngrok-cli -stop"
 #define GET_NGROK_STATUS				"ngrok-cli -status"
+#define GET_NGROK_ERROR_STATUS                          "ngrok-cli -start 2>&1 | grep ERR_NGROK | awk '/ERROR/ {print $2}'"
 #define GET_NGROK_HOST_NAME				"ngrok-cli -host_name"
 #define GET_NGROK_PORT_NUM				"ngrok-cli -port_num"
 #define SET_NGROK_AUTHTOKEN				"ngrok-cli -set_authtoken %s"
@@ -1038,6 +1040,7 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
 	}
 
 	if (ngrok_enable == 1) {
+		system(GET_NGROK_STOP);
 		system(GET_NGROK_START);
 		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
 	} else if (ngrok_enable == 0) {
@@ -1059,6 +1062,7 @@ static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
 
 	log_debug("Updating the Ngrok data");
 	prop_send_by_name("ngrok_status");
+	prop_send_by_name("ngrok_error_status");
 	prop_send_by_name("ngrok_hostname");
 	prop_send_by_name("ngrok_port");
 	appd_ngrok_send_authtoken();
@@ -1130,6 +1134,36 @@ static enum err_t appd_ngrok_status_send(struct prop *prop, int req_id,
 	return prop_arg_send(prop, req_id, opts);
 
 }
+
+/*
+ *To get the Ngrok Error Status.
+ */
+static enum err_t appd_ngrok_error_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+        FILE *fp;
+
+        fp = popen(GET_NGROK_ERROR_STATUS,"r");
+        if (fp == NULL || appd_is_ngrok_installed()) {
+                log_err("Get ngrok error status failed");
+                strcpy(ngrok_error_status , "ngrok not installed");
+		ngrok_enable = 0;
+		prop_send_by_name("ngrok_enable");
+        } else {
+		memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+                fscanf(fp, "%[^\n]", ngrok_error_status);
+		if(strlen(ngrok_error_status) <= 0)
+		{
+			memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+			ngrok_enable = 0;
+			prop_send_by_name("ngrok_enable");
+		}	
+                pclose(fp);
+        }
+        return prop_arg_send(prop, req_id, opts);
+
+}
+
 
 /*
  *Set ngrok authtoken from cloud.
@@ -1925,6 +1959,13 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &ngrok_status,
 		.len = sizeof(ngrok_status),
 	},
+        {
+                .name = "ngrok_error_status",
+                .type = PROP_STRING,
+                .send = appd_ngrok_error_status_send,
+                .arg = &ngrok_error_status,
+                .len = sizeof(ngrok_error_status),
+        },	
 	{
 		.name = "ngrok_hostname",
 		.type = PROP_STRING,

@@ -70,11 +70,15 @@
 #define REQUEST_TIMEOUT_PING_SECS 5	/* max s for a ping to complete */
 #define REQUEST_TIMEOUT_DEFAULT_SECS 60	/* max s allowed with no throughput */
 
+#define GET_CUSTO_ITERATION_VALUE "uci get version.@version[0].custo_iteration"
+
 struct client_lan_reg client_lan_reg[CLIENT_LAN_REGS];
 
 /* Points to new ADS URL, if server changed */
 static char *ds_new_ads_host;
 
+/* To store the custo iteration value in this variable */
+static unsigned int custo_iteration_value;
 /*
  * Maps server hostnames to region for both dev and OEM
  */
@@ -757,9 +761,36 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
     char *homeware_version_extract=NULL;
     char *version=NULL;
 
+    FILE *fp1;
+
     homeware_version_extract=strtok(homeware_version, "-");
     version=strtok(NULL, "-");
-    sprintf(ayla_new_version_homeware,"%s-%s",homeware_version_extract,version);
+
+    if ( strcmp (product, "gdnt-r_extender") == 0 )
+    {
+
+       fp1 = popen(GET_CUSTO_ITERATION_VALUE,"r");
+       if (fp1 == NULL) 
+       {
+          log_err("get custo iteration failed");
+	  exit(1);
+       }
+
+       fscanf(fp1, "%d", &custo_iteration_value);
+
+       if(custo_iteration_value <= 0)
+       {
+          log_debug("custo_iteration_value : %d\n",custo_iteration_value);	       
+	  sprintf(ayla_new_version_homeware,"%s-%s",homeware_version_extract,version);
+       }
+       else
+       {
+	   log_debug("custo_iteration_value : %d\n",custo_iteration_value);
+	   sprintf(ayla_new_version_homeware,"%s-%s-i%d",homeware_version_extract,version,custo_iteration_value);
+       }	   
+
+        pclose(fp1);
+    }
 
     log_debug("ayla_new_version_homeware : %s\n",ayla_new_version_homeware);
     printf("Homeware version is :%s\n", ayla_new_version_homeware);
