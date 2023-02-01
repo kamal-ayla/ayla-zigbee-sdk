@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ayla-zigbee-sdk
-PKG_RELEASE:=1.2
+PKG_RELEASE:=1.10
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 PKG_INSTALL_DIR := $(PKG_BUILD_DIR)/device_linux_gw_public/build/$(TARGET_CROSS)/obj
@@ -26,7 +26,7 @@ define Build/Prepare
 endef
 
 define Build/Compile
-	$(MAKE)  COMPILER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc COMPILER_INCLUDES=-I$(TOOLCHAIN_DIR)/usr/include/ LINKER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc ARCHIVE=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar  -C $(PKG_BUILD_DIR)/v2.7/app/builder/ember \
+	$(MAKE)  COMPILER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc COMPILER_INCLUDES=-I$(TOOLCHAIN_DIR)/usr/include/ LINKER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc ARCHIVE=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar  -C $(PKG_BUILD_DIR)/v3.2/app/builder/ember \
 	GENERATE_LIBRARY=1 \
 	NO_READLINE=1 \
 	STAGING_DIR="$(STAGING_DIR)" \
@@ -52,6 +52,10 @@ define Package/ayla-zigbee-sdk/install
 	$(INSTALL_BIN) ./files/apply_ota.sh $(1)/bin/apply_ota.sh
 	$(INSTALL_BIN) ./files/get_sysinfo.sh $(1)/bin/get_sysinfo.sh
 	$(INSTALL_BIN) ./files/get_stainfo.sh $(1)/bin/get_stainfo.sh
+        $(INSTALL_BIN) ./files/devd_config.sh $(1)/bin/devd_config.sh
+        $(INSTALL_BIN) ./files/decision_tree.sh $(1)/bin/decision_tree.sh
+        $(INSTALL_DIR) $(1)/etc/config
+        $(INSTALL_BIN) ./files/radio_fw_version.conf $(1)/etc/config/radio_fw_version.conf
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/zb_gatewayd/appd $(1)/bin
