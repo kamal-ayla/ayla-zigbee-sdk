@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v2.10";
+const char *appd_template_version = "zigbee_gateway_demo_v3.0";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -109,6 +109,7 @@ static int appd_send_wifi_sta_data(char *name, char *value);
 /* Station properties  */
 static int wifi_sta_info_update;
 static int wifi_sta_channel;
+static int gw_channel_value;
 static int wifi_sta_noise;
 static int wifi_sta_RSSI;
 static char wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN];
@@ -136,6 +137,7 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define EM_BACKHAUL_TYPE		"em_backhaul_type"
 #define GW_AGENT_ALMAC_ADDRESS          "gw_agent_almac_address"
 #define GW_CTRL_ALMAC_ADDRESS           "gw_ctrl_almac_address"
+#define GET_CHANNEL_VALUE		"gw_channel_value"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
@@ -151,7 +153,15 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define GET_EM_BACKHAUL_TYPE            "get_stainfo.sh -sta_bh_type"
 #define GET_GW_AGENT_ALMAC_ADDRESS      "get_stainfo.sh -sta_agent_almac"
 #define GET_GW_CTRL_ALMAC_ADDRESS       "get_stainfo.sh -sta_controller_almac"
+#define GET_GW_CHANNEL_VALUE            "get_stainfo.sh -sta_get_channel_value"
 
+#define CHANNEL_COMMAND_LEN 80
+static int set_channel_value;
+static char channel_command[CHANNEL_COMMAND_LEN];
+
+#define SET_CHANNEL_VALUE "uci set wireless.radio0.channel=%d"
+#define CHANNEL_COMMIT "uci commit"
+#define RESTART_WLAN_MGR "/etc/init.d/wlan_mgr restart"
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
 #define NGROK_STATUS_LEN			30
@@ -182,7 +192,6 @@ static char radio0_fw_version[RADIO_FW_LEN];
 #define GET_RADIO_BLE_FW                "cat /etc/config/radio_fw_version.conf  | awk '/\"radio1\"/ {print $2}' | tr -d '\"' | tr -d \",\""
 #define GET_RADIO_ZIGBEE_FW             "cat /etc/config/radio_fw_version.conf  | awk '/\"radio2\"/ {print $2}' | tr -d '\"' | tr -d \",\""
 #define GET_RADIO_ZWAVE_FW              "cat /etc/config/radio_fw_version.conf  | awk '/\"radio0\"/ {print $2}' | tr -d '\"' | tr -d \",\""
-
 
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
@@ -1194,6 +1203,47 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 	return 0;
 }
 
+
+/*
+ *Set channel value from cloud.
+ */
+static int appd_set_channel_value(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+        FILE *fp;
+	FILE *fp1;
+	FILE *fp2;
+
+        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                log_err("prop_arg_set returned error");
+                return -1;
+        }
+
+         snprintf(channel_command, sizeof(channel_command), SET_CHANNEL_VALUE, set_channel_value);
+
+                fp = popen(channel_command, "r");
+                if (fp == NULL) {
+                        log_err("set channel value failed");
+                        exit(1);
+		}
+                pclose(fp);
+
+		fp1 = popen(CHANNEL_COMMIT, "r");
+		if( fp1 == NULL) {
+			log_err("channel commit command failed");
+			exit(1);
+		}
+		pclose(fp1);
+		fp2 = popen(RESTART_WLAN_MGR, "r");
+		if( fp2 == NULL) {
+			log_err("restart wlan mgr failed");
+			exit(1);
+		}
+		pclose(fp2);
+        return 0;
+}
+
+
 /*
  * Set Wifi sta_info update period
  */
@@ -1237,13 +1287,16 @@ void appd_wifi_sta_poll()
 		 prop_send_by_name("set_wifi_stainfo_update_min");
 		 att_set_poll_period(wifi_sta_info_update);
 	}
-
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_RSSI);
 	exec_systemcmd(command, data, DATA_SIZE);
 	if (appd_check_wifi_sta_data_deviation(WIFI_STA_RSSI, data)) {
 		appd_send_wifi_sta_data(WIFI_STA_RSSI, data);
 	}
 
+        memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_NOISE);
 	exec_systemcmd(command, data, DATA_SIZE);
 	if (appd_check_wifi_sta_data_deviation(WIFI_STA_NOISE, data)) {
@@ -1252,10 +1305,16 @@ void appd_wifi_sta_poll()
 
 
 	if (wifi_sta_info_update_period_min >= wifi_sta_info_update || wifi_sta_info_update_period_min == 0) {
+
+                memset(command,'\0',sizeof(command));
+	        memset(data,'\0',sizeof(data));
 		sprintf(command, WIFI_GET_STA_RSSI);
 		exec_systemcmd(command, data, DATA_SIZE);
 		appd_send_wifi_sta_data(WIFI_STA_RSSI, data);
 
+
+                memset(command,'\0',sizeof(command));
+          	memset(data,'\0',sizeof(data));
 		sprintf(command, WIFI_GET_STA_NOISE);
 		exec_systemcmd(command, data, DATA_SIZE);
 		appd_send_wifi_sta_data(WIFI_STA_NOISE, data);
@@ -1265,55 +1324,83 @@ void appd_wifi_sta_poll()
 
 	wifi_sta_info_update_period_min += 1;
 
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_CHANNEL);
 	exec_systemcmd(command, data, DATA_SIZE);
 	appd_send_wifi_sta_data(WIFI_STA_CHANNEL, data);
 
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, GET_GW_CHANNEL_VALUE);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(GET_CHANNEL_VALUE, data);
+
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_SSID);
 	exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
 	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_SSID, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_BSSID);
 	exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
 	appd_send_wifi_sta_data(WIFI_STA_ASSOCIATED_BSSID, data);
 	
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_5G);
 	exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
 	appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_5G, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
         sprintf(command, GW_WIFI_GET_BSSID_FRONTHAUL_2G);
         exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
         appd_send_wifi_sta_data(GW_WIFI_BSSID_FRONTHAUL_2G, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, GW_WIFI_GET_BSSID_BACKHAUL);
 	exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
 	appd_send_wifi_sta_data(GW_WIFI_BSSID_BACKHAUL, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
 	sprintf(command, GET_DEVICE_MAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
         appd_send_wifi_sta_data(DEVICE_MAC_ADDRESS, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
         sprintf(command, GET_EM_PARENT_MAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
         appd_send_wifi_sta_data(EM_PARENT_MAC_ADDRESS, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
         sprintf(command, GET_EM_BACKHAUL_TYPE);
         exec_systemcmd(command, data, DATA_SIZE);
 	uppercase_convert(data);
         appd_send_wifi_sta_data(EM_BACKHAUL_TYPE, data);	
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
         sprintf(command, GET_GW_AGENT_ALMAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
         uppercase_convert(data);
         appd_send_wifi_sta_data(GW_AGENT_ALMAC_ADDRESS, data);
 
+	memset(command,'\0',sizeof(command));
+	memset(data,'\0',sizeof(data));
         sprintf(command, GET_GW_CTRL_ALMAC_ADDRESS);
         exec_systemcmd(command, data, DATA_SIZE);
         uppercase_convert(data);
@@ -1372,6 +1459,19 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 
 		prop_send_by_name(name);
 
+        } else if (!strcmp(name, GET_CHANNEL_VALUE)) {
+
+                tmp = atoi(value);
+
+                if (tmp == gw_channel_value) {
+                      return 0;
+                }
+
+                gw_channel_value = tmp;
+
+                prop_send_by_name(name);
+		
+
 	} else if (!strcmp(name, WIFI_STA_NOISE)) {
 
                 tmp = atoi(value);
@@ -1394,7 +1494,7 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 
                 wifi_sta_RSSI = tmp;
 
-		prop_send_by_name(name);
+		prop_send_by_name(name);		
         
 	} else if (!strcmp(name, WIFI_STA_ASSOCIATED_SSID)) {
        
@@ -1487,10 +1587,7 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 gw_ctrl_almac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
 
                 prop_send_by_name(name);
-        }
-
-
-	
+        }	
 
 	return 0;
 }
@@ -1850,6 +1947,13 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &wifi_sta_channel,
 		.len = sizeof(wifi_sta_channel),
 	},
+        {
+                .name = "gw_channel_value",
+                .type = PROP_INTEGER,
+                .send = prop_arg_send,
+                .arg = &gw_channel_value,
+                .len = sizeof(gw_channel_value),
+        },
 	{
 		.name = "wifi_sta_noise",
 		.type = PROP_INTEGER,
@@ -1988,6 +2092,14 @@ static struct prop appd_gw_prop_table[] = {
 		.arg = &ngrok_set_authtoken,
 		.len = sizeof(ngrok_set_authtoken),
 	},
+        {
+                .name = "set_channel_value",
+                .type = PROP_INTEGER,
+                .set = appd_set_channel_value,
+                .send = prop_arg_send,
+                .arg = &set_channel_value,
+                .len = sizeof(set_channel_value),
+        },
 	{
 		.name = "ram_usage",
 		.type = PROP_STRING,
