@@ -135,6 +135,17 @@ get_sta_channel()
 
 }
 
+get_channel_value()
+{
+   uci get wireless.radio0.channel
+}
+
+set_channel()
+{
+      uci set wireless.radio0.channel=$1
+      uci commit
+      /etc/init.d/wlan_mgr restart
+}
 
 get_sta_ssid()
 {
@@ -523,10 +534,12 @@ case "$1" in
         -sta_bh_type)
                 get_bh_type
                 ;;
-		
+        -sta_get_channel_value)
+                get_channel_value
+                ;;		
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-sta_get_channel_value]"
 		exit 1
 		;;
 esac
