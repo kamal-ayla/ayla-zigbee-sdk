@@ -135,18 +135,6 @@ get_sta_channel()
 
 }
 
-get_channel_value()
-{
-   uci get wireless.radio0.channel
-}
-
-set_channel()
-{
-      uci set wireless.radio0.channel=$1
-      uci commit
-      /etc/init.d/wlan_mgr restart
-}
-
 get_sta_ssid()
 {
 	sta_interface=`get_sta_interface`
@@ -227,7 +215,6 @@ get_wifi_BSSID_fronthaul_5G()
 	fi
 
 	if [ $product  == $prod_type_gdnt ]; then	
-#		front_5g=`wb_cli -s info | grep "Fronthaul" | grep 5G | awk '{print $2}' | sed -e $'s/,/\\\n/g'`
 		front_5g=`ifconfig wl0 | awk '/HWaddr/ {print $5}'`
 		f=${#front_5g}
 		if [ $f == "17" ]; then
@@ -246,7 +233,6 @@ get_wifi_BSSID_backhaul()
 	product=`uci get version.@version[0].product`
 
 	if [ $product  == $prod_type_gdnt ]; then
-#		back=`ifconfig wl0.1 | awk '/HWaddr/ {print $5}'`
 		back=`wb_cli -s info | grep "Backhaul" | awk '{print $2}' | sed -e $'s/,/\\\n/g'`
 		b=${#back}
 		if [ $b == "17" ]; then
@@ -367,12 +353,23 @@ get_stationtype()
         else
 		ap_interface="${ap_interface//./_}"
                 RADIO=`uci get wireless.${ap_interface}.device`
+           if [ $product  == $prod_type_gcnt ]; then
                 TYPE=`uci get wireless.${ap_interface}.fronthaul`
                 if [ $TYPE == "1" ]; then
                         echo -en "Fronthaul"
                 else
                         echo -en "Backhaul"
                 fi
+          fi
+          if [ $product  == $prod_type_gdnt ]; then
+                TYPE=`ubus call wireless.accesspoint get | sed -n '/"'${ap_interface}'": {/,/}/p' | awk '/"map"/ {print $2}' | sed 's/"//g' | sed 's/-BSS//g' | sed 's/,//g'`
+               if [ $TYPE == "Fronthaul" ]; then
+		     echo -en "$TYPE"
+               else
+                     echo -en "Backhaul"
+                fi
+           fi
+
 		if [ $product  == $prod_type_gcnt ]; then
 			if [ "$RADIO" == "radio_2G" ]; then
 	                        echo -en "_2G"
@@ -392,34 +389,6 @@ get_stationtype()
 			fi
 		fi				
         fi
-
-
-#	if [ -z $1 ]; then                                                                 
-#                echo "0"                                                                   
-#                return                                                                     
-#        fi
-
-#	ap_interface=`get_sta_associated_ap $1`                                    
-#        if [ $ap_interface == "0" ]; then                                              
-#                echo "0"                                        
-#        else  
-#		RADIO=`uci get wireless.${ap_interface}.device`
-#		TYPE=`uci get wireless.${ap_interface}.fronthaul`
-#		if [ $TYPE == "1" ]; then
-#			echo -en "Fronthaul"
-#		else
-#			echo -en "Backhaul"
-#		fi
-
-#		if [ "$RADIO" == "radio_2G" ]; then
-#			echo -en "_2G"
-#		elif [ "$RADIO" == "radio_5G" ]; then
-#			echo -en "_5G"
-#		else
-#			echo -en "_"
-#		fi
-#	fi
-
 }
 
 get_parentnode()
@@ -534,12 +503,9 @@ case "$1" in
         -sta_bh_type)
                 get_bh_type
                 ;;
-        -sta_get_channel_value)
-                get_channel_value
-                ;;		
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-sta_get_channel_value]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type]"
 		exit 1
 		;;
 esac
