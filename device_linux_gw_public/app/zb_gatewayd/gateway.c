@@ -1783,6 +1783,14 @@ void appd_wifi_sta_poll()
         exec_systemcmd(command, data, DATA_SIZE);
         uppercase_convert(data);
         appd_send_wifi_sta_data(GW_AGENT_ALMAC_ADDRESS, data);
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, GET_GW_CTRL_ALMAC_ADDRESS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        uppercase_convert(data);
+        appd_send_wifi_sta_data(GW_CTRL_ALMAC_ADDRESS, data);
+	
 }
 
 
