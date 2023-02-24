@@ -1096,12 +1096,27 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
 	}
 
 	if (ngrok_enable == 1) {
-		system(GET_NGROK_STOP);
-		system(GET_NGROK_START);
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
+
+		memset(command,'\0',sizeof(command));
+		memset(data,'\0',sizeof(data));
+		sprintf(command, GET_NGROK_STOP);
+		exec_systemcmd(command, data, DATA_SIZE);
+
+		memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, GET_NGROK_START);	
+		exec_systemcmd(command, data, DATA_SIZE);
+
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
+
 	} else if (ngrok_enable == 0) {
-		system(GET_NGROK_STOP);
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
+
+		memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, GET_NGROK_STOP);
+                exec_systemcmd(command, data, DATA_SIZE);
+		
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
 	} else {
 		log_debug("get ngrok_info failed");
 	}
@@ -1138,6 +1153,7 @@ static enum err_t appd_ngrok_hostname_send(struct prop *prop, int req_id,
 		strcpy(ngrok_hostname, "0");
 	} else {
 		fscanf(fp, "%[^\n]", ngrok_hostname);
+		log_debug("Get ngrok_hostname value : %s",ngrok_hostname);
 		pclose(fp);
 	}
 
@@ -1161,6 +1177,7 @@ static enum err_t appd_ngrok_port_send(struct prop *prop, int req_id,
 		prop_send_by_name("ngrok_enable");
 	} else {
 		fscanf(fp, "%d", &ngrok_port);
+		log_debug("Get ngrok_port value : %d",ngrok_port);
 		if (ngrok_port == 0) {
 			ngrok_enable = 0;
 			prop_send_by_name("ngrok_enable");
@@ -1403,14 +1420,20 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
 	FILE *fp1;
 
 	char two_ghz_ssid_command[150];
-	
+	unsigned int validate;
+
         memset(two_ghz_ssid_command,'\0',sizeof(two_ghz_ssid_command));
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
                 log_err("prop_arg_set returned error");
                 return -1;
         }
 
-        snprintf(two_ghz_ssid_command, sizeof(two_ghz_ssid_command), TWO_GHZ_SET_SSID, ssid_2ghz);
+
+        validate = strlen(ssid_2ghz);
+
+        if(validate  > 0 && validate < 33){
+
+                snprintf(two_ghz_ssid_command, sizeof(two_ghz_ssid_command), TWO_GHZ_SET_SSID, ssid_2ghz);
 
                 fp = popen(two_ghz_ssid_command, "r");
                 if (fp == NULL) {
@@ -1419,7 +1442,7 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
                 }
                 pclose(fp);
 
-	memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
+	        memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
 
                 fp1 = popen(RESTART_MESH_BROKER, "r");
                 if( fp1 == NULL) {
@@ -1427,7 +1450,11 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp1);
-		
+	}
+        else {
+               log_err("Invalid ssid 2ghz");
+        }
+
         return 0;
 }
 
@@ -1441,14 +1468,18 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 	FILE *fp1;
 
         char two_ghz_key_command[150];
+	unsigned int validate;
 
         memset(two_ghz_key_command,'\0',sizeof(two_ghz_key_command));
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
                 log_err("prop_arg_set returned error");
                 return -1;
-        }
+       }
+       validate = strlen(ssid_key_2ghz);
+	
+       if(validate  > 7 && validate < 64){
 
-        snprintf(two_ghz_key_command, sizeof(two_ghz_key_command), TWO_GHZ_SET_KEY, ssid_key_2ghz);
+                snprintf(two_ghz_key_command, sizeof(two_ghz_key_command), TWO_GHZ_SET_KEY, ssid_key_2ghz);
 
                 fp = popen(two_ghz_key_command, "r");
                 if (fp == NULL) {
@@ -1457,7 +1488,7 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
                 }
                 pclose(fp);
 
-       memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));		
+                memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));		
 
 		fp1 = popen(RESTART_MESH_BROKER, "r");
                 if( fp1 == NULL) {
@@ -1465,6 +1496,11 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp1);
+       }
+       else {
+             log_err("Invalid ssid key 2ghz");
+       }
+
 		
         return 0;
 }
@@ -1480,6 +1516,7 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
 	FILE *fp1;
 
         char five_ghz_ssid_command[150];
+	unsigned int validate;
 
         memset(five_ghz_ssid_command,'\0',sizeof(five_ghz_ssid_command));
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
@@ -1487,7 +1524,11 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
                 return -1;
         }
 
-        snprintf(five_ghz_ssid_command, sizeof(five_ghz_ssid_command), FIVE_GHZ_SET_SSID, ssid_5ghz);
+        validate = strlen(ssid_5ghz);
+
+        if(validate  > 0 && validate < 33){
+
+                snprintf(five_ghz_ssid_command, sizeof(five_ghz_ssid_command), FIVE_GHZ_SET_SSID, ssid_5ghz);
 
                 fp = popen(five_ghz_ssid_command, "r");
                 if (fp == NULL) {
@@ -1496,7 +1537,7 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
                 }
                 pclose(fp);
 
-	memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
+	        memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
 
                 fp1 = popen(RESTART_MESH_BROKER, "r");
                 if( fp1 == NULL) {
@@ -1504,6 +1545,11 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp1);
+	}
+        else {
+              log_err("Invalid ssid 5ghz");
+        }
+
 	
         return 0;
 }
@@ -1519,6 +1565,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 	FILE *fp1;
 
         char five_ghz_key_command[150];
+	 unsigned int validate;
 
         memset(five_ghz_key_command,'\0',sizeof(five_ghz_key_command));
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
@@ -1526,7 +1573,11 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                 return -1;
         }
 
-        snprintf(five_ghz_key_command, sizeof(five_ghz_key_command), FIVE_GHZ_SET_KEY, ssid_key_5ghz);
+        validate = strlen(ssid_key_5ghz);
+
+	if(validate  > 7 && validate < 64){
+
+                snprintf(five_ghz_key_command, sizeof(five_ghz_key_command), FIVE_GHZ_SET_KEY, ssid_key_5ghz);
 
                 fp = popen(five_ghz_key_command, "r");
                 if (fp == NULL) {
@@ -1535,7 +1586,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                 }
                 pclose(fp);
 
-	memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));	
+	        memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));	
 
                 fp1 = popen(RESTART_MESH_BROKER, "r");
                 if( fp1 == NULL) {
@@ -1543,6 +1594,11 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp1);
+	}
+        else {
+              log_err("Invalid ssid key 5ghz");
+        }
+
 		
         return 0;
 }
@@ -1625,6 +1681,12 @@ static int appd_properties_get(void)
                 log_debug("backhual optimization enable/disable: %d",bh_optimization);
         }
         pclose(fp4);
+
+ 	if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
+                    prop_send_by_name("ngrok_hostname");
+                  prop_send_by_name("ngrok_port");
+       }
+
 
        prop_send_by_name("gw_wifi_channel_2G");
        prop_send_by_name("gw_wifi_channel_5G");
@@ -2821,6 +2883,9 @@ int appd_init(void)
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	get_sysinfo_status=1;
 	prop_send_by_name("get_sysinfo_status");
+        get_sysinfo_status=0;
+        prop_send_by_name("get_sysinfo_status");
+
 
 	return 0;
 }
