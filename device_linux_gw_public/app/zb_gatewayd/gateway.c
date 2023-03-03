@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.2";
+const char *appd_template_version = "zigbee_gateway_demo_v3.3";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -228,6 +228,12 @@ static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 #define SCHEDULE_RBT_REASON                             "transformer-cli set rpc.system.scheduledrebootreason \"GUI\""
 #define SCHEDULE_RBT_APPLY                              "transformer-cli apply"
 static char schedule_reboot[SCHEDULE_REBOOT];
+
+/* WPS button */
+#define WPS_BUTTON_LEN                                  50
+static char wps_pairing_status[WPS_BUTTON_LEN];
+static int wps_button_press;
+static struct timer wps_pairing_status_timer;
 
 /* Firmware properties **/
 #define RADIO_FW_LEN                                    50
@@ -945,6 +951,16 @@ static int appd_gw_change_channel_set(struct prop *prop, const void *val,
 }
 
 /*
+ * To Initalize the properties
+ */
+void appd_prop_init()
+{
+	prop_send_by_name("controller_status");
+	prop_send_by_name("up_time");
+	appd_properties_get();
+}
+
+/*
  *To get the sysinfo:
  */
 static int appd_sysinfo_set(struct prop *prop, const void *val,
@@ -1267,6 +1283,33 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 	return 0;
 }
 
+/*
+ *WPS data update timer
+ */
+
+static void appd_wps_button_update(struct timer *timer_wps_pairing_status)
+{
+        timer_cancel(app_get_timers(), timer_wps_pairing_status);
+
+        log_debug("Timer wps button");
+        prop_send_by_name("wps_pairing_status");
+}
+
+/*
+ *To get the wps status.
+ */
+static enum err_t appd_wps_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+	/* hard coded WPS pairing completed */
+
+        log_debug("WPS pairing completed");
+        strcpy(wps_pairing_status , "WPS pairing completed");
+        wps_button_press=0;
+        prop_send_by_name("wps_button_press");
+        return prop_arg_send(prop, req_id, opts);
+
+}
 
 /*
  *Set 2ghz channel value from cloud.
@@ -2097,6 +2140,33 @@ static int appd_schedule_reboot(struct prop *prop, const void *val,
 }
 
 /*
+ *To get the wps button
+ */
+static int appd_wps_button_press(struct prop *prop, const void *val,
+        size_t len, const struct op_args *args)
+{
+        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                log_err("prop_arg_set returned error");
+                return -1;
+        }
+
+        if (wps_button_press == 1) {
+                log_debug("WPS button pressed");
+		memset(command,'\0',sizeof(command));
+		memset(data,'\0',sizeof(data));
+		sprintf(command, "wps_button_pressed.sh");
+		exec_systemcmd(command, data, DATA_SIZE);
+		timer_set(app_get_timers(), &wps_pairing_status_timer, 120000);
+        } else if (wps_button_press== 0) {
+                timer_set(app_get_timers(), &wps_pairing_status_timer, 1000);
+        } else {
+                log_debug("wps button wrong info");
+        }
+        return 0;
+}
+
+
+/*
  *  *To get the Radio BLE FW.
  *   */
 static enum err_t appd_ble_fw(struct prop *prop, int req_id,
@@ -2697,6 +2767,23 @@ static struct prop appd_gw_prop_table[] = {
                 .len = sizeof(schedule_reboot),
         },
 
+	{
+                .name = "wps_button_press",
+                .type = PROP_INTEGER,
+                .set = appd_wps_button_press,
+                .send = prop_arg_send,
+                .arg = &wps_button_press,
+                .len = sizeof(wps_button_press),
+        },
+
+	{
+                .name = "wps_pairing_status",
+                .type = PROP_STRING,
+                .send = appd_wps_status_send,
+                .arg = &wps_pairing_status,
+                .len = sizeof(wps_pairing_status),
+        }
+
 
 };
 
@@ -2876,16 +2963,13 @@ int appd_init(void)
 	 */
 	node_mgmt_init(app_get_timers());
 
+	appd_prop_init();
 	node_set_cloud_callbacks(&cloud_callbacks);
 	appd_node_network_callback_init();
 
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
-	get_sysinfo_status=1;
-	prop_send_by_name("get_sysinfo_status");
-        get_sysinfo_status=0;
-        prop_send_by_name("get_sysinfo_status");
-
+	timer_init(&wps_pairing_status_timer, appd_wps_button_update);
 
 	return 0;
 }
