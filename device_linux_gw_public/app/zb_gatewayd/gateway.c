@@ -153,9 +153,9 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define CHANNEL_COMMAND_LEN 80
 static int channel_2ghz;
 static int channel_5ghz;
-static int get_channel_2ghz_value;
-static int get_channel_5ghz_value;
-static char channel_command[CHANNEL_COMMAND_LEN];
+//static int get_channel_2ghz_value;
+//static int get_channel_5ghz_value;
+//static char channel_command[CHANNEL_COMMAND_LEN];
 
 #define GET_TWO_GHZ_CHANNEL_VALUE "uci get wireless.radio1.channel"
 #define GET_FIVE_GHZ_CHANNEL_VALUE "uci get wireless.radio0.channel"
@@ -168,8 +168,8 @@ static char channel_command[CHANNEL_COMMAND_LEN];
 /* backhaul optimization */
 #define OPTIMIZE_COMMAND_LEN 80
 static unsigned int bh_optimization;
-static unsigned int get_bh_optimization;
-static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
+//static unsigned int get_bh_optimization;
+//static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
 
 #define BH_OPTIMIZE "uci set smartmesh.sm_steering.bhsta_optimization=%d"
 //#define ENABLE_BH_OPTIMIZATION "uci set smartmesh.sm_steering.bhsta_optimization=1"
@@ -183,12 +183,12 @@ static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
 // 5GHZ variables
 static char ssid_5ghz[SSID_LEN];
 static char ssid_key_5ghz[KEY_LEN];
-static char ssid_5ghz_get[SSID_LEN];
+//static char ssid_5ghz_get[SSID_LEN];
 
 // 2GHZ variables
 static char ssid_2ghz[SSID_LEN];
 static char ssid_key_2ghz[KEY_LEN];
-static char ssid_2ghz_get[SSID_LEN];
+//static char ssid_2ghz_get[SSID_LEN];
 
 #define TWO_GHZ_SET_SSID "uci set mesh_broker.cred0.ssid=%s"
 #define TWO_GHZ_SET_KEY "uci set mesh_broker.cred0.wpa_psk_key=%s"
@@ -1317,6 +1317,21 @@ static enum err_t appd_wps_status_send(struct prop *prop, int req_id,
 static int appd_channel_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+	log_debug("set channel 2ghz functionality disabled !!!");
+	FILE *fp;
+        // To get 2ghz channel value
+        fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
+         if (fp == NULL) {
+                log_err("Get 2ghz channel failed");
+                exit(1);
+         } else {
+               fscanf(fp, "%d", &channel_2ghz);
+               log_debug("get 2ghz channel value : %d",channel_2ghz);
+               prop_send_by_name("gw_wifi_channel_2G");
+         }
+         pclose(fp);
+	
+#if 0	
         FILE *fp;
 	FILE *fp1;
 	FILE *fp2;
@@ -1347,6 +1362,7 @@ static int appd_channel_2ghz(struct prop *prop, const void *val,
 			exit(1);
 		}
 		pclose(fp2);
+#endif		
         return 0;
 }
 
@@ -1356,6 +1372,20 @@ static int appd_channel_2ghz(struct prop *prop, const void *val,
 static int appd_channel_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+	log_debug("set channel 5ghz functionality disabled !!!");
+	 FILE *fp;
+         fp = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
+         if (fp == NULL) {
+                log_err("Get 5ghz channel failed");
+                 exit(1);
+	 } else {
+               fscanf(fp, "%d", &channel_5ghz);
+               log_debug("get 5ghz channel value : %d",channel_5ghz);
+               prop_send_by_name("gw_wifi_channel_5G");
+         }
+	 pclose(fp);
+	
+#if 0	
         FILE *fp;
         FILE *fp1;
         FILE *fp2;
@@ -1386,6 +1416,7 @@ static int appd_channel_5ghz(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp2);
+#endif		
         return 0;
 }
 
@@ -1397,6 +1428,21 @@ static int appd_channel_5ghz(struct prop *prop, const void *val,
 static int appd_bh_optimization(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+     log_debug("set backhaul optimization  functionality disabled !!!");
+     FILE *fp;
+     // To get backhaul optimization value
+     fp = popen(GET_BH_OPTIMIZATION,"r");
+     if (fp == NULL) {
+           log_err("Get backhaul optimization failed");
+           exit(1);
+      } else {
+          fscanf(fp, "%d", &bh_optimization);
+          log_debug("backhaul optimization enable/disable : %d",bh_optimization);
+	  prop_send_by_name("gw_wifi_bh_optimization");
+        }
+        pclose(fp);
+	
+#if 0	
         FILE *fp;
         FILE *fp1;
         FILE *fp2;
@@ -1447,7 +1493,7 @@ static int appd_bh_optimization(struct prop *prop, const void *val,
                         exit(1);
                 }
                 pclose(fp2);
-       
+#endif       
 		return 0;
 }
 
@@ -1459,6 +1505,22 @@ static int appd_bh_optimization(struct prop *prop, const void *val,
 static int appd_ssid_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+	log_debug("set ssid 2ghz functionality disabled !!!");
+	FILE *fp;
+        // To get 2ghz ssid
+        fp = popen(TWO_GHZ_GET_SSID,"r");
+        if (fp == NULL) {
+               log_err("Get 2ghz ssid  failed");
+               exit(1);
+        } else {
+              memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));
+              fscanf(fp, "%[^\n]", ssid_2ghz);
+              log_debug("ssid 2ghz get value : %s",ssid_2ghz);
+        }
+        prop_send_by_name("gw_wifi_ssid_2G");
+        pclose(fp);
+	
+#if 0	
         FILE *fp;
 	FILE *fp1;
 
@@ -1497,7 +1559,7 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
         else {
                log_err("Invalid ssid 2ghz");
         }
-
+#endif
         return 0;
 }
 
@@ -1507,6 +1569,12 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
 static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+	log_debug("set ssid 2ghz key functionality disabled !!!");
+        memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+        strcpy(ssid_key_2ghz, "N/A");
+        prop_send_by_name("gw_wifi_ssid_key_2G");
+	
+#if 0	
         FILE *fp;
 	FILE *fp1;
 
@@ -1544,7 +1612,7 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
              log_err("Invalid ssid key 2ghz");
        }
 
-		
+#endif		
         return 0;
 }
 
@@ -1555,6 +1623,22 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 static int appd_ssid_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+       log_debug("set ssid 5ghz functionality disabled !!!");
+        FILE *fp;
+        // To get 5ghz ssid
+        fp = popen(FIVE_GHZ_GET_SSID,"r");
+        if (fp == NULL) {
+               log_err("Get 5ghz ssid  failed");
+               exit(1);
+	} else {
+                memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));
+                fscanf(fp, "%[^\n]", ssid_5ghz);
+                log_debug("ssid 5ghz get value : %s",ssid_5ghz);
+	}
+        prop_send_by_name("gw_wifi_ssid_5G");
+        pclose(fp);
+	
+#if 0	
         FILE *fp;
 	FILE *fp1;
 
@@ -1592,7 +1676,7 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
         else {
               log_err("Invalid ssid 5ghz");
         }
-
+#endif
 	
         return 0;
 }
@@ -1604,6 +1688,12 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
 static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
+	log_debug("set ssid 5ghz key functionality disabled !!!");
+        memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+        strcpy(ssid_key_5ghz, "N/A");
+        prop_send_by_name("gw_wifi_ssid_key_5G");
+	
+#if 0	
         FILE *fp;
 	FILE *fp1;
 
@@ -1642,7 +1732,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
               log_err("Invalid ssid key 5ghz");
         }
 
-		
+#endif		
         return 0;
 }
 
@@ -1664,10 +1754,10 @@ static int appd_properties_get(void)
                 log_err("Get 2ghz channel failed");
                 exit(1);
         } else {
-                fscanf(fp, "%d", &get_channel_2ghz_value);
-                log_debug("get 2ghz channel value : %d",get_channel_2ghz_value);
-                channel_2ghz = get_channel_2ghz_value;        
-                log_debug("set 2ghz channel value: %d",channel_2ghz);
+                fscanf(fp, "%d", &channel_2ghz);
+                log_debug("get 2ghz channel value : %d",channel_2ghz);
+                //channel_2ghz = get_channel_2ghz_value;        
+                //log_debug("set 2ghz channel value: %d",channel_2ghz);
         }
         pclose(fp);
 
@@ -1677,10 +1767,10 @@ static int appd_properties_get(void)
                 log_err("Get 5ghz channel failed");
                 exit(1);
         } else {
-                fscanf(fp1, "%d", &get_channel_5ghz_value);
-                log_debug("get 5ghz channel value : %d",get_channel_5ghz_value);
-                channel_5ghz = get_channel_5ghz_value;
-                log_debug("set 5ghz channel value: %d",channel_5ghz);
+                fscanf(fp1, "%d", &channel_5ghz);
+                log_debug("get 5ghz channel value : %d",channel_5ghz);
+                //channel_5ghz = get_channel_5ghz_value;
+                //log_debug("set 5ghz channel value: %d",channel_5ghz);
         }
         pclose(fp1);
 
@@ -1690,11 +1780,11 @@ static int appd_properties_get(void)
                 log_err("Get 2ghz ssid  failed");
                 exit(1);
         } else {
-	       memset(ssid_2ghz_get,'\0',sizeof(ssid_2ghz_get));	
-               fscanf(fp2, "%[^\n]", ssid_2ghz_get);
-               log_debug("ssid 2ghz get value : %s",ssid_2ghz_get);
-	       strcpy(ssid_2ghz,ssid_2ghz_get);
-               log_debug("ssid 2ghz set value : %s",ssid_2ghz);
+	       memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
+               fscanf(fp2, "%[^\n]", ssid_2ghz);
+               log_debug("ssid 2ghz get value : %s",ssid_2ghz);
+	      // strcpy(ssid_2ghz,ssid_2ghz_get);
+               //log_debug("ssid 2ghz set value : %s",ssid_2ghz);
 	}
         pclose(fp2);
 
@@ -1704,11 +1794,11 @@ static int appd_properties_get(void)
                 log_err("Get 5ghz ssid  failed");
                 exit(1);
         } else {
-	       memset(ssid_5ghz_get,'\0',sizeof(ssid_5ghz_get));	
-               fscanf(fp, "%[^\n]", ssid_5ghz_get);
-               log_debug("ssid 5ghz get value : %s",ssid_5ghz_get);
-               strcpy(ssid_5ghz,ssid_5ghz_get);
-               log_debug("ssid 5ghz set value : %s",ssid_5ghz);
+	       memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
+               fscanf(fp, "%[^\n]", ssid_5ghz);
+               log_debug("ssid 5ghz get value : %s",ssid_5ghz);
+              // strcpy(ssid_5ghz,ssid_5ghz_get);
+              // log_debug("ssid 5ghz set value : %s",ssid_5ghz);
         }
         pclose(fp3);
 
@@ -1718,10 +1808,10 @@ static int appd_properties_get(void)
                 log_err("Get backhaul optimization failed");
                 exit(1);
         } else {
-                fscanf(fp4, "%d", &get_bh_optimization);
-                log_debug("backhaul optimization enable/disable : %d",get_bh_optimization);
-                bh_optimization = get_bh_optimization;
-                log_debug("backhual optimization enable/disable: %d",bh_optimization);
+                fscanf(fp4, "%d", &bh_optimization);
+                log_debug("backhaul optimization enable/disable : %d",bh_optimization);
+                //bh_optimization = get_bh_optimization;
+                //log_debug("backhual optimization enable/disable: %d",bh_optimization);
         }
         pclose(fp4);
 
