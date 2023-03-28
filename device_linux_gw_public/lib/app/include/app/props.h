@@ -201,6 +201,11 @@ struct prop {
 	 * contains properties that need explicit acknowledgments.
 	 */
 	 u8 app_manages_acks:1;
+
+	/*
+	* 1 if the prop that is "To Device" needs to skip update from cloud during the init
+	*/
+	 u8 skip_init_update_from_cloud;
 };
 
 enum err_t {

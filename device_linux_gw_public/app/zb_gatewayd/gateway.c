@@ -2884,6 +2884,7 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &channel_2ghz,
                 .len = sizeof(channel_2ghz),
+		.skip_init_update_from_cloud = 1,
         },
         {
                 .name = "gw_wifi_channel_5G",
@@ -2892,6 +2893,7 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &channel_5ghz,
                 .len = sizeof(channel_5ghz),
+		.skip_init_update_from_cloud = 1,
         },
 	
         {
@@ -2901,6 +2903,7 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &bh_optimization,
                 .len = sizeof(bh_optimization),
+		.skip_init_update_from_cloud = 1,
         },
 
 	{
@@ -2925,6 +2928,7 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
                 .arg = &ssid_2ghz,
                 .len = sizeof(ssid_2ghz),
+		.skip_init_update_from_cloud = 1,
         },
         {
                 .name = "gw_wifi_ssid_key_2G",
@@ -2933,6 +2937,7 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
                 .arg = &ssid_key_2ghz,
                 .len = sizeof(ssid_key_2ghz),
+		.skip_init_update_from_cloud = 1,
         },
         {
                 .name = "gw_wifi_ssid_5G",
@@ -2941,6 +2946,7 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
                 .arg = &ssid_5ghz,
                 .len = sizeof(ssid_5ghz),
+		.skip_init_update_from_cloud = 1,
         },
         {
                 .name = "gw_wifi_ssid_key_5G",
@@ -2949,6 +2955,7 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
                 .arg = &ssid_key_5ghz,
                 .len = sizeof(ssid_key_5ghz),
+		.skip_init_update_from_cloud = 1,
         },
 	
         /* Radio information */

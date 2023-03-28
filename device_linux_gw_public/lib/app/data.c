@@ -224,6 +224,14 @@ static int data_process_prop_update(json_t *cmd, int req_id)
 	struct op_args op_args;
 	int rc;
 
+	const char *opstr = json_get_string(cmd, "op");
+	enum ayla_data_op op;
+
+	if (!opstr) {
+		goto op_err;
+	}
+	op = jint_get_data_op(opstr);
+
 	memset(&op_args, 0, sizeof(op_args));
 	opts_obj = json_object_get(cmd, "opts");
 	if (opts_obj) {
@@ -252,6 +260,11 @@ inval_args:
 		prop = prop_lookup(name);
 		if (!prop) {
 			data_send_nak(JINT_ERR_UNKWN_PROP, req_id);
+			continue;
+		}
+		if ((prop->skip_init_update_from_cloud) && (op == AD_PROP_RESP)) {
+			log_debug("||||||||||Skipping cloud init update for prop %s|||||||||||||", prop->name);
+			/* skip over props that don't want update from cloud during init*/
 			continue;
 		}
 		if (!prop->set) {
@@ -318,6 +331,9 @@ bad_value:
 		}
 		data_send_nak(JINT_ERR_BAD_VAL, req_id);
 	}
+
+op_err:
+		data_send_nak(JINT_ERR_OP, req_id);
 
 	return 0;
 }
