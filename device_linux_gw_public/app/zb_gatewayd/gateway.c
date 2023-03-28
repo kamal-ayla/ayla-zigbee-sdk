@@ -33,6 +33,7 @@
 #include "libtransformer.h"
 #include <inttypes.h>
 #include <ayla/json_parser.h>
+#include <regex.h>
 
 #include "opkg.h"
 
@@ -82,6 +83,7 @@ static unsigned int bh_num_nodes;
 #define UPTIME_LEN						50
 static u8  get_sysinfo_status;
 static unsigned int controller_status;
+static unsigned int mesh_controller_status;
 static char board_model[100];
 static char ram_usage[100];
 static char cpu_usage[5];
@@ -155,7 +157,7 @@ static int channel_2ghz;
 static int channel_5ghz;
 //static int get_channel_2ghz_value;
 //static int get_channel_5ghz_value;
-//static char channel_command[CHANNEL_COMMAND_LEN];
+static char channel_command[CHANNEL_COMMAND_LEN];
 
 #define GET_TWO_GHZ_CHANNEL_VALUE "uci get wireless.radio1.channel"
 #define GET_FIVE_GHZ_CHANNEL_VALUE "uci get wireless.radio0.channel"
@@ -169,7 +171,7 @@ static int channel_5ghz;
 #define OPTIMIZE_COMMAND_LEN 80
 static unsigned int bh_optimization;
 //static unsigned int get_bh_optimization;
-//static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
+static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
 
 #define BH_OPTIMIZE "uci set smartmesh.sm_steering.bhsta_optimization=%d"
 //#define ENABLE_BH_OPTIMIZATION "uci set smartmesh.sm_steering.bhsta_optimization=1"
@@ -190,10 +192,10 @@ static char ssid_2ghz[SSID_LEN];
 static char ssid_key_2ghz[KEY_LEN];
 //static char ssid_2ghz_get[SSID_LEN];
 
-#define TWO_GHZ_SET_SSID "uci set mesh_broker.cred0.ssid=%s"
-#define TWO_GHZ_SET_KEY "uci set mesh_broker.cred0.wpa_psk_key=%s"
-#define FIVE_GHZ_SET_SSID "uci set mesh_broker.cred1.ssid=%s"
-#define FIVE_GHZ_SET_KEY "uci set mesh_broker.cred1.wpa_psk_key=%s"
+#define TWO_GHZ_SET_SSID "uci set mesh_broker.cred0.ssid=\"%s\""
+#define TWO_GHZ_SET_KEY "uci set mesh_broker.cred0.wpa_psk_key=\"%s\""
+#define FIVE_GHZ_SET_SSID "uci set mesh_broker.cred1.ssid=\"%s\""
+#define FIVE_GHZ_SET_KEY "uci set mesh_broker.cred1.wpa_psk_key=\"%s\""
 #define RESTART_MESH_BROKER "/etc/init.d/mesh-broker restart"
 
 #define TWO_GHZ_GET_SSID "uci get mesh_broker.cred0.ssid"
@@ -1150,7 +1152,7 @@ static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
 
 	log_debug("Updating the Ngrok data");
 	prop_send_by_name("ngrok_status");
-	//prop_send_by_name("ngrok_error_status");
+//	prop_send_by_name("ngrok_error_status");
 	prop_send_by_name("ngrok_hostname");
 	prop_send_by_name("ngrok_port");
 	appd_ngrok_send_authtoken();
@@ -1355,58 +1357,93 @@ static enum err_t appd_gw_led_status_send(struct prop *prop, int req_id,
 
 }
 
+
+/*
+ * To Know the mesh controller status
+ */
+int appd_mesh_controller_status()
+{
+    FILE *fp;
+    fp = popen(GET_MESH_CONTROLLER_STATUS_GDNT,"r");
+    if (fp == NULL) {
+            log_err("Mesh controller status get failed");
+            exit(1);
+       }
+       fscanf(fp, "%d", &mesh_controller_status);
+       if ( mesh_controller_status > 1 ){
+                mesh_controller_status = 1;
+       }
+       pclose(fp);
+
+       return mesh_controller_status;
+
+}
+
 /*
  *Set 2ghz channel value from cloud.
  */
 static int appd_channel_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-	log_debug("set channel 2ghz functionality disabled !!!");
-	FILE *fp;
-        // To get 2ghz channel value
-        fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
-         if (fp == NULL) {
-                log_err("Get 2ghz channel failed");
-                exit(1);
-         } else {
-               fscanf(fp, "%d", &channel_2ghz);
-               log_debug("get 2ghz channel value : %d",channel_2ghz);
-               prop_send_by_name("gw_wifi_channel_2G");
-         }
-         pclose(fp);
-	
-#if 0	
-        FILE *fp;
+    FILE *fp;
 	FILE *fp1;
 	FILE *fp2;
 
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
+	unsigned int status;
 
-         snprintf(channel_command, sizeof(channel_command), SET_TWO_GHZ_CHANNEL_VALUE, channel_2ghz);
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
+	}
+	status=appd_mesh_controller_status();
 
-                fp = popen(channel_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2 ghz channel value failed");
-                        exit(1);
-		}
-                pclose(fp);
+	if(status == 1)
+	{
+	   if(channel_2ghz > 0 && channel_2ghz < 12){
 
-		fp1 = popen(UCI_COMMIT, "r");
-		if( fp1 == NULL) {
-			log_err("uci commit command failed");
-			exit(1);
-		}
-		pclose(fp1);
-		fp2 = popen(RESTART_WLAN_MGR, "r");
-		if( fp2 == NULL) {
-			log_err("restart wlan mgr failed");
-			exit(1);
-		}
-		pclose(fp2);
-#endif		
+			log_debug("set channel 2ghz : %d",channel_2ghz);
+			snprintf(channel_command, sizeof(channel_command), SET_TWO_GHZ_CHANNEL_VALUE, channel_2ghz);
+
+			fp = popen(channel_command, "r");
+			if (fp == NULL) {
+					log_err("set 2 ghz channel value failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			fp1 = popen(UCI_COMMIT, "r");
+			if( fp1 == NULL) {
+					log_err("uci commit command failed");
+					exit(1);
+			}
+			pclose(fp1);
+			fp2 = popen(RESTART_WLAN_MGR, "r");
+			if( fp2 == NULL) {
+					log_err("restart wlan mgr failed");
+					exit(1);
+			}
+			pclose(fp2);
+	   }
+	   else{
+			log_debug("Failed to set Invalid entry for channel 2ghz");
+	   }
+	}
+	else
+	{
+	   log_debug("set chaneel 2ghz failed due to gateway configured as an agent !!!");
+	}
+	// To get 2ghz channel value
+	fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
+	if (fp == NULL) {
+		   log_err("Get 2ghz channel failed");
+		   exit(1);
+	} else {
+		  fscanf(fp, "%d", &channel_2ghz);
+		  log_debug("get 2ghz channel value : %d",channel_2ghz);
+		  prop_send_by_name("gw_wifi_channel_2G");
+    }
+	pclose(fp);
+	
         return 0;
 }
 
@@ -1416,52 +1453,85 @@ static int appd_channel_2ghz(struct prop *prop, const void *val,
 static int appd_channel_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-	log_debug("set channel 5ghz functionality disabled !!!");
-	 FILE *fp;
-         fp = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
-         if (fp == NULL) {
-                log_err("Get 5ghz channel failed");
-                 exit(1);
-	 } else {
-               fscanf(fp, "%d", &channel_5ghz);
-               log_debug("get 5ghz channel value : %d",channel_5ghz);
-               prop_send_by_name("gw_wifi_channel_5G");
-         }
-	 pclose(fp);
+ 
+	FILE *fp;
+	FILE *fp1;
+	FILE *fp2;
+
+	unsigned int status;
+	unsigned int channels[]={36,40,44,48,52,56,60,64,100,104,108,112,116,132,136,149,153,157,161};
+	unsigned int check_flag = 0;
+	unsigned int size = 0;
+	unsigned int i=0;
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
+	}
+
+	status=appd_mesh_controller_status();
+
+	if(status == 1)
+	{
+
+	   log_debug("set channel for 5ghz : %d",channel_5ghz);
+
+	   size=sizeof(channels)/sizeof(channels[0]);
+
+	   for(i=0;i<size;i++){
+			   if(channel_5ghz == channels[i])
+			   {
+					  log_debug("matched value with one of the allocated channel : %d\n",channels[i]);
+					  check_flag = 1;
+			    }
+	    }
+
+	   if(check_flag == 1){
+
+			snprintf(channel_command, sizeof(channel_command), SET_FIVE_GHZ_CHANNEL_VALUE, channel_5ghz);
+
+			fp = popen(channel_command, "r");
+			if (fp == NULL) {
+					log_err("set 2 ghz channel value failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			fp1 = popen(UCI_COMMIT, "r");
+			if( fp1 == NULL) {
+					log_err("uci commit command failed");
+					exit(1);
+			}
+			pclose(fp1);
+			fp2 = popen(RESTART_WLAN_MGR, "r");
+			if( fp2 == NULL) {
+					log_err("restart wlan mgr failed");
+					exit(1);
+			}
+			pclose(fp2);
+	   }
+	   else{
+			   log_debug("Failed to set Invalid entry for channel 5ghz");
+
+	   }
+	}
+	else
+	{
+	   log_debug("set chaneel 5ghz failed due to gateway configured as an agent !!!");
+	}
+	// To get 5ghz channel value
+	fp = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
+	if (fp == NULL) {
+		   log_err("Get 5ghz channel failed");
+		   exit(1);
+	} else {
+		  fscanf(fp, "%d", &channel_5ghz);
+		  log_debug("get 5ghz channel value : %d",channel_5ghz);
+		  prop_send_by_name("gw_wifi_channel_5G");
+	}
+	pclose(fp);
 	
-#if 0	
-        FILE *fp;
-        FILE *fp1;
-        FILE *fp2;
-
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
-
-         snprintf(channel_command, sizeof(channel_command), SET_FIVE_GHZ_CHANNEL_VALUE, channel_5ghz);
-
-                fp = popen(channel_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2 ghz channel value failed");
-                        exit(1);
-                }
-                pclose(fp);
-
-                fp1 = popen(UCI_COMMIT, "r");
-                if( fp1 == NULL) {
-                        log_err("uci commit command failed");
-                        exit(1);
-                }
-                pclose(fp1);
-                fp2 = popen(RESTART_WLAN_MGR, "r");
-                if( fp2 == NULL) {
-                        log_err("restart wlan mgr failed");
-                        exit(1);
-                }
-                pclose(fp2);
-#endif		
-        return 0;
+	return 0;
 }
 
 
@@ -1472,73 +1542,49 @@ static int appd_channel_5ghz(struct prop *prop, const void *val,
 static int appd_bh_optimization(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-     log_debug("set backhaul optimization  functionality disabled !!!");
-     FILE *fp;
-     // To get backhaul optimization value
-     fp = popen(GET_BH_OPTIMIZATION,"r");
-     if (fp == NULL) {
-           log_err("Get backhaul optimization failed");
-           exit(1);
-      } else {
-          fscanf(fp, "%d", &bh_optimization);
-          log_debug("backhaul optimization enable/disable : %d",bh_optimization);
-	  prop_send_by_name("gw_wifi_bh_optimization");
-        }
-        pclose(fp);
-	
-#if 0	
-        FILE *fp;
-        FILE *fp1;
-        FILE *fp2;
+
+	FILE *fp;
+	FILE *fp1;
+	FILE *fp2;
 
 
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
-
-/*	if(bh_optimization == 1) {
-		system(ENABLE_BH_OPTIMIZATION);
-		log_debug("bh_optimization enabled");	
-	} else if(bh_optimization == 0)
-	{
-		system(DISABLE_BH_OPTIMIZATION);
-		log_debug("bh_optimization disabled");
-	} else {
-		log_debug("Invalid value for bh_optimization");
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
 	}
-*/
-
 
 	if(bh_optimization > 1) {
 	        bh_optimization = 1;
 	}
 
-         snprintf(bh_optimization_command, sizeof(bh_optimization_command), BH_OPTIMIZE, bh_optimization);
+	log_debug("backhaul optmization set value : %d",bh_optimization);
 
-                fp = popen(bh_optimization_command, "r");
-                if (fp == NULL) {
-                        log_err("enable/disable backhaul optimization command failed");
-                        exit(1);
-                }
-                pclose(fp);
+	snprintf(bh_optimization_command, sizeof(bh_optimization_command), BH_OPTIMIZE, bh_optimization);
+
+	fp = popen(bh_optimization_command, "r");
+	if (fp == NULL) {
+		  log_err("enable/disable backhaul optimization command failed");
+		  exit(1);
+	}
+	pclose(fp);
 
 
 
-                fp1 = popen(UCI_COMMIT, "r");
-                if( fp1 == NULL) {
-                        log_err("uci commit command failed");
-                        exit(1);
-                }
-                pclose(fp1);
-                fp2 = popen(RESTART_MESH_BROKER, "r");
-                if( fp2 == NULL) {
-                        log_err("restart mesh broker failed");
-                        exit(1);
-                }
-                pclose(fp2);
-#endif       
-		return 0;
+    fp1 = popen(UCI_COMMIT, "r");
+    if( fp1 == NULL) {
+		   log_err("uci commit command failed");
+		   exit(1);
+    }
+    pclose(fp1);
+
+    fp2 = popen(RESTART_MESH_BROKER, "r");
+    if( fp2 == NULL) {
+		  log_err("restart mesh broker failed");
+		   exit(1);
+    }
+    pclose(fp2);
+
+	return 0;
 }
 
 
@@ -1549,62 +1595,70 @@ static int appd_bh_optimization(struct prop *prop, const void *val,
 static int appd_ssid_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-	log_debug("set ssid 2ghz functionality disabled !!!");
-	FILE *fp;
-        // To get 2ghz ssid
-        fp = popen(TWO_GHZ_GET_SSID,"r");
-        if (fp == NULL) {
-               log_err("Get 2ghz ssid  failed");
-               exit(1);
-        } else {
-              memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));
-              fscanf(fp, "%[^\n]", ssid_2ghz);
-              log_debug("ssid 2ghz get value : %s",ssid_2ghz);
-        }
-        prop_send_by_name("gw_wifi_ssid_2G");
-        pclose(fp);
-	
-#if 0	
-        FILE *fp;
+
+    FILE *fp;
 	FILE *fp1;
 
 	char two_ghz_ssid_command[150];
 	unsigned int validate;
+	unsigned int status;
 
-        memset(two_ghz_ssid_command,'\0',sizeof(two_ghz_ssid_command));
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
-
-
-        validate = strlen(ssid_2ghz);
-
-        if(validate  > 0 && validate < 33){
-
-                snprintf(two_ghz_ssid_command, sizeof(two_ghz_ssid_command), TWO_GHZ_SET_SSID, ssid_2ghz);
-
-                fp = popen(two_ghz_ssid_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2.4GHZ ssid failed");
-                        exit(1);
-                }
-                pclose(fp);
-
-	        memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
-
-                fp1 = popen(RESTART_MESH_BROKER, "r");
-                if( fp1 == NULL) {
-                        log_err("restart mesh broker failed");
-                        exit(1);
-                }
-                pclose(fp1);
+	memset(two_ghz_ssid_command,'\0',sizeof(two_ghz_ssid_command));
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
 	}
-        else {
-               log_err("Invalid ssid 2ghz");
-        }
-#endif
-        return 0;
+	status=appd_mesh_controller_status();
+
+	if(status == 1)
+	{
+
+		validate = strlen(ssid_2ghz);
+		log_debug("set ssid 2ghz value : %s and size of the value : %d",ssid_2ghz,validate);
+
+		if(validate  > 0 && validate < 33 && ssid_2ghz[0] != ' ' && ssid_2ghz[validate-1] != ' '){
+
+			snprintf(two_ghz_ssid_command, sizeof(two_ghz_ssid_command), TWO_GHZ_SET_SSID, ssid_2ghz);
+
+			fp = popen(two_ghz_ssid_command, "r");
+			if (fp == NULL) {
+					log_err("set 2.4GHZ ssid failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));
+
+			fp1 = popen(RESTART_MESH_BROKER, "r");
+			if( fp1 == NULL) {
+					log_err("restart mesh broker failed");
+					exit(1);
+			}
+			pclose(fp1);
+	    }
+	   else {
+			 log_err("Invalid ssid 2ghz");
+	    }
+	}
+	else
+	{
+		log_debug("set ssid 2ghz failed due to gateway configured as an agent !!!");
+	}
+	
+	// To get 2ghz ssid
+	fp = popen(TWO_GHZ_GET_SSID,"r");
+	if (fp == NULL) {
+		   log_err("Get 2ghz ssid  failed");
+			exit(1);
+	} else {
+		memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));
+		fscanf(fp, "%[^\n]", ssid_2ghz);
+		log_debug("ssid 2ghz get value : %s",ssid_2ghz);
+	}
+    prop_send_by_name("gw_wifi_ssid_2G");
+    pclose(fp);
+
+	return 0;
 }
 
 /*
@@ -1613,51 +1667,71 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
 static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-	log_debug("set ssid 2ghz key functionality disabled !!!");
-        memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
-        strcpy(ssid_key_2ghz, "N/A");
-        prop_send_by_name("gw_wifi_ssid_key_2G");
 	
-#if 0	
-        FILE *fp;
+    FILE *fp;
 	FILE *fp1;
 
-        char two_ghz_key_command[150];
+	char two_ghz_key_command[150];
 	unsigned int validate;
+	unsigned int status;
+	unsigned int value = 1;
 
-        memset(two_ghz_key_command,'\0',sizeof(two_ghz_key_command));
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-       }
-       validate = strlen(ssid_key_2ghz);
+	// Variable to store initial regex()
+	regex_t reegex;
+	memset(two_ghz_key_command,'\0',sizeof(two_ghz_key_command));
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
+   }
+
+	status=appd_mesh_controller_status();
+
+	if(status == 1)
+	{
+		validate = strlen(ssid_key_2ghz);
+		log_debug("set ssid 2ghz key value : %s and size of the value : %d",ssid_key_2ghz,validate);
+
+	value = regcomp( &reegex, "^[%x]+$", 0);
+		value = regexec( &reegex, ssid_2ghz, 0, NULL, 0);
+
+		if(validate  > 7 && validate < 64 && value != 0 ){
+
+			snprintf(two_ghz_key_command, sizeof(two_ghz_key_command), TWO_GHZ_SET_KEY, ssid_key_2ghz);
+
+			fp = popen(two_ghz_key_command, "r");
+			if (fp == NULL) {
+					log_err("set 2.4GHZ ssid failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			fp1 = popen(RESTART_MESH_BROKER, "r");
+			if( fp1 == NULL) {
+					log_err("restart mesh broker failed");
+					exit(1);
+			}
+			pclose(fp1);
+			
+			memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+			memset(ssid_key_2ghz,'0',1);
+			prop_send_by_name("gw_wifi_ssid_key_2G");
+		}
+		else {
+			log_err("Invalid ssid key 2ghz");
+			memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+			memset(ssid_key_2ghz,'0',1);
+			prop_send_by_name("gw_wifi_ssid_key_2G");
+		}
+	}
+	else
+	{
+		memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+		log_debug("set ssid 2ghz key failed due to gateway configured as an agent !!!");
+		strcpy(ssid_key_2ghz, "N/A");
+		prop_send_by_name("gw_wifi_ssid_key_2G");
+	}
 	
-       if(validate  > 7 && validate < 64){
-
-                snprintf(two_ghz_key_command, sizeof(two_ghz_key_command), TWO_GHZ_SET_KEY, ssid_key_2ghz);
-
-                fp = popen(two_ghz_key_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2.4GHZ ssid failed");
-                        exit(1);
-                }
-                pclose(fp);
-
-                memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));		
-
-		fp1 = popen(RESTART_MESH_BROKER, "r");
-                if( fp1 == NULL) {
-                        log_err("restart mesh broker failed");
-                        exit(1);
-                }
-                pclose(fp1);
-       }
-       else {
-             log_err("Invalid ssid key 2ghz");
-       }
-
-#endif		
-        return 0;
+	return 0;
 }
 
 
@@ -1667,62 +1741,69 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 static int appd_ssid_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-       log_debug("set ssid 5ghz functionality disabled !!!");
-        FILE *fp;
-        // To get 5ghz ssid
-        fp = popen(FIVE_GHZ_GET_SSID,"r");
-        if (fp == NULL) {
-               log_err("Get 5ghz ssid  failed");
-               exit(1);
-	} else {
-                memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));
-                fscanf(fp, "%[^\n]", ssid_5ghz);
-                log_debug("ssid 5ghz get value : %s",ssid_5ghz);
-	}
-        prop_send_by_name("gw_wifi_ssid_5G");
-        pclose(fp);
-	
-#if 0	
-        FILE *fp;
+
+    FILE *fp;
 	FILE *fp1;
 
-        char five_ghz_ssid_command[150];
+	char five_ghz_ssid_command[150];
 	unsigned int validate;
+	unsigned int status;
 
-        memset(five_ghz_ssid_command,'\0',sizeof(five_ghz_ssid_command));
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
-
-        validate = strlen(ssid_5ghz);
-
-        if(validate  > 0 && validate < 33){
-
-                snprintf(five_ghz_ssid_command, sizeof(five_ghz_ssid_command), FIVE_GHZ_SET_SSID, ssid_5ghz);
-
-                fp = popen(five_ghz_ssid_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2.4GHZ ssid failed");
-                        exit(1);
-                }
-                pclose(fp);
-
-	        memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
-
-                fp1 = popen(RESTART_MESH_BROKER, "r");
-                if( fp1 == NULL) {
-                        log_err("restart mesh broker failed");
-                        exit(1);
-                }
-                pclose(fp1);
+	memset(five_ghz_ssid_command,'\0',sizeof(five_ghz_ssid_command));
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
 	}
-        else {
-              log_err("Invalid ssid 5ghz");
-        }
-#endif
-	
-        return 0;
+
+	status=appd_mesh_controller_status();
+
+	if(status == 1)
+	{
+		validate = strlen(ssid_5ghz);
+	    log_debug("set ssid 5ghz value : %s and size of the value : %d",ssid_5ghz,validate);
+
+	    if(validate  > 0 && validate < 33  && ssid_5ghz[0] != ' ' && ssid_5ghz[validate-1] != ' '){
+
+			snprintf(five_ghz_ssid_command, sizeof(five_ghz_ssid_command), FIVE_GHZ_SET_SSID, ssid_5ghz);
+
+			fp = popen(five_ghz_ssid_command, "r");
+			if (fp == NULL) {
+					log_err("set 5GHZ ssid failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));
+
+			fp1 = popen(RESTART_MESH_BROKER, "r");
+			if( fp1 == NULL) {
+					log_err("restart mesh broker failed");
+					exit(1);
+			}
+			pclose(fp1);
+		}
+		else {
+			log_err("Invalid ssid 5ghz");
+		}
+	}
+	else
+	{
+		log_debug("set ssid 5ghz failed due to gateway configured as an agent !!!");
+	}
+	// To get 5ghz ssid
+	fp = popen(FIVE_GHZ_GET_SSID,"r");
+	if (fp == NULL) {
+			log_err("Get 5ghz ssid  failed");
+			exit(1);
+	} else {
+		memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));
+		fscanf(fp, "%[^\n]", ssid_5ghz);
+		log_debug("ssid 5ghz get value : %s",ssid_5ghz);
+	}
+	prop_send_by_name("gw_wifi_ssid_5G");
+	pclose(fp);
+
+	return 0;
 }
 
 
@@ -1732,52 +1813,72 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
 static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-	log_debug("set ssid 5ghz key functionality disabled !!!");
-        memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
-        strcpy(ssid_key_5ghz, "N/A");
-        prop_send_by_name("gw_wifi_ssid_key_5G");
 	
-#if 0	
-        FILE *fp;
+    FILE *fp;
 	FILE *fp1;
 
-        char five_ghz_key_command[150];
-	 unsigned int validate;
+	char five_ghz_key_command[150];
+	unsigned int validate;
+	unsigned int status;
+	unsigned int value = 1;
 
-        memset(five_ghz_key_command,'\0',sizeof(five_ghz_key_command));
-        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-                log_err("prop_arg_set returned error");
-                return -1;
-        }
+	// Variable to store initial regex()
+	regex_t reegex;	
 
-        validate = strlen(ssid_key_5ghz);
-
-	if(validate  > 7 && validate < 64){
-
-                snprintf(five_ghz_key_command, sizeof(five_ghz_key_command), FIVE_GHZ_SET_KEY, ssid_key_5ghz);
-
-                fp = popen(five_ghz_key_command, "r");
-                if (fp == NULL) {
-                        log_err("set 2.4GHZ ssid failed");
-                        exit(1);
-                }
-                pclose(fp);
-
-	        memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));	
-
-                fp1 = popen(RESTART_MESH_BROKER, "r");
-                if( fp1 == NULL) {
-                        log_err("restart mesh broker failed");
-                        exit(1);
-                }
-                pclose(fp1);
+	memset(five_ghz_key_command,'\0',sizeof(five_ghz_key_command));
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+			log_err("prop_arg_set returned error");
+			return -1;
 	}
-        else {
-              log_err("Invalid ssid key 5ghz");
-        }
+	status=appd_mesh_controller_status();
 
-#endif		
-        return 0;
+	if(status == 1)
+	{
+
+		validate = strlen(ssid_key_5ghz);
+
+		log_debug("set ssid 5ghz key value : %s and size of the value : %d",ssid_key_5ghz,validate);
+
+		value = regcomp( &reegex, "^[%x]+$", 0);
+		value = regexec( &reegex, ssid_2ghz, 0, NULL, 0);
+
+		if(validate  > 7 && validate < 64 && value != 0){
+
+			snprintf(five_ghz_key_command, sizeof(five_ghz_key_command), FIVE_GHZ_SET_KEY, ssid_key_5ghz);
+
+			fp = popen(five_ghz_key_command, "r");
+			if (fp == NULL) {
+					log_err("set 5GHZ ssid key failed");
+					exit(1);
+			}
+			pclose(fp);
+
+			fp1 = popen(RESTART_MESH_BROKER, "r");
+			if( fp1 == NULL) {
+					log_err("restart mesh broker failed");
+					exit(1);
+			}
+			pclose(fp1);
+			memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+			memset(ssid_key_5ghz,'0',1);
+			prop_send_by_name("gw_wifi_ssid_key_5G");		
+		}
+		else {
+			log_err("Invalid ssid key 5ghz");
+			memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+			memset(ssid_key_5ghz,'0',1);
+			prop_send_by_name("gw_wifi_ssid_key_5G");
+		}
+	}
+	else
+	{
+		memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+		log_debug("set ssid 5ghz key failed due to gateway configured as an agent !!!");
+		strcpy(ssid_key_5ghz, "N/A");
+		prop_send_by_name("gw_wifi_ssid_key_5G");
+	}
+
+	return 0;
 }
 
 
@@ -1786,92 +1887,76 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
  */
 static int appd_properties_get(void)
 {
-        FILE *fp;
+    FILE *fp;
 	FILE *fp1;
 	FILE *fp2;
 	FILE *fp3;
 	FILE *fp4;
 
-        // To get 2ghz channel value
-        fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
-        if (fp == NULL) {
-                log_err("Get 2ghz channel failed");
-                exit(1);
-        } else {
-                fscanf(fp, "%d", &channel_2ghz);
-                log_debug("get 2ghz channel value : %d",channel_2ghz);
-                //channel_2ghz = get_channel_2ghz_value;        
-                //log_debug("set 2ghz channel value: %d",channel_2ghz);
-        }
-        pclose(fp);
-
-        // To get 5ghz channel value
-        fp1 = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
-        if (fp1 == NULL) {
-                log_err("Get 5ghz channel failed");
-                exit(1);
-        } else {
-                fscanf(fp1, "%d", &channel_5ghz);
-                log_debug("get 5ghz channel value : %d",channel_5ghz);
-                //channel_5ghz = get_channel_5ghz_value;
-                //log_debug("set 5ghz channel value: %d",channel_5ghz);
-        }
-        pclose(fp1);
-
-        // To get 2ghz ssid 
-        fp2 = popen(TWO_GHZ_GET_SSID,"r");
-        if (fp2 == NULL) {
-                log_err("Get 2ghz ssid  failed");
-                exit(1);
-        } else {
-	       memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
-               fscanf(fp2, "%[^\n]", ssid_2ghz);
-               log_debug("ssid 2ghz get value : %s",ssid_2ghz);
-	      // strcpy(ssid_2ghz,ssid_2ghz_get);
-               //log_debug("ssid 2ghz set value : %s",ssid_2ghz);
+	// To get 2ghz channel value
+	fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
+	if (fp == NULL) {
+			log_err("Get 2ghz channel failed");
+			exit(1);
+	} else {
+		fscanf(fp, "%d", &channel_2ghz);
+		log_debug("get 2ghz channel value : %d",channel_2ghz);
 	}
-        pclose(fp2);
+	pclose(fp);
 
-        // To get 5ghz ssid
-        fp3 = popen(FIVE_GHZ_GET_SSID,"r");
-        if (fp3 == NULL) {
-                log_err("Get 5ghz ssid  failed");
-                exit(1);
-        } else {
-	       memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
-               fscanf(fp, "%[^\n]", ssid_5ghz);
-               log_debug("ssid 5ghz get value : %s",ssid_5ghz);
-              // strcpy(ssid_5ghz,ssid_5ghz_get);
-              // log_debug("ssid 5ghz set value : %s",ssid_5ghz);
-        }
-        pclose(fp3);
+	// To get 5ghz channel value
+	fp1 = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
+	if (fp1 == NULL) {
+			log_err("Get 5ghz channel failed");
+			exit(1);
+	} else {
+		fscanf(fp1, "%d", &channel_5ghz);
+		log_debug("get 5ghz channel value : %d",channel_5ghz);
+	}
+	pclose(fp1);
 
-        // To get backhaul optimization value
-        fp4 = popen(GET_BH_OPTIMIZATION,"r");
-        if (fp4 == NULL) {
-                log_err("Get backhaul optimization failed");
-                exit(1);
-        } else {
-                fscanf(fp4, "%d", &bh_optimization);
-                log_debug("backhaul optimization enable/disable : %d",bh_optimization);
-                //bh_optimization = get_bh_optimization;
-                //log_debug("backhual optimization enable/disable: %d",bh_optimization);
-        }
-        pclose(fp4);
+	// To get 2ghz ssid 
+	fp2 = popen(TWO_GHZ_GET_SSID,"r");
+	if (fp2 == NULL) {
+			log_err("Get 2ghz ssid  failed");
+			exit(1);
+	} else {
+		memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
+		fscanf(fp2, "%[^\n]", ssid_2ghz);
+		log_debug("ssid 2ghz get value : %s",ssid_2ghz);
+	}
+	pclose(fp2);
 
- 	//if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
-        //            prop_send_by_name("ngrok_hostname");
-        //          prop_send_by_name("ngrok_port");
-        //}
+	// To get 5ghz ssid
+	fp3 = popen(FIVE_GHZ_GET_SSID,"r");
+	if (fp3 == NULL) {
+			log_err("Get 5ghz ssid  failed");
+			exit(1);
+	} else {
+		memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));	
+		fscanf(fp, "%[^\n]", ssid_5ghz);
+		log_debug("ssid 5ghz get value : %s",ssid_5ghz);
+	}
+	pclose(fp3);
 
+	// To get backhaul optimization value
+	fp4 = popen(GET_BH_OPTIMIZATION,"r");
+	if (fp4 == NULL) {
+			log_err("Get backhaul optimization failed");
+			exit(1);
+	} else {
+		fscanf(fp4, "%d", &bh_optimization);
+		log_debug("backhaul optimization enable/disable : %d",bh_optimization);
+	}
+	pclose(fp4);
 
-       prop_send_by_name("gw_wifi_channel_2G");
-       prop_send_by_name("gw_wifi_channel_5G");
-       prop_send_by_name("gw_wifi_ssid_2G");
-       prop_send_by_name("gw_wifi_ssid_5G");
-       prop_send_by_name("gw_wifi_bh_optimization");
+	prop_send_by_name("gw_wifi_channel_2G");
+	prop_send_by_name("gw_wifi_channel_5G");
+	prop_send_by_name("gw_wifi_ssid_2G");
+	prop_send_by_name("gw_wifi_ssid_5G");
+	prop_send_by_name("gw_wifi_bh_optimization");
 
-       return 0;
+    return 0;
 }
 
 /*
