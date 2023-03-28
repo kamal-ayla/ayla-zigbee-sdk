@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.3";
+const char *appd_template_version = "zigbee_gateway_demo_v3.4";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -231,9 +231,9 @@ static char schedule_reboot[SCHEDULE_REBOOT];
 
 /* WPS button */
 #define WPS_BUTTON_LEN                                  50
-static char wps_pairing_status[WPS_BUTTON_LEN];
-static int wps_button_press;
-static struct timer wps_pairing_status_timer;
+static char gw_led_status[WPS_BUTTON_LEN];
+static int gw_wps_button;
+static struct timer gw_led_status_timer;
 
 /* Firmware properties **/
 #define RADIO_FW_LEN                                    50
@@ -979,6 +979,7 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
                         prop_send_by_name("radio1_fw_version");
                         prop_send_by_name("radio2_fw_version");
                         prop_send_by_name("radio0_fw_version");
+			prop_send_by_name("gw_led_status");
 			appd_properties_get();
 			log_debug("get sysinfo success");
 	}
@@ -1149,7 +1150,7 @@ static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
 
 	log_debug("Updating the Ngrok data");
 	prop_send_by_name("ngrok_status");
-	prop_send_by_name("ngrok_error_status");
+	//prop_send_by_name("ngrok_error_status");
 	prop_send_by_name("ngrok_hostname");
 	prop_send_by_name("ngrok_port");
 	appd_ngrok_send_authtoken();
@@ -1284,29 +1285,72 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 }
 
 /*
- *WPS data update timer
+ *WPS data update timer & gw led status update
  */
 
-static void appd_wps_button_update(struct timer *timer_wps_pairing_status)
+static void appd_gw_wps_status_update(struct timer *timer_gw_led_status)
 {
-        timer_cancel(app_get_timers(), timer_wps_pairing_status);
-
+        timer_cancel(app_get_timers(), timer_gw_led_status);
+	gw_wps_button=0;
+        prop_send_by_name("gw_wps_button");
         log_debug("Timer wps button");
-        prop_send_by_name("wps_pairing_status");
+        prop_send_by_name("gw_led_status");
 }
 
 /*
  *To get the wps status.
  */
-static enum err_t appd_wps_status_send(struct prop *prop, int req_id,
+static enum err_t appd_gw_led_status_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
-	/* hard coded WPS pairing completed */
+        long int red,red_delay,orange,orange_delay,green,green_delay;
+        char status[50];
+        log_debug("GW led status");
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps\\:red/brightness");
+        exec_systemcmd(command, data, DATA_SIZE);
+        red=atoi(data);
+        //log_debug("Red %d",red);
 
-        log_debug("WPS pairing completed");
-        strcpy(wps_pairing_status , "WPS pairing completed");
-        wps_button_press=0;
-        prop_send_by_name("wps_button_press");
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps\\:red/delay_on");
+        exec_systemcmd(command, data, DATA_SIZE);
+        red_delay=atoi(data);
+        //log_debug("Red_delay %d",red_delay);
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps\\:orange/brightness");
+        exec_systemcmd(command, data, DATA_SIZE);
+        orange=atoi(data);
+        //log_debug("Orange %d",orange);
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps\\:orange/delay_on");
+        exec_systemcmd(command, data, DATA_SIZE);
+        orange_delay=atoi(data);
+        //log_debug("orange_delay %d",orange_delay);
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps\\:green/brightness");
+        exec_systemcmd(command, data, DATA_SIZE);
+        green=atoi(data);
+        //log_debug("green %d",green);
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command,"cat /sys/class/leds/wps/\\:green/delay_on");
+        exec_systemcmd(command, data, DATA_SIZE);
+        green_delay=atoi(data);
+        //log_debug("Green_delay %d",green_delay);
+
+        sprintf(status,"%s_%s,%s_%s,%s_%s",(red==255) ? "RED" : "0",(red_delay==1000) ? "HIGH" : (red_delay==250) ? "SHORT" : "0"  ,(orange==255) ? "ORANGE" : "0",(orange_delay==1000) ? "HIGH" : (orange_delay==250) ? "SHORT" : "0",(green==255)?"GREEN":"0",(green_delay==1000) ? "HIGH" : (green_delay==250) ? "SHORT" : "0" );
+
+        strcpy(gw_led_status , status);
         return prop_arg_send(prop, req_id, opts);
 
 }
@@ -1815,10 +1859,10 @@ static int appd_properties_get(void)
         }
         pclose(fp4);
 
- 	if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
-                    prop_send_by_name("ngrok_hostname");
-                  prop_send_by_name("ngrok_port");
-       }
+ 	//if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
+        //            prop_send_by_name("ngrok_hostname");
+        //          prop_send_by_name("ngrok_port");
+        //}
 
 
        prop_send_by_name("gw_wifi_channel_2G");
@@ -2230,9 +2274,9 @@ static int appd_schedule_reboot(struct prop *prop, const void *val,
 }
 
 /*
- *To get the wps button
+ *To enable gw wps button and update the gw led status after 110 seconds
  */
-static int appd_wps_button_press(struct prop *prop, const void *val,
+static int appd_gw_wps_button(struct prop *prop, const void *val,
         size_t len, const struct op_args *args)
 {
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
@@ -2240,21 +2284,20 @@ static int appd_wps_button_press(struct prop *prop, const void *val,
                 return -1;
         }
 
-        if (wps_button_press == 1) {
+        if (gw_wps_button == 1) {
                 log_debug("WPS button pressed");
-		memset(command,'\0',sizeof(command));
-		memset(data,'\0',sizeof(data));
-		sprintf(command, "wps_button_pressed.sh");
-		exec_systemcmd(command, data, DATA_SIZE);
-		timer_set(app_get_timers(), &wps_pairing_status_timer, 120000);
-        } else if (wps_button_press== 0) {
-                timer_set(app_get_timers(), &wps_pairing_status_timer, 1000);
+                memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, "wps_button_pressed.sh");
+                exec_systemcmd(command, data, DATA_SIZE);
+                timer_set(app_get_timers(), &gw_led_status_timer, 110000);
+        } else if (gw_wps_button== 0) {
+                timer_set(app_get_timers(), &gw_led_status_timer, 1000);
         } else {
                 log_debug("wps button wrong info");
         }
         return 0;
 }
-
 
 /*
  *  *To get the Radio BLE FW.
@@ -2857,23 +2900,22 @@ static struct prop appd_gw_prop_table[] = {
                 .len = sizeof(schedule_reboot),
         },
 
-	{
-                .name = "wps_button_press",
+        {
+                .name = "gw_wps_button",
                 .type = PROP_INTEGER,
-                .set = appd_wps_button_press,
+                .set = appd_gw_wps_button,
                 .send = prop_arg_send,
-                .arg = &wps_button_press,
-                .len = sizeof(wps_button_press),
+                .arg = &gw_wps_button,
+                .len = sizeof(gw_wps_button),
         },
 
-	{
-                .name = "wps_pairing_status",
+        {
+                .name = "gw_led_status",
                 .type = PROP_STRING,
-                .send = appd_wps_status_send,
-                .arg = &wps_pairing_status,
-                .len = sizeof(wps_pairing_status),
+                .send = appd_gw_led_status_send,
+                .arg = &gw_led_status,
+                .len = sizeof(gw_led_status),
         }
-
 
 };
 
@@ -3059,7 +3101,7 @@ int appd_init(void)
 
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
-	timer_init(&wps_pairing_status_timer, appd_wps_button_update);
+	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
 
 	return 0;
 }
