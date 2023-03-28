@@ -107,6 +107,7 @@ static unsigned int wifi_sta_info_update_period_min;
 
 static int appd_check_wifi_sta_data_deviation(char *name, char *value);
 static int appd_send_wifi_sta_data(char *name, char *value);
+static int appd_is_ngrok_installed(void);
 
 /* Station properties  */
 static int wifi_sta_info_update;
@@ -210,6 +211,7 @@ static int appd_properties_get(void);
 static char auth_command[AUTH_COMMAND_LEN];
 static u8 ngrok_enable;
 static int ngrok_port;
+static unsigned int ngrok_update_counter;
 static char ngrok_status[NGROK_STATUS_LEN];
 static char ngrok_error_status[NGROK_STATUS_LEN];
 static char ngrok_hostname[NGROK_STATUS_LEN];
@@ -982,6 +984,11 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
                         prop_send_by_name("radio2_fw_version");
                         prop_send_by_name("radio0_fw_version");
 			prop_send_by_name("gw_led_status");
+                        if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
+                                prop_send_by_name("ngrok_status");
+                                prop_send_by_name("ngrok_hostname");
+                                prop_send_by_name("ngrok_port");
+                        }
 			appd_properties_get();
 			log_debug("get sysinfo success");
 	}
@@ -1109,37 +1116,40 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
         size_t len, const struct op_args *args)
 {
 
-	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-		log_err("prop_arg_set returned error");
-		return -1;
-	}
+        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                log_err("prop_arg_set returned error");
+                return -1;
+        }
+        prop_send_by_name("ngrok_status");
 
-	if (ngrok_enable == 1) {
+        if ((strcmp(ngrok_status,"ngrok not running") == 0) && ngrok_enable == 1) {
 
-		memset(command,'\0',sizeof(command));
-		memset(data,'\0',sizeof(data));
-		sprintf(command, GET_NGROK_STOP);
-		exec_systemcmd(command, data, DATA_SIZE);
-
-		memset(command,'\0',sizeof(command));
-                memset(data,'\0',sizeof(data));
-                sprintf(command, GET_NGROK_START);	
-		exec_systemcmd(command, data, DATA_SIZE);
-
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
-
-	} else if (ngrok_enable == 0) {
-
-		memset(command,'\0',sizeof(command));
+                memset(command,'\0',sizeof(command));
                 memset(data,'\0',sizeof(data));
                 sprintf(command, GET_NGROK_STOP);
                 exec_systemcmd(command, data, DATA_SIZE);
-		
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
-	} else {
-		log_debug("get ngrok_info failed");
-	}
-	return 0;
+
+                memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, GET_NGROK_START);
+                exec_systemcmd(command, data, DATA_SIZE);
+        } else if ((strcmp(ngrok_status,"ngrok not running") == 0) && ngrok_enable == 0) {
+                 log_debug("ngrok status : ngrok not running and ngrok enable set to 0");
+        } else if ((strcmp(ngrok_status,"ngrok running") == 0) && ngrok_enable == 1) {
+                 log_debug("ngrok status: ngrok running and ngrok enable set to 1");
+        } else if ((strcmp(ngrok_status,"ngrok running") == 0) && ngrok_enable == 0) {
+
+                memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, GET_NGROK_STOP);
+                exec_systemcmd(command, data, DATA_SIZE);
+                log_debug("ngrok status : ngrok running and ngrok enable set to 0");
+        } else {
+                log_debug("get ngrok_info failed");
+        }
+        timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
+	
+       return 0;
 }
 
 /*
@@ -1152,10 +1162,31 @@ static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
 
 	log_debug("Updating the Ngrok data");
 	prop_send_by_name("ngrok_status");
-//	prop_send_by_name("ngrok_error_status");
-	prop_send_by_name("ngrok_hostname");
-	prop_send_by_name("ngrok_port");
-	appd_ngrok_send_authtoken();
+        
+	FILE *fp;
+
+	fp = popen(GET_NGROK_PORT_NUM,"r");
+        if (fp == NULL || appd_is_ngrok_installed()) {
+                log_err("Get ngrok port failed");
+        } else {
+                fscanf(fp, "%d", &ngrok_port);
+                log_debug("Get ngrok_port value in appd_ngrok_data_update : %d",ngrok_port);
+        
+                pclose(fp);
+       }
+
+        if ((strcmp(ngrok_status,"ngrok running") == 0) && ngrok_port == 0 && (ngrok_update_counter < 4)){
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 2000);
+		log_debug("port 0 adding again & ngrok_update_counter = %d",ngrok_update_counter);
+		ngrok_update_counter++;
+        } else {
+                ngrok_update_counter = 0;
+                log_debug("either number of iterations completed or port number available");
+		prop_send_by_name("ngrok_error_status");
+		prop_send_by_name("ngrok_hostname");
+		prop_send_by_name("ngrok_port");
+		appd_ngrok_send_authtoken();
+	} 	
 }
 
 /*
@@ -1235,23 +1266,32 @@ static enum err_t appd_ngrok_error_status_send(struct prop *prop, int req_id,
 {
         FILE *fp;
 
+   if((strcmp(ngrok_status,"ngrok not running") == 0) && (ngrok_enable == 1)){
+
         fp = popen(GET_NGROK_ERROR_STATUS,"r");
         if (fp == NULL || appd_is_ngrok_installed()) {
                 log_err("Get ngrok error status failed");
                 strcpy(ngrok_error_status , "ngrok not installed");
-		ngrok_enable = 0;
-		prop_send_by_name("ngrok_enable");
+                ngrok_enable = 0;
+                prop_send_by_name("ngrok_enable");
         } else {
-		memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+                memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
                 fscanf(fp, "%[^\n]", ngrok_error_status);
-		if(strlen(ngrok_error_status) <= 0)
-		{
-			memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
-			ngrok_enable = 0;
-			prop_send_by_name("ngrok_enable");
-		}	
+
+
+                if(strlen(ngrok_error_status) < 10)
+                {
+                        memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+                        strcpy(ngrok_error_status , "NONE");
+                }
+
                 pclose(fp);
         }
+   }
+   else {
+            memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+            strcpy(ngrok_error_status , "NONE");
+   }
         return prop_arg_send(prop, req_id, opts);
 
 }
@@ -3187,13 +3227,13 @@ int appd_init(void)
 	 */
 	node_mgmt_init(app_get_timers());
 
-	appd_prop_init();
 	node_set_cloud_callbacks(&cloud_callbacks);
 	appd_node_network_callback_init();
 
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
+	appd_prop_init();
 
 	return 0;
 }
