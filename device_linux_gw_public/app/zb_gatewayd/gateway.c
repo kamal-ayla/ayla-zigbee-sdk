@@ -228,7 +228,7 @@ static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 
 /* Schedule Reboot */
 #define SCHEDULE_REBOOT                         	50
-#define CLEAR_CRON					"crontab -l | grep -v '/sbin/reboot' | crontab -"
+#define CLEAR_CRON					"crontab -l | grep -v '/bin/gw_schedule_reboot.sh' | crontab -"
 #define SCHEDULE_RBT_REASON                             "transformer-cli set rpc.system.scheduledrebootreason \"GUI\""
 #define SCHEDULE_RBT_APPLY                              "transformer-cli apply"
 static char schedule_reboot[SCHEDULE_REBOOT];
@@ -2340,19 +2340,21 @@ static int appd_schedule_reboot(struct prop *prop, const void *val,
         log_debug("schedule reboot: %s",schedule_reboot);
         char *delim = ":";
         char * x [] = {"0","1","2","3","4","5","6","0,1","0,2","0,3","0,4","0,5","0,6","1,2","1,3","1,4","1,5","1,6","2,3","2,4","2,5","2,6","3,4","3,5","3,6","4,5","4,6","5,6","0,1,2","0,1,3","0,1,4","0,1,5","0,1,6","0,2,3","0,2,4","0,2,5","0,2,6","0,3,4","0,3,5","0,3,6","0,4,5","0,4,6","0,5,6","1,2,3","1,2,4","1,2,5","1,2,6","1,3,4","1,3,5","1,3,6","1,4,5","1,4,6","1,5,6","2,3,4","2,3,5","2,3,6","2,4,5","2,4,6","2,5,6","3,4,5","3,4,6","3,5,6","4,5,6","0,1,2,3","0,1,2,4","0,1,2,5","0,1,2,6","0,2,3,4","0,2,3,5","0,2,3,6","0,2,4,5","0,2,4,6","0,2,5,6","1,2,3,4","1,2,3,5","1,2,3,6","1,3,4,5","1,3,4,6","1,3,5,6","1,4,5,6","2,3,4,5","2,3,4,6","2,4,5,6","3,4,5,6","0,1,2,3,4","0,1,2,3,5","0,1,2,3,6","0,2,3,4,5","0,2,3,4,5","0,3,4,5,6","1,2,3,4,5","1,2,3,4,6","2,3,4,5,6","0,1,2,3,4,5,6","0-2","0-3","0-4","0-5","0-6","1-3","1-4","1-5","1-6","2-4","2-5","2-6","3-5","3-6","4-6"};
-        unsigned count = 0;
-        char *token = strtok(schedule_reboot,delim);
-        int min,hour,i;
-        char day[5],cron[100];
-        count++;
 
-        if(atoi(schedule_reboot)==0){
-		memset(command,'\0',sizeof(command));
-        	memset(data,'\0',sizeof(data));
-        	sprintf(command, CLEAR_CRON);
-        	exec_systemcmd(command, data, DATA_SIZE);
+        if(!strcmp(schedule_reboot,"0")){
+                memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, CLEAR_CRON);
+                exec_systemcmd(command, data, DATA_SIZE);
+                log_debug("disable reboot : %s ",command);
         }
         else{
+                unsigned count = 0;
+                char *token = strtok(schedule_reboot,delim);
+                int min,hour,i;
+                char day[5],cron[200];
+                count++;
+
                 while(token != NULL)
                 {
                         if(count==1){
@@ -2364,20 +2366,18 @@ static int appd_schedule_reboot(struct prop *prop, const void *val,
                         if((count==3)&&(min<60)&&(hour<24)){
                                 memset(day,0,sizeof(day));
                                 strcpy(day,token);
-                                printf("Token no. %d : %02d:%02d:%s \n", count,min,hour,day);
                                 memset(cron,0,sizeof(cron));
                                 int len = sizeof(x)/sizeof(x[0]);
                                 for(i = 0; i < len; ++i){
                                         if(!strcmp(x[i], day)){
-                                                sprintf(cron,"echo \"%02d %02d * * %s /sbin/reboot\" >>  /etc/crontabs/root",min,hour,day);
 						memset(command,'\0',sizeof(command));
                 				memset(data,'\0',sizeof(data));
                 				sprintf(command, CLEAR_CRON);
                 				exec_systemcmd(command, data, DATA_SIZE);
-						memset(command,'\0',sizeof(command));
+						memset(cron,'\0',sizeof(cron));
                                                 memset(data,'\0',sizeof(data));
-                                                sprintf(command, cron);
-                                                exec_systemcmd(command, data, DATA_SIZE);
+						sprintf(cron,"echo \"%02d %02d * * %s /bin/gw_schedule_reboot.sh\" >>  /etc/crontabs/root",min,hour,day);
+                                                exec_systemcmd(cron, data, DATA_SIZE);
 						memset(command,'\0',sizeof(command));
                                                 memset(data,'\0',sizeof(data));
                                                 sprintf(command, SCHEDULE_RBT_REASON);
