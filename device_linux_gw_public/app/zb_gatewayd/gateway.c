@@ -61,7 +61,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.4";
+const char *appd_template_version = "zigbee_gateway_demo_v3.5";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -179,6 +179,26 @@ static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
 //#define DISABLE_BH_OPTIMIZATION "uci set smartmesh.sm_steering.bhsta_optimization=0"
 #define GET_BH_OPTIMIZATION "uci get smartmesh.sm_steering.bhsta_optimization"
 
+
+/* channel scanning properties */
+//Multi-channel scanning 
+#define CHANNEL_SCAN_CMD_LEN 80
+static unsigned int multi_channel_scan;
+static char multi_channel_buf[CHANNEL_SCAN_CMD_LEN];
+
+#define MULTI_CHANNEL_SCAN_CMD "uci set smartmesh.sm_agent.multi_channel_support=%d"
+#define GET_MULTI_CHANNEL_SCAN "uci get smartmesh.sm_agent.multi_channel_support"
+
+
+//Single channel scanning
+static unsigned int single_channel_scan;
+static char single_channel_buf[CHANNEL_SCAN_CMD_LEN];
+
+#define SINGLE_CHANNEL_SCAN_CMD "uci set smartmesh.sm_agent.channel_scan_capability=%d"
+#define GET_SINGLE_CHANNEL_SCAN "uci get smartmesh.sm_agent.channel_scan_capability"
+
+
+
 /* ssid and key properties */
 #define SSID_LEN 80
 #define KEY_LEN 80
@@ -199,8 +219,10 @@ static char ssid_key_2ghz[KEY_LEN];
 #define FIVE_GHZ_SET_KEY "uci set mesh_broker.cred1.wpa_psk_key=\"%s\""
 #define RESTART_MESH_BROKER "/etc/init.d/mesh-broker restart"
 
-#define TWO_GHZ_GET_SSID "uci get mesh_broker.cred0.ssid"
+#define TWO_GHZ_GET_SSID  "uci get mesh_broker.cred0.ssid"
 #define FIVE_GHZ_GET_SSID "uci get mesh_broker.cred1.ssid"
+#define TWO_GHZ_GET_KEY   "uci get mesh_broker.cred0.wpa_psk_key"
+#define FIVE_GHZ_GET_KEY  "uci get mesh_broker.cred1.wpa_psk_key"
 
 static int appd_properties_get(void);
 
@@ -1583,48 +1605,184 @@ static int appd_bh_optimization(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 
-	FILE *fp;
-	FILE *fp1;
-	FILE *fp2;
+   FILE *fp;
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
+
+   if(bh_optimization > 1) {
+       bh_optimization = 1;
+   }
+
+   log_debug("backhaul optmization set value : %d",bh_optimization);
+
+   snprintf(bh_optimization_command, sizeof(bh_optimization_command), BH_OPTIMIZE, bh_optimization);
+
+   fp = popen(bh_optimization_command, "r");
+   if(fp == NULL) {
+       log_err("enable/disable backhaul optimization command failed");
+       exit(1);
+   }
+   pclose(fp);
+
+   fp1 = popen(UCI_COMMIT, "r");
+   if(fp1 == NULL) {
+       log_err("uci commit command failed");
+       exit(1);
+   }
+   pclose(fp1);
+
+   fp2 = popen(RESTART_MESH_BROKER, "r");
+   if(fp2 == NULL) {
+       log_err("restart mesh broker failed");
+       exit(1);
+   }
+   pclose(fp2);
+
+   // To get backhaul optimization value
+   fp3 = popen(GET_BH_OPTIMIZATION,"r");
+   if(fp3 == NULL) {
+      log_err("Get backhaul optimization failed");
+      exit(1);
+   } else {
+      fscanf(fp3, "%d", &bh_optimization);
+      log_debug("backhaul optimization enable/disable : %d",bh_optimization);
+   }
+   pclose(fp3);
+   prop_send_by_name("gw_wifi_bh_optimization");    
+
+   return 0;
+}
 
 
-	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-			log_err("prop_arg_set returned error");
-			return -1;
-	}
+/*
+ *enable/disable multi channel scan from cloud.
+ */
 
-	if(bh_optimization > 1) {
-	        bh_optimization = 1;
-	}
+static int appd_multi_channel_scan(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
 
-	log_debug("backhaul optmization set value : %d",bh_optimization);
+   FILE *fp;
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
 
-	snprintf(bh_optimization_command, sizeof(bh_optimization_command), BH_OPTIMIZE, bh_optimization);
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
 
-	fp = popen(bh_optimization_command, "r");
-	if (fp == NULL) {
-		  log_err("enable/disable backhaul optimization command failed");
-		  exit(1);
-	}
-	pclose(fp);
+   if(multi_channel_scan > 1) {
+       multi_channel_scan = 1;
+   }
+
+   log_debug("Multi channel scan set value : %d",multi_channel_scan);
+
+   snprintf(multi_channel_buf, sizeof(multi_channel_buf), MULTI_CHANNEL_SCAN_CMD, multi_channel_scan);
+
+   fp = popen(multi_channel_buf, "r");
+   if (fp == NULL) {
+       log_err("enable/disable multi channel scan command failed");
+       exit(1);
+   }
+   pclose(fp);
+   
+   fp1 = popen(UCI_COMMIT, "r");
+   if(fp1 == NULL) {
+       log_err("uci commit command failed");
+       exit(1);
+   }
+   pclose(fp1);
+
+   fp2 = popen(RESTART_MESH_BROKER, "r");
+   if(fp2 == NULL) {
+       log_err("restart mesh broker failed");
+       exit(1);
+   }
+   pclose(fp2);
+
+   // To get multi channel value
+   fp3 = popen(GET_MULTI_CHANNEL_SCAN,"r");
+   if(fp3 == NULL) {
+       log_err("Get multi channel scan failed");
+       exit(1);
+   } else {
+       fscanf(fp3, "%d", &multi_channel_scan);
+       log_debug("Get multi channel scan value : %d",multi_channel_scan);
+   }
+   pclose(fp3);
+   prop_send_by_name("gw_wifi_multi_channel_scan");
+      
+   return 0;
+}
+
+/*
+ *enable/disable single channel scan from cloud.
+ */
+
+static int appd_single_channel_scan(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+   FILE *fp;
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
 
 
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
 
-    fp1 = popen(UCI_COMMIT, "r");
-    if( fp1 == NULL) {
-		   log_err("uci commit command failed");
-		   exit(1);
-    }
-    pclose(fp1);
+   if(single_channel_scan > 1) {
+       single_channel_scan = 1;
+   }
 
-    fp2 = popen(RESTART_MESH_BROKER, "r");
-    if( fp2 == NULL) {
-		  log_err("restart mesh broker failed");
-		   exit(1);
-    }
-    pclose(fp2);
+   log_debug("Single channel scan set value : %d",single_channel_scan);
 
-	return 0;
+   snprintf(single_channel_buf, sizeof(single_channel_buf), SINGLE_CHANNEL_SCAN_CMD, single_channel_scan);
+
+   fp = popen(single_channel_buf, "r");
+   if (fp == NULL) {
+       log_err("enable/disable single channel scan command failed");
+       exit(1);
+   }
+   pclose(fp);
+   fp1 = popen(UCI_COMMIT, "r");
+   if(fp1 == NULL) {
+       log_err("uci commit command failed");
+       exit(1);
+   }
+   pclose(fp1);
+
+   fp2 = popen(RESTART_MESH_BROKER, "r");
+   if(fp2 == NULL) {
+       log_err("restart mesh broker failed");
+       exit(1);
+   }
+   pclose(fp2);
+
+   // To get single channel value
+   fp3 = popen(GET_SINGLE_CHANNEL_SCAN,"r");
+   if(fp3 == NULL) {
+       log_err("Get single channel scan failed");
+       exit(1);
+   } else {
+       fscanf(fp3, "%d", &single_channel_scan);
+       log_debug("Get single channel scan value : %d",single_channel_scan);
+   }
+   pclose(fp3);
+   prop_send_by_name("gw_wifi_single_channel_scan");
+   
+
+   return 0;
 }
 
 
@@ -1636,7 +1794,7 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 
-    FILE *fp;
+        FILE *fp;
 	FILE *fp1;
 
 	char two_ghz_ssid_command[150];
@@ -1708,7 +1866,7 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 	
-    FILE *fp;
+        FILE *fp;
 	FILE *fp1;
 
 	char two_ghz_key_command[150];
@@ -1731,7 +1889,7 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 		validate = strlen(ssid_key_2ghz);
 		log_debug("set ssid 2ghz key value : %s and size of the value : %d",ssid_key_2ghz,validate);
 
-	value = regcomp( &reegex, "^[%x]+$", 0);
+	        value = regcomp( &reegex, "^[%x]+$", 0);
 		value = regexec( &reegex, ssid_2ghz, 0, NULL, 0);
 
 		if(validate  > 7 && validate < 64 && value != 0 ){
@@ -1745,31 +1903,37 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 			}
 			pclose(fp);
 
+                        memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));			
+			
 			fp1 = popen(RESTART_MESH_BROKER, "r");
 			if( fp1 == NULL) {
 					log_err("restart mesh broker failed");
 					exit(1);
 			}
 			pclose(fp1);
-			
-			memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
-			memset(ssid_key_2ghz,'0',1);
-			prop_send_by_name("gw_wifi_ssid_key_2G");
 		}
 		else {
 			log_err("Invalid ssid key 2ghz");
-			memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
-			memset(ssid_key_2ghz,'0',1);
-			prop_send_by_name("gw_wifi_ssid_key_2G");
 		}
 	}
 	else
 	{
-		memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
 		log_debug("set ssid 2ghz key failed due to gateway configured as an agent !!!");
-		strcpy(ssid_key_2ghz, "N/A");
-		prop_send_by_name("gw_wifi_ssid_key_2G");
 	}
+
+	// To get 2ghz ssid key
+        fp = popen(TWO_GHZ_GET_KEY,"r");
+        if (fp == NULL) {
+                        log_err("Get 2ghz ssid key failed");
+                        exit(1);
+        } else {
+                memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+                fscanf(fp, "%[^\n]", ssid_key_2ghz);
+                log_debug("ssid key 2ghz get value : %s",ssid_key_2ghz);
+        }
+        prop_send_by_name("gw_wifi_ssid_key_2G");
+        pclose(fp);
+
 	
 	return 0;
 }
@@ -1782,7 +1946,7 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 
-    FILE *fp;
+        FILE *fp;
 	FILE *fp1;
 
 	char five_ghz_ssid_command[150];
@@ -1854,7 +2018,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 	
-    FILE *fp;
+        FILE *fp;
 	FILE *fp1;
 
 	char five_ghz_key_command[150];
@@ -1893,30 +2057,37 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 			}
 			pclose(fp);
 
+			memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+
 			fp1 = popen(RESTART_MESH_BROKER, "r");
 			if( fp1 == NULL) {
 					log_err("restart mesh broker failed");
 					exit(1);
 			}
 			pclose(fp1);
-			memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
-			memset(ssid_key_5ghz,'0',1);
-			prop_send_by_name("gw_wifi_ssid_key_5G");		
 		}
 		else {
 			log_err("Invalid ssid key 5ghz");
-			memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
-			memset(ssid_key_5ghz,'0',1);
-			prop_send_by_name("gw_wifi_ssid_key_5G");
 		}
 	}
 	else
 	{
-		memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
 		log_debug("set ssid 5ghz key failed due to gateway configured as an agent !!!");
-		strcpy(ssid_key_5ghz, "N/A");
-		prop_send_by_name("gw_wifi_ssid_key_5G");
 	}
+
+	// To get 5ghz ssid key
+        fp = popen(FIVE_GHZ_GET_KEY,"r");
+        if (fp == NULL) {
+                        log_err("Get 5ghz ssid key failed");
+                        exit(1);
+        } else {
+                memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+                fscanf(fp, "%[^\n]", ssid_key_5ghz);
+                log_debug("ssid key 5ghz get value : %s",ssid_key_5ghz);
+        }
+        prop_send_by_name("gw_wifi_ssid_key_5G");
+        pclose(fp);
+	
 
 	return 0;
 }
@@ -1927,12 +2098,16 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
  */
 static int appd_properties_get(void)
 {
-    FILE *fp;
+        FILE *fp;
 	FILE *fp1;
 	FILE *fp2;
 	FILE *fp3;
 	FILE *fp4;
-
+	FILE *fp5;
+	FILE *fp6;
+        FILE *fp7;
+        FILE *fp8;
+	
 	// To get 2ghz channel value
 	fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
 	if (fp == NULL) {
@@ -1990,12 +2165,61 @@ static int appd_properties_get(void)
 	}
 	pclose(fp4);
 
+        // To get multi channel value
+        fp5 = popen(GET_MULTI_CHANNEL_SCAN,"r");
+        if (fp5 == NULL) {
+                        log_err("Get multi channel scan failed");
+                        exit(1);
+        } else {
+                fscanf(fp5, "%d", &multi_channel_scan);
+                log_debug("Get multi channel scan value : %d",multi_channel_scan);
+        }
+        pclose(fp5);
+
+        // To get single channel value
+        fp6 = popen(GET_SINGLE_CHANNEL_SCAN,"r");
+        if (fp6 == NULL) {
+                        log_err("Get single channel scan failed");
+                        exit(1);
+        } else {
+                fscanf(fp6, "%d", &single_channel_scan);
+                log_debug("Get single channel scan value : %d",single_channel_scan);
+        }
+        pclose(fp6);
+
+        // To get 2ghz ssid key
+        fp7 = popen(TWO_GHZ_GET_KEY,"r");
+        if (fp7 == NULL) {
+                        log_err("Get 2ghz ssid key failed");
+                        exit(1);
+        } else {
+                memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
+                fscanf(fp7, "%[^\n]", ssid_key_2ghz);
+                log_debug("Get ssid key 2ghz value : %s",ssid_key_2ghz);
+        }
+	pclose(fp7);
+
+        // To get 5ghz ssid key
+        fp8 = popen(FIVE_GHZ_GET_KEY,"r");
+        if (fp8 == NULL) {
+                        log_err("Get 5ghz ssid key failed");
+                        exit(1);
+        } else {
+                memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
+                fscanf(fp8, "%[^\n]", ssid_key_5ghz);
+                log_debug("Get ssid key 5ghz value : %s",ssid_key_5ghz);
+        }
+        pclose(fp8);
+
 	prop_send_by_name("gw_wifi_channel_2G");
 	prop_send_by_name("gw_wifi_channel_5G");
 	prop_send_by_name("gw_wifi_ssid_2G");
 	prop_send_by_name("gw_wifi_ssid_5G");
 	prop_send_by_name("gw_wifi_bh_optimization");
-
+	prop_send_by_name("gw_wifi_multi_channel_scan");
+	prop_send_by_name("gw_wifi_single_channel_scan");
+        prop_send_by_name("gw_wifi_ssid_key_2G");
+        prop_send_by_name("gw_wifi_ssid_key_5G");
     return 0;
 }
 
@@ -2945,6 +3169,25 @@ static struct prop appd_gw_prop_table[] = {
                 .len = sizeof(bh_optimization),
 		.skip_init_update_from_cloud = 1,
         },
+        {
+                .name = "gw_wifi_multi_channel_scan",
+                .type = PROP_INTEGER,
+                .set = appd_multi_channel_scan,
+                .send = prop_arg_send,
+                .arg = &multi_channel_scan,
+                .len = sizeof(multi_channel_scan),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_single_channel_scan",
+                .type = PROP_INTEGER,
+                .set = appd_single_channel_scan,
+                .send = prop_arg_send,
+                .arg = &single_channel_scan,
+                .len = sizeof(single_channel_scan),
+                .skip_init_update_from_cloud = 1,
+        },
+	
 
 	{
 		.name = "ram_usage",
