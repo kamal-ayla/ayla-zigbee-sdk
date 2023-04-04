@@ -59,6 +59,12 @@ void platform_configure_led(bool cloud_up, bool registered,
  */
 void platform_factory_reset(void)
 {
+	log_debug("platform factory reset: /usr/bin/rtfd --soft");
+	if(system("/usr/bin/rtfd --soft"))
+	{
+		log_warn("/usr/bin/rtfd --soft factory reset failed");
+	}
+
 	return;
 }
 

@@ -1510,9 +1510,10 @@ static void ds_reset_execute(struct device_state *dev, bool factory)
 		/* Perform any factory reset actions on system */
 		platform_factory_reset();
 		dev->factory_reset = 0;
+	}else{
+		platform_reset();
+		dev->hard_reset = 0;
 	}
-	platform_reset();
-	dev->hard_reset = 0;
 }
 
 /*
