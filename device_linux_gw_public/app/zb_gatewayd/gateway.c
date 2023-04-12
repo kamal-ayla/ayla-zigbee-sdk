@@ -61,7 +61,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.5";
+const char *appd_template_version = "zigbee_gateway_demo_v3.6";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -224,6 +224,15 @@ static char ssid_key_2ghz[KEY_LEN];
 #define TWO_GHZ_GET_KEY   "uci get mesh_broker.cred0.wpa_psk_key"
 #define FIVE_GHZ_GET_KEY  "uci get mesh_broker.cred1.wpa_psk_key"
 
+/* whitelist property */
+#define WHITELIST_LEN 100
+
+//whitelist variable
+static char whitelist_cmd_buf[WHITELIST_LEN];
+static char whitelist_mac_addr[20];
+
+#define WHITELIST_CMD "ubus call wireless.station connect '{\"name\":\"wl0\",\"bssid\":\"%s\"}'"
+#define SYSTEM_REBOOT "reboot"
 static int appd_properties_get(void);
 
 /* ngrok properties */
@@ -2092,6 +2101,74 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 	return 0;
 }
 
+/*
+ *Connect with specified mac address.
+ */
+
+static int appd_whitelist_mac_address(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+   FILE *fp;
+   FILE *fp1;
+
+   unsigned int validate;
+   unsigned int status;
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
+
+   status=appd_mesh_controller_status();
+
+   if(status == 0) {
+
+      validate = strlen(whitelist_mac_addr);
+
+      log_debug("whitelist connect mac address value : %s and size of the value : %d",whitelist_mac_addr,validate);
+
+      if(validate == 17 && strcmp(whitelist_mac_addr,"00:00:00:00:00:00") != 0){
+
+         log_debug("whitelist mac address connect value : %s",whitelist_mac_addr);
+
+         snprintf(whitelist_cmd_buf, sizeof(whitelist_cmd_buf), WHITELIST_CMD, whitelist_mac_addr);
+
+         log_debug("whitelist command : %s",whitelist_cmd_buf);
+       
+         fp = popen(whitelist_cmd_buf, "r");
+         if (fp == NULL) {
+            log_err("whitelist connect command failed");
+            exit(1);
+         }
+         pclose(fp);
+
+	 fp1 = popen(SYSTEM_REBOOT, "r");
+         if (fp1 == NULL) {
+            log_err("reboot command failed");
+            exit(1);
+	 }
+         pclose(fp1);	 
+      }
+      else {
+	 log_debug("Invalid mac address try again");     
+         memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));	    
+         strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
+      }
+   }
+   else {
+      log_debug("whitelist command not allowed due to extender act as a controller"); 
+      memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
+      strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
+	   
+   }
+
+    prop_send_by_name("gw_whitelist_mac_address");
+
+   return 0;
+}
+   
+
 
 /*
  *To get 2GHZ SSID and TEST function SRINI.
@@ -3240,6 +3317,16 @@ static struct prop appd_gw_prop_table[] = {
                 .len = sizeof(ssid_key_5ghz),
 		.skip_init_update_from_cloud = 1,
         },
+        {
+                .name = "gw_whitelist_mac_address",
+                .type = PROP_STRING,
+                .set = appd_whitelist_mac_address,
+                .send = prop_arg_send,
+                .arg = &whitelist_mac_addr,
+                .len = sizeof(ssid_key_5ghz),
+                .skip_init_update_from_cloud = 1,
+        },
+	
 	
         /* Radio information */
         {
