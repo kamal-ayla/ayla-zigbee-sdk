@@ -36,6 +36,7 @@
 #include "app_if.h"
 #include "gateway_if.h"
 #include "gateway_client.h"
+#include "vt_node_list.h"
 
 #define LAN_CONN_STATUS_URL	"node/conn_status.json"
 #define LAN_NODE_PROP_SEND_URL	"node/property/datapoint.json"
@@ -85,6 +86,8 @@ static struct hashmap gw_dsn_to_addr;
 static struct hashmap gw_addr_to_dsn;
 
 HASHMAP_FUNCS_CREATE(gateway, const char, const char);
+
+char req_json_paylod_copy[1024];
 
 /*
  * This function should never be called.
@@ -314,6 +317,7 @@ static int gateway_mapping_add(const char *dsn, const char *addr)
 
 	/* Remove any existing entries for this DSN and address */
 	gateway_mapping_delete(dsn, addr);
+	RemoveNode(addr);
 	/* Add new hash entries for bi-directional lookup */
 	if (!gateway_hashmap_put(&gw_dsn_to_addr, dsn_data, addr_data)) {
 		goto error;
@@ -374,6 +378,7 @@ static int gateway_node_rst_success(struct ops_devd_cmd *op_cmd,
 	}
 	log_debug("delete node: %s --> %s", dsn, addr);
 	if (!gateway_mapping_delete(dsn, addr)) {
+		RemoveNode(addr);
 		conf_save();
 	}
 	return 0;
@@ -579,6 +584,41 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 	const char *dsn;
 	json_t *device_j;
 
+	char oem_model[64] = {0};
+	bool dsn_valid_flag = true;
+	const char *oem;
+	json_t *root;
+	json_error_t error;
+	json_t *node_obj;
+
+	if(strlen(req_json_paylod_copy) > 0)
+	{
+		root = json_loads( req_json_paylod_copy, 0, &error );
+		if ( !root )
+		{
+    			log_debug("error: on line %d: %s\n", error.line, error.text );
+			return -1;
+		}else{
+			node_obj = json_object_get(root, "node");
+			if (!node_obj) {
+				log_warn("missing device object");
+				return -1;
+			}else{
+				oem = json_get_string(node_obj, "oem_model");
+				if(!oem)
+				{
+					log_debug("oem_model not avail");
+					return -1;
+				}
+				else{
+					memcpy(oem_model,oem,strlen(oem));
+					log_info("parsing oem model is %s", oem_model);
+				}
+			}
+			json_decref(root);
+		}
+	}
+
 	if (!req_resp) {
 		log_err("failed to parse response");
 		return -1;
@@ -591,16 +631,50 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 	}
 	addr = json_get_string(device_j, "address");
 	dsn = json_get_string(device_j, "dsn");
+	
 	if (!addr || !dsn) {
 		log_warn("missing addr or dsn");
 		return -1;
 	}
-	if (gateway_mapping_add(dsn, addr) < 0) {
-		log_err("add node failed: %s --> %s", dsn, addr);
+	/*Validate DSN*/
+	for(int i = 0; i <strlen(dsn); i++){
+    		char ch = dsn[i];
+    		if(ch == '\0')
+		     break; //stop iterating at end of string
+
+     		if((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
+    		{
+			dsn_valid_flag = true;
+    		}
+    		else if(ch >= '0' && ch <= '9')
+    		{
+			dsn_valid_flag = true;
+    		}
+    		else
+    		{
+        		log_debug("'%c' is special character.", ch);
+			dsn_valid_flag = false;
+			break;
+    		}	
+	}
+	if(true == dsn_valid_flag)
+	{
+		if (gateway_mapping_add(dsn, addr) < 0) {
+			log_err("add node failed: %s --> %s", dsn, addr);
+			return -1;
+		}
+		log_debug("add node: %s --> %s", dsn, addr);
+		if(0 == strcmp(oem_model,"virtualnode"))
+		{
+			InsertNode(addr);
+			log_info("vtnode not needed to save in file");
+		}else{
+			conf_save();
+		}
+	}else{
+		log_debug("invalid dsn recvd from cloud [%s]",dsn);
 		return -1;
 	}
-	log_debug("add node: %s --> %s", dsn, addr);
-	conf_save();
 	return 0;
 }
 
@@ -637,6 +711,7 @@ static int gateway_node_remove_success(struct ops_devd_cmd *op_cmd,
 	}
 	log_debug("delete node: %s --> %s", dsn, addr);
 	if (!gateway_mapping_delete(dsn, addr)) {
+		RemoveNode(addr);
 		conf_save();
 	}
 	return 0;
@@ -650,6 +725,8 @@ static int gateway_node_add_init(enum http_method *method, char *link,
 			struct ops_devd_cmd *op_cmd, struct device_state *dev)
 {
 	struct gateway_cmd *gcmd = (struct gateway_cmd *)op_cmd->arg;
+	char *buf = NULL;
+	json_t *obj = gcmd->info_j;
 
 	if (!gcmd) {
 		log_err("gcmd NULL");
@@ -662,6 +739,26 @@ static int gateway_node_add_init(enum http_method *method, char *link,
 	log_debug("link %s", link);
 
 	ds_client_data_init_json(&info->req_data, gcmd->info_j);
+
+	/*Copy the node add init request json payload used to validate node is WiFi virtual node or Sensor node*/
+	{
+		if (!obj) {
+			log_err("node add init NULL JSON object");
+		}
+		else{
+			buf = json_dumps(obj, JSON_COMPACT);
+			if (!buf) {
+				log_err("node add init malloc failed");
+				return -1;
+			}else{
+				log_debug("node add init req buf %s", buf);
+				memset(req_json_paylod_copy,0x00,sizeof(req_json_paylod_copy));
+				memcpy(req_json_paylod_copy,buf,strlen(buf));
+				free(buf);
+			}
+		}
+	}
+
 	info->init = 1;
 	*method = HTTP_POST;
 
@@ -1503,10 +1600,15 @@ static json_t *gateway_conf_get(void)
 	    iter = hashmap_iter_next(&gw_dsn_to_addr, iter)) {
 		dsn = gateway_hashmap_iter_get_key(iter);
 		addr = gateway_hashmap_iter_get_data(iter);
-		obj = json_object();
-		json_array_append_new(mappings_arr, obj);
-		json_object_set_new(obj, "dsn", json_string(dsn));
-		json_object_set_new(obj, "address", json_string(addr));
+		if(0 == findNode(addr))
+		{
+			obj = json_object();
+			json_array_append_new(mappings_arr, obj);
+			json_object_set_new(obj, "dsn", json_string(dsn));
+			json_object_set_new(obj, "address", json_string(addr));
+		}else{
+			log_info("%d vt_node dsn info not added into file",__LINE__);
+		}
 	}
 	return gateway_obj;
 }
