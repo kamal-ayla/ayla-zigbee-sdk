@@ -432,6 +432,14 @@ get_bh_type()
 	echo $status
 }
 
+get_backhaul_network_up_time()
+{
+	status=`wl -i wl0 sta_info all | grep network | awk '{ print substr ($0, 14 ) }' | awk '{ print substr( $0, 1, length($0)-8 ) }'`
+
+	echo $status
+}
+
+
 Macaddr=$2
 
 case "$1" in
@@ -503,9 +511,12 @@ case "$1" in
         -sta_bh_type)
                 get_bh_type
                 ;;
+	-backhaul_nw_up_time)
+                get_backhaul_network_up_time
+                ;;
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time]"
 		exit 1
 		;;
 esac

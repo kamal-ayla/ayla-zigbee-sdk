@@ -18,7 +18,6 @@
  * application supporting physical nodes connected over a wireless network.
  *
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -61,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.6";
+const char *appd_template_version = "zigbee_gateway_demo_v3.7";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -279,6 +278,10 @@ static char radio0_fw_version[RADIO_FW_LEN];
 #define GET_RADIO_BLE_FW                "cat /etc/config/radio_fw_version.conf  | awk '/\"radio1\"/ {print $2}' | tr -d '\"' | tr -d \",\""
 #define GET_RADIO_ZIGBEE_FW             "cat /etc/config/radio_fw_version.conf  | awk '/\"radio2\"/ {print $2}' | tr -d '\"' | tr -d \",\""
 #define GET_RADIO_ZWAVE_FW              "cat /etc/config/radio_fw_version.conf  | awk '/\"radio0\"/ {print $2}' | tr -d '\"' | tr -d \",\""
+
+/*Network up time command*/
+static char network_up_time[40];
+#define GET_NETWORK_UP_TIME				"get_stainfo.sh -backhaul_nw_up_time"
 
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
@@ -1015,9 +1018,10 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
 			prop_send_by_name("up_time");
 			prop_send_by_name("ram_usage");
 			prop_send_by_name("cpu_usage");
-                        prop_send_by_name("radio1_fw_version");
-                        prop_send_by_name("radio2_fw_version");
-                        prop_send_by_name("radio0_fw_version");
+			prop_send_by_name("radio1_fw_version");
+			prop_send_by_name("radio2_fw_version");
+			prop_send_by_name("radio0_fw_version");
+			prop_send_by_name("gw_wifi_bh_uptime");
 			prop_send_by_name("gw_led_status");
                         if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
                                 prop_send_by_name("ngrok_status");
@@ -2880,6 +2884,63 @@ static enum err_t appd_ble_fw(struct prop *prop, int req_id,
 }
 
 /*
+ *  *To get Network up time.
+ *   */
+static enum err_t get_gw_wifi_bh_uptime(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+	int day, hour, minutes, seconds;
+	unsigned long int nw_up_time = 0;
+	char *temp = NULL;
+
+	memset(network_up_time,0x00, sizeof(network_up_time));
+	if(1 == appd_mesh_controller_status())
+	{
+		log_debug("Gateway configured as controller");
+	}else{
+			memset(command,'\0',sizeof(command));
+			memset(data,'\0',sizeof(data));
+			sprintf(command, GET_NETWORK_UP_TIME);
+			exec_systemcmd(command, data, DATA_SIZE);
+
+			if(strlen(data) > 0)
+			{
+				nw_up_time = strtoul(data, &temp, 0);
+				if(0 == nw_up_time)
+				{
+					sprintf(network_up_time,"%s","N/A");
+				}else{
+					/*day conversion*/
+					day = nw_up_time / (24 * 3600);
+
+					/*Hours conversion*/
+					nw_up_time = nw_up_time % (24 * 3600);
+					hour = nw_up_time / 3600;
+
+					/*Minutes conversion*/
+					nw_up_time %= 3600;
+					minutes = nw_up_time / 60 ;
+
+					/*Seconds conversion*/
+					nw_up_time %= 60;
+					seconds = nw_up_time;
+
+					if(0 == day)
+					{
+						sprintf(network_up_time,"%d Hrs %d min %d sec",hour, minutes, seconds);
+					}else{
+						sprintf(network_up_time,"%d days %d Hrs %d min %d sec",day, hour, minutes, seconds);
+					}
+				}
+			}else{
+				sprintf(network_up_time,"%s","N/A");
+			}
+			log_debug("network up time: %s",network_up_time);
+		}
+    return prop_arg_send(prop, req_id, opts);
+}
+
+/*
  *  *To get the Radio ZIGBEE FW.
  *   */
 static enum err_t appd_zigbee_fw(struct prop *prop, int req_id,
@@ -3511,8 +3572,14 @@ static struct prop appd_gw_prop_table[] = {
                 .send = appd_gw_led_status_send,
                 .arg = &gw_led_status,
                 .len = sizeof(gw_led_status),
+        },
+		{
+                .name = "gw_wifi_bh_uptime",
+                .type = PROP_STRING,
+                .send = get_gw_wifi_bh_uptime,
+                .arg = &network_up_time,
+                .len = sizeof(network_up_time),
         }
-
 };
 
 
