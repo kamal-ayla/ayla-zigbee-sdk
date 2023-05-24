@@ -52,10 +52,10 @@ define Package/ayla-zigbee-sdk/install
 	$(INSTALL_BIN) ./files/apply_ota.sh $(1)/bin/apply_ota.sh
 	$(INSTALL_BIN) ./files/get_sysinfo.sh $(1)/bin/get_sysinfo.sh
 	$(INSTALL_BIN) ./files/get_stainfo.sh $(1)/bin/get_stainfo.sh
-        $(INSTALL_BIN) ./files/devd_config.sh $(1)/bin/devd_config.sh
-        $(INSTALL_BIN) ./files/decision_tree.sh $(1)/bin/decision_tree.sh
-        $(INSTALL_DIR) $(1)/etc/config
-        $(INSTALL_BIN) ./files/radio_fw_version.conf $(1)/etc/config/radio_fw_version.conf
+	$(INSTALL_BIN) ./files/devd_config.sh $(1)/bin/devd_config.sh
+	$(INSTALL_BIN) ./files/decision_tree.sh $(1)/bin/decision_tree.sh
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_BIN) ./files/radio_fw_version.conf $(1)/etc/config/radio_fw_version.conf
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/zb_gatewayd/appd $(1)/bin
