@@ -29,6 +29,9 @@ $ export TOP_DIR=/home/user/openwrt-sdk-brcm6xxx-tch-GCNTA_502L07p1_gcc-5.5.0_gl
 Clone the ayla_agent source into $TOP_DIR/package/ directory.
 ```
 $ cd $TOP_DIR/package/
+$ git clone https://github.com/technicolor-inc/Ayla_Agent.git -b developer ayla-zigbee-sdk
+
+or use below command if github keys are already added:
 $ git clone git@github.com:technicolor-inc/Ayla_Agent.git -b developer ayla-zigbee-sdk
 ```
 
