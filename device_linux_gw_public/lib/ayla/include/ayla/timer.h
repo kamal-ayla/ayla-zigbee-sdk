@@ -16,6 +16,7 @@ struct timer {
 	struct timer *next;
 	u64 time_ms;	/* monotonic trigger time */
 	void (*handler)(struct timer *);
+	void* data;	/* private data that can be used in the handler */
 };
 
 struct timer_head {

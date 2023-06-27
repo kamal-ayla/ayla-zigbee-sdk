@@ -37,6 +37,7 @@
 #include "gateway_if.h"
 #include "gateway_client.h"
 #include "vt_node_list.h"
+#include "video_stream_ds.h"
 
 #define LAN_CONN_STATUS_URL	"node/conn_status.json"
 #define LAN_NODE_PROP_SEND_URL	"node/property/datapoint.json"
@@ -675,6 +676,16 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 		log_debug("invalid dsn recvd from cloud [%s]",dsn);
 		return -1;
 	}
+
+	/* Start request for video streams (KVS & WebRTC) */
+	if(start_video_stream_request(dev, addr) != 0) {
+		log_err("start video stream request failed");
+		return -1;
+	}
+
+	log_debug("add node: %s --> %s", dsn, addr);
+	conf_save();
+	
 	return 0;
 }
 
@@ -1434,6 +1445,32 @@ err:
 		case AG_PROP_SEND:
 			dests = prop_get_dests_helper(dev, opts,
 			    &dests_specified);
+
+			/* Execute special action for KVS & WebRTC video stream update */
+			const char* prop_name = json_get_string(prop_info_j, "name");
+			const char* base_type = json_get_string(prop_info_j, "base_type");
+			int val;
+			if(strcmp(prop_name, "s1:kvs_base:kvs_stream_update") == 0 &&
+				strcmp(base_type, "integer") == 0)
+			{
+				json_get_int(prop_info_j, "value", &val);
+				if(1 == val) {
+					if (ds_update_kvs_streaming_channel(err_name) != 0) {
+						log_err("Failed to update KVS streaming channel");
+					}
+				}
+			}
+			else if(strcmp(prop_name, "s1:kvs_base:webrtc_stream_update") == 0 &&
+					strcmp(base_type, "integer") == 0)
+			{
+				json_get_int(prop_info_j, "value", &val);
+				if(1 == val) {
+					if (ds_update_webrtc_streaming_channel(err_name) != 0) {
+						log_err("Failed to update KVS streaming channel");
+					}
+				}
+			}
+
 			gateway_send_ack(recv_id);
 			gcs = GCS_PROP_SEND;
 			break;
@@ -1678,3 +1715,86 @@ static const struct op_funcs gw_op_handlers[] = {
 	[GCS_NODE_REG_RESULT] = {&gateway_ops[AG_NODE_REG_RESULT],
 	    gateway_node_rst_result_init, NULL, gateway_generic_op_finished},
 };
+
+void gateway_video_stream_request_statemachine(struct timer* timer)
+{
+	struct device_state *dev = (struct device_state*)timer->data;
+	struct video_stream_request* req = &dev->video_stream_req;
+
+	if(! req->request) {
+		return;
+	}
+
+	log_debug("video stream request statemachine step: %d", req->step);
+	switch(req->step)
+	{
+		case DS_VIDEO_STREAM_REQUEST_STEP_IDLE:
+		{
+			req->step = DS_VIDEO_STREAM_REQUEST_STEP_KVS;
+			timer_set(&dev->timers, &req->timer, 500);
+
+			break;
+		}
+		case DS_VIDEO_STREAM_REQUEST_STEP_KVS:
+		{
+			/* Request KVS stream info */
+			log_debug("calling the kvs streaming channel get ******************* ");
+			if (ds_get_kvs_streaming_channel(dev, req->addr_curr) < 0) {
+				ds_cloud_failure(0);
+			}
+
+			req->step = DS_VIDEO_STREAM_REQUEST_STEP_WEBRTC;
+			timer_set(&dev->timers, &req->timer, req->timeout_ms);
+
+			break;
+		}
+		case DS_VIDEO_STREAM_REQUEST_STEP_WEBRTC:
+		{
+			/* Request WebRTC stream info */
+			log_debug("calling the webrtc signalling channel get ******************* ");
+			if (ds_get_webrtc_signalling_channel(dev, req->addr_curr) < 0) {
+				ds_cloud_failure(0);
+			}
+
+			req->step = DS_VIDEO_STREAM_REQUEST_STEP_DONE;
+			timer_set(&dev->timers, &req->timer, req->timeout_ms);
+
+			break;
+		}
+		case DS_VIDEO_STREAM_REQUEST_STEP_DONE:
+		{
+			log_debug("video stream request finished");
+			timer_cancel(&dev->timers, &req->timer);
+			req->step = DS_VIDEO_STREAM_REQUEST_STEP_IDLE;
+			free(req->addr_curr);
+			req->addr_curr = NULL;
+			req->request = false;
+
+			break;
+		}
+		default:
+		{
+			log_err("unknown video stream request step %d", req->step);
+			req->step = DS_VIDEO_STREAM_REQUEST_STEP_IDLE;
+			req->request = false;
+			req->addr_curr = NULL;
+		}
+	}
+}
+
+int start_video_stream_request(struct device_state *dev, const char* addr)
+{
+	if(dev->video_stream_req.request) {
+		log_err("video stream request already in progress");
+		return -1;
+	}
+
+	dev->video_stream_req.request = true;
+	dev->video_stream_req.step = DS_VIDEO_STREAM_REQUEST_STEP_IDLE;
+	dev->video_stream_req.addr_curr = strdup(addr);
+	timer_set(&dev->timers, &dev->video_stream_req.timer, dev->video_stream_req.timeout_ms);
+
+	log_debug("video stream request started for ADDR: %s", addr);
+
+	return 0;
+}

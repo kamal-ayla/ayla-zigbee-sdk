@@ -603,7 +603,25 @@ inval_json:
 	}
 
 	str_dbg = json_dumps(root, JSON_COMPACT);
-	log_debug("%s", str_dbg);
+	log_debug("JSON_COMPACT : %s", str_dbg);
+
+	{
+		struct prop *prop = NULL;
+		if( strstr(str_dbg, "signaling_channels"))
+		{
+			prop = prop_lookup("signaling_channels");
+		} else if(strstr(str_dbg, "kvs_streams"))
+		{
+			prop = prop_lookup("kvs_streams");
+		}
+		if (prop)
+		{
+			int rc = prop_datapoint_set(prop, root, sizeof(json_t *), NULL);
+			log_debug("we have send the json to appd with rc '%d'", rc);
+			goto cleanup;
+		}
+	}
+
 	free(str_dbg);
 
 	cmd = json_object_get(root, "cmd");

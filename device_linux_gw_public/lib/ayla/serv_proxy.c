@@ -38,7 +38,7 @@ int serv_local_connect(const char *path)
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	len = strlen(path);
+	len = strnlen(path, sizeof(sa.sun_path));
 	REQUIRE(len < sizeof(sa.sun_path), REQUIRE_MSG_BUF_SIZE);
 	if (len >= sizeof(sa.sun_path)) {
 		return -1;

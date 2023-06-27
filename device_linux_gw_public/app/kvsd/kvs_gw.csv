@@ -1,0 +1,6 @@
+ack_enabled,base_type,comment,created_at,data_updated_at,direction,display_name,feed_data,feed_interval,feed_params,feed_type,host_sw_version,id,last_data_id,mime_type,name,read_only,sampled,scope,smart_home_skill,template_id,template_retention_days,time_series,track_only_changes,unit,updated_at,type,template_denied_roles
+null,integer,null,2023-05-22T11:09:58Z,null,input,add_camera_nodes,null,null,null,null,false,4302299,null,null,add_camera_nodes,false,false,user,null,318981,30,false,false,null,2023-05-22T11:09:58Z,TemplateProperty,
+null,integer,null,2023-05-22T11:09:58Z,null,output,num_nodes,null,null,null,null,false,4302300,null,null,num_nodes,true,false,user,null,318981,30,false,false,null,2023-05-22T11:09:58Z,TemplateProperty,
+null,integer,null,2023-05-22T11:09:58Z,null,input,set_val,null,null,null,null,false,4302303,null,null,set_val,false,false,user,null,318981,30,false,false,null,2023-05-22T11:09:58Z,TemplateProperty,
+null,integer,null,2023-05-22T11:09:58Z,null,output,test_val,null,null,null,null,false,4302302,null,null,test_val,true,false,user,null,318981,30,false,false,null,2023-05-22T11:09:58Z,TemplateProperty,
+null,string,null,2023-05-22T11:09:58Z,null,output,version,null,null,null,null,true,4302301,null,null,version,true,false,user,null,318981,null,false,true,null,2023-05-22T11:09:58Z,TemplateProperty,

@@ -5,44 +5,31 @@
 # with Ayla Networks, Inc., a copy of which can be obtained from
 # Ayla Networks, Inc.
 
-EXEC = devd
-DIR = daemon/devd
+EXEC = kvsd
+DIR = app/kvsd
 SRC = ../..
-
-
 
 #
 # List of source files to build
 #
 SOURCES = \
-	app_if.c \
-	client_lan.c \
-	dapi.c \
-	devd_conf.c \
-	dnss.c \
-	ds_client.c \
-	ds_main.c \
-	msg_server.c \
-	notify.c \
-	ops_devd.c \
-	props_client.c \
-	props_if.c \
-	serv.c \
-	video_stream_ds.c \
+	gateway.c \
+	main.c \
+	node.c \
+	node_camera.c \
+	utils.c \
+	video_stream.c \
 	$(NULL)
-
-# Optional components
--include gateway.mk
 
 #
 # List of libraries to link
 #
-LIBS = curl ssl crypto jansson pthread transformer
+LIBS = ssl crypto curl jansson
 
 #
 # List of dependencies on Ayla libraries 
 #
-LIBDEPS = $(LIB_PLATFORM) $(LIB_AYLA) $(STAGING_DIR)/usr/lib/libtransformer.so
+LIBDEPS = $(LIB_PLATFORM) $(LIB_AYLA) $(LIB_APP)
 
 #
 # Compiler and linker flags
@@ -53,9 +40,7 @@ LIBDEPS = $(LIB_PLATFORM) $(LIB_AYLA) $(STAGING_DIR)/usr/lib/libtransformer.so
 #
 # List of pre-processor definitions
 #
-ifeq ($(NOTIFY_DEBUG),1)
-DEFINES += NP_DEBUG
-endif
+DEFINES += GATEWAY_SUPPORT
 
 #
 # Optional: For vi users, list any directories to make tags for in addition to
@@ -71,21 +56,17 @@ include $(SRC)/make/common_defs.mk
 #
 # Build rules for this target
 #
-.PHONY: default install all
-
-default: all
+.PHONY: all default install
 
 all: $(EXEC)
 
+default: all
+
 install: all
 	$(INSTALL) $(BUILD)/$(EXEC) $(INSTALL_ROOT)/bin/$(EXEC)
-	mkdir -p $(INSTALL_ROOT)/etc/config
-	$(INSTALL) config/* $(INSTALL_ROOT)/etc/config
-	mkdir -p $(INSTALL_ROOT)/etc/certs
-	$(INSTALL) certs/* $(INSTALL_ROOT)/etc/certs
 
 #
 # Include common build rules
 #
-include $(SRC)/make/common_cc.mk 
+include $(SRC)/make/common_cc.mk
 

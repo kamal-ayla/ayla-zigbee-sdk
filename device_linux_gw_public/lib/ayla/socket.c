@@ -43,7 +43,7 @@ static void socket_fill_sa(const char *path, struct sockaddr_un *sa)
 {
 	size_t len;
 
-	len = strlen(path);
+	len = strnlen(path, sizeof(sa->sun_path));
 	REQUIRE(len < sizeof(sa->sun_path), REQUIRE_MSG_BUF_SIZE);
 	memset(sa, 0, sizeof(*sa));
 	sa->sun_family = AF_UNIX;

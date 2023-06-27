@@ -1,0 +1,1 @@
+/usr/bin/gst-launch-1.0 -v autovideosrc do-timestamp=TRUE device-index=0  ! video/x-raw,framerate=15/1,format=I420,width=640,height=480 ! videoflip method=rotate-180 ! videoconvert ! x264enc tune=zerolatency bitrate=2000  bframes=0 key-int-max=45  !  video/x-h264,stream-format=avc,alignment=au,profile=baseline ! kvssink stream-name=$1 storage-size=$2

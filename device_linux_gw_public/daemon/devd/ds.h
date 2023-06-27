@@ -68,6 +68,8 @@
 #define DS_CLIENT_TEMPLATE_VER	"template_version"
 
 #define CLIENT_POLL_INTERVAL	300	/* default polling time, seconds */
+#define CLIENT_MAX_POLLING_TIME	\
+    (24 * 60 * 60)			/* time until forced reconnect, sec */
 
 /* defines for lan client */
 #define CLIENT_LAN_KEEPALIVE	30	/* default LAN keepalive time, secs */
@@ -90,6 +92,14 @@
 
 DEF_ENUM(ds_cloud_state, DS_CLOUD_STATES);
 
+enum ds_video_stream_request_step {
+	DS_VIDEO_STREAM_REQUEST_STEP_IDLE = 0,		/* idle */
+	DS_VIDEO_STREAM_REQUEST_STEP_KVS,			/* request KVS stream */
+	DS_VIDEO_STREAM_REQUEST_STEP_WEBRTC,		/* request WebRTC stream */
+	DS_VIDEO_STREAM_REQUEST_STEP_DONE,			/* request done */
+	DS_VIDEO_STREAM_REQUEST_STEP_COUNT			/* step count */
+};
+
 struct device_state {
 	char *dsn;
 	char *pub_key;
@@ -104,6 +114,7 @@ struct device_state {
 	unsigned ads_host_dev_override:1;
 
 	u16 poll_interval;		/* polling interval, seconds */
+	u32 ads_polls;			/* polls since polling started */
 
 	unsigned setup_mode:1;
 	char auth_header[SESSION_KEY_LEN + 30];
@@ -151,6 +162,8 @@ struct device_state {
 	unsigned update_oem_info:1;	/* update oem info is pending */
 	unsigned template_assoc:1;	/* template association done */
 	unsigned get_regtoken:1;	/* get regtoken when unregistered */
+//	unsigned get_webrtc_keys:1;	/* get WebRTC streaming security keys and session token */	// @TODO: MAN: clean up
+//	unsigned get_kvs_keys:1;	/* get KVS streaming security keys and session token */
 
 	u64 conn_mtime;			/* last connection mtime */
 	time_t conn_time;		/* last connection time (UTC) */
@@ -175,6 +188,14 @@ struct device_state {
 	json_t *commands;		/* cached cmds needing to be exec'd */
 	json_t *update_info;		/* information for the PUT */
 	int ota_status;			/* OTA status to put if non-zero */
+
+	struct video_stream_request {
+		bool request;		/* start request for KVS and WebRTC data */
+		enum ds_video_stream_request_step step;		    /* step of the request */
+		struct timer timer;	/* timer for the state machine */
+		u32 timeout_ms;		/* state machine period timeout */
+		char* addr_curr;	/* current address to be processed */
+	} video_stream_req;
 };
 
 /*

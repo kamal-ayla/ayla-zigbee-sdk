@@ -169,7 +169,9 @@ static int devd_conf_client_set(json_t *obj)
 		conf_ads_region = strdup(str);
 	}
 	/* Generate new ADS host URL in case it changed */
+	dev->setup_mode = 1;
 	ds_update_ads_host();
+	dev->setup_mode = 0;
 	return 0;
 }
 

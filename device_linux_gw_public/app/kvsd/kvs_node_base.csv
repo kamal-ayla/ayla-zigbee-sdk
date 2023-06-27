@@ -1,0 +1,2 @@
+ack_enabled,base_type,comment,created_at,data_updated_at,direction,display_name,feed_data,feed_interval,feed_params,feed_type,host_sw_version,id,last_data_id,mime_type,name,read_only,sampled,scope,smart_home_skill,template_id,template_retention_days,time_series,track_only_changes,unit,updated_at,type,template_denied_roles
+null,boolean,null,2023-05-23T14:39:08Z,null,input,enable,null,null,null,null,false,4307754,null,null,enable,false,false,user,null,319396,30,false,false,null,2023-05-23T14:39:08Z,TemplateProperty,

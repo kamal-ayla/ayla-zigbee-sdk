@@ -70,6 +70,8 @@
 #define REQUEST_TIMEOUT_PING_SECS 5	/* max s for a ping to complete */
 #define REQUEST_TIMEOUT_DEFAULT_SECS 60	/* max s allowed with no throughput */
 
+#define DS_VIDEO_STREAM_STATEMACHINE_PERIOD_MS	2000	/* timer period for video stream state machine */
+
 #define GET_CUSTO_ITERATION_VALUE "uci get version.@version[0].custo_iteration"
 
 struct client_lan_reg client_lan_reg[CLIENT_LAN_REGS];
@@ -302,6 +304,7 @@ static int ds_polling_start(struct device_state *dev)
 	}
 	log_info("ADS polling started: period %hus", dev->poll_interval);
 	dev->poll_ads = 1;
+	dev->ads_polls = 0;
 	timer_set(&dev->timers, &dev->poll_ads_timer,
 	    dev->poll_interval * 1000);
 	return 0;
@@ -332,6 +335,7 @@ static void ds_polling_timeout(struct timer *timer)
 		return;
 	}
 	log_debug("polling ADS");
+	dev->ads_polls++;
 	dev->get_cmds = 1;
 	ds_step();
 
@@ -339,6 +343,12 @@ static void ds_polling_timeout(struct timer *timer)
 	if (np_server_is_set()) {
 		/* Force refresh ANS DNS info */
 		np_clear_dns_info();
+		if (dev->ads_polls >=
+		    CLIENT_MAX_POLLING_TIME / dev->poll_interval) {
+			/* Force ADS reconnect */
+			dev->do_reconnect = 1;
+			ds_step();
+		}
 	}
 	/* Reset polling timer */
 	timer_set(&dev->timers, &dev->poll_ads_timer,
@@ -1131,7 +1141,7 @@ void ds_update_template_ver_to_cloud(const char *template_ver)
 
 	dev->template_version_curr = strdup(template_ver);
 	if (!dev->template_version_curr) {
-		log_err("malloc memory failed for length %u",
+		log_err("malloc memory failed for length %zu",
 		    strlen(template_ver));
 		return;
 	}
@@ -1468,6 +1478,7 @@ static void ds_notify_event(enum notify_event event)
 			}
 		} else {
 			log_warn("ANS reg/reach fail");
+			ds_polling_timeout(&dev->poll_ads_timer);
 		}
 		dev->np_up = 0;
 		dev->np_started = 0;
@@ -1650,11 +1661,17 @@ int ds_init(void)
 
 	srandom((unsigned)time_mtime_ms());
 
+	memset(&dev->video_stream_req, 0, sizeof(dev->video_stream_req));
+
 	ops_devd_init();
 	timer_init(&dev->ping_ads_timer, ds_ping_retry);
 	timer_init(&dev->poll_ads_timer, ds_polling_timeout);
 	timer_init(&dev->ds_step_timer, ds_step_timeout);
 	timer_init(&dev->reg_window_timer, ds_reg_window_timeout);
+
+	dev->video_stream_req.timer.data = dev;
+	dev->video_stream_req.timeout_ms = DS_VIDEO_STREAM_STATEMACHINE_PERIOD_MS;
+	timer_init(&dev->video_stream_req.timer, gateway_video_stream_request_statemachine);
 
 	if (time(NULL) < CLOCK_START) {
 		if (clock_set_time(CLOCK_START, CS_DEFAULT) >= 0) {
@@ -1894,6 +1911,7 @@ int ds_update_ads_host(void)
 	if (ds_new_ads_host) {
 		free(ds_new_ads_host);
 	}
+	log_debug("setup_mode '%d' conf_ads_host_override '%s' ", dev->setup_mode , conf_ads_host_override);
 	if (dev->setup_mode && conf_ads_host_override) {
 		ds_new_ads_host = strdup(conf_ads_host_override);
 	} else {
@@ -1922,6 +1940,7 @@ int ds_update_ads_host(void)
 	if (!strcmp(ds_new_ads_host, dev->ads_host)) {
 		free(ds_new_ads_host);
 		ds_new_ads_host = NULL;
+		log_debug("new & previous host are same no change ");
 		return 1;
 	}
 	/* Service may have changed, so force reconnect */
@@ -1953,7 +1972,10 @@ int ds_update_oem_model(const char *oem_model)
 		free(dev->oem_model);
 	}
 	dev->oem_model = strdup(oem_model);
+	log_err("calling ds_update_ads_host() from ds_update_oem_model()");
+	dev->setup_mode = 1;
 	rc = ds_update_ads_host();
+	dev->setup_mode = 0;
 	if (rc != 0) {
 		/*
 		 * If OEM model change did not change the ADS

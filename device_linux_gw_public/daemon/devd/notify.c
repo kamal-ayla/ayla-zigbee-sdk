@@ -888,6 +888,11 @@ static void np_dns_cb(struct notify_state *state, struct sockaddr_in *newsa)
 	if (newsa->sin_port) {
 		diffipaddr = (state->serv_sa.sin_port != newsa->sin_port) ||
 		    (state->serv_sa.sin_addr.s_addr != newsa->sin_addr.s_addr);
+		if (!state->serv_sa.sin_port &&
+		    state->client_state == NCS_DOWN_RETRY) {
+			/* Name wasn't resolved, so ANS wasn't up. */
+			state->client_state = NCS_DOWN;
+		}
 		memcpy(&state->serv_sa, newsa, sizeof(*newsa));
 		log_info("ANS server %s at %s", state->notify_host,
 		    inet_ntoa(newsa->sin_addr));
@@ -952,7 +957,8 @@ void np_set_server(const char *name)
 
 	err = getaddrinfo(name, NULL, &hint, &res);
 	if (err) {
-		log_warn("gethost error %d: %s", err, gai_strerror(err));
+		log_warn("gethost %s error %d: %s", name, err,
+		    gai_strerror(err));
 		if (state->client_state == NCS_DOWN_RETRY) {
 			np_setup_next_reach_check(state);
 		} else {
@@ -981,6 +987,16 @@ int np_server_is_set(void)
 	struct notify_state *state = &notify_state;
 
 	return state->notify_host[0] != '\0';
+}
+
+/*
+ * Check if host name has been resolved.
+ */
+static int np_host_resolved(void)
+{
+	struct notify_state *state = &notify_state;
+
+	return state->serv_sa.sin_port != 0;
 }
 
 /*
@@ -1071,13 +1087,15 @@ static void np_timeout(struct timer *timer)
 		np_send_keep_alive(state);
 		break;
 	case NCS_DOWN_RETRY:
-		if (!state->reg_key) {
-			np_reregister(state);
-			break;
-		}
-		if (state->probe_send) {
-			np_send_keep_alive(state);
-			break;
+		if (np_host_resolved()) {
+			if (!state->reg_key) {
+				np_reregister(state);
+				break;
+			}
+			if (state->probe_send) {
+				np_send_keep_alive(state);
+				break;
+			}
 		}
 		if (state->notify_host[0] != '\0') {
 			np_set_server(state->notify_host);

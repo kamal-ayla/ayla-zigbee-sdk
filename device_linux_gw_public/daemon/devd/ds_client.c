@@ -285,7 +285,7 @@ static int ds_client_add_auth_header(struct ds_client *client,
 	for (i = 0; i < 3; i++) {
 		url = strchr(url, '/');
 		if (!url) {
-			log_err("invalid url: %s", url);
+			log_err("invalid url: %s", buf);
 			return -1;
 		}
 		url++;
