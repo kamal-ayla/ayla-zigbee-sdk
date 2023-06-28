@@ -35,7 +35,7 @@ define Build/Compile
 	
 	$(MAKE) COMPILER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc COMPILER_INCLUDES=-I$(TOOLCHAIN_DIR)/usr/include/ LINKER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc ARCHIVE=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar -C $(PKG_BUILD_DIR)/device_linux_gw_public \
 	PROD="generic" \
-	APP="zb_gatewayd" \
+	APP="kvsd" \
 	NO_WIFI=1 \
 	STAGING_DIR="$(STAGING_DIR)" \
 	TOOLCHAIN_DIR="$(TOOLCHAIN_DIR)" \
@@ -58,7 +58,7 @@ define Package/ayla-zigbee-sdk/install
 	$(INSTALL_BIN) ./files/radio_fw_version.conf $(1)/etc/config/radio_fw_version.conf
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/zb_gatewayd/appd $(1)/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/kvsd/kvsd $(1)/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/acgi/acgi $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/acli/acli $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/ota/ota_update $(1)/usr/bin
