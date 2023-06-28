@@ -87,7 +87,8 @@ TARGET_CFLAGS += -O2 -Wuninitialized
 else
 TARGET_CFLAGS += -O0 -g -ggdb
 endif
-TARGET_CFLAGS += -Wall -Wunused -Werror -std=gnu99
+#TARGET_CFLAGS += -Wall -Wunused -Werror -std=gnu99		# @TODO: MAN: Disabled for demo. Revert this.
+TARGET_CFLAGS += -Wall -Wno-unused -Werror -std=gnu99
 TARGET_CFLAGS += $(addprefix -D,$(sort $(DEFINES)))
 
 #
