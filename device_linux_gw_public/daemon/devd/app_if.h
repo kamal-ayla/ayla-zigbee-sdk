@@ -9,6 +9,9 @@
 #ifndef __AYLA_APP_IF_H__
 #define __AYLA_APP_IF_H__
 
+#include "ops_devd.h"
+#include "ayla/ayla_interface.h"
+
 /*
  * Property requests to appd.
  */

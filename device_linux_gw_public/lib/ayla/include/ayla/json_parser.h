@@ -10,6 +10,7 @@
 #define __AYLA_JSON_PARSER_H__
 
 #include <jansson.h>
+#include "ayla/utypes.h"
 
 int json_get_bool(const json_t *obj, const char *name, bool *value);
 
