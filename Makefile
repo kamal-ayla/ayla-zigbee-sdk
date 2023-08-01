@@ -58,12 +58,13 @@ define Package/ayla-zigbee-sdk/install
 	$(INSTALL_BIN) ./files/radio_fw_version.conf $(1)/etc/config/radio_fw_version.conf
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/daemon/devd/devd $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/kvsd/kvsd $(1)/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/app/kvsd/kvsd $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/acgi/acgi $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/acli/acli $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/ota/ota_update $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/gw_setup_agent/gw_setup_agent $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/host_util/config_gen/config_gen $(1)/usr/bin
+	$(INSTALL_BIN) ./files/kvs_streaming_rtsp.sh $(1)/usr/bin/kvs_streaming_rtsp.sh
 	$(INSTALL_DIR) $(1)/lib/app
 	$(CP) $(PKG_INSTALL_DIR)/lib/app/libapp.a $(1)/lib/app
 	$(INSTALL_DIR) $(1)/lib/ayla

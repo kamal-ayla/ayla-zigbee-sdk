@@ -48,7 +48,7 @@
 #define CAM_NODE_TEMPLATE_NODE		"kvs_cam"
 
 /* Default between node property updates */
- #define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	5000
+ #define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	60000
 
 #define CAM_URL_DEFAULT             		""
 #define CAM_USERID_DEFAULT          		""
@@ -785,7 +785,7 @@ static void cam_node_state_cleanup(void *arg)
 }
 
 static void stream_state_init(struct stream_state* ss, struct node* node,
-		void (*stream_timeout)(struct timer *timer), int timeout,
+		void (*stream_timeout)(struct timer *timer),
 		void (*start_delay_timeout)(struct timer *timer),
 	    void (*stream_update_timeout)(struct timer *timer),
 		void* stream_data)
@@ -832,9 +832,8 @@ static struct cam_node_state *cam_node_start(struct node *node,
 	node_state_set(node, STATE_SLOT_NET, node_state,
 	    cam_node_state_cleanup);
 
-	struct node_prop * stream_time_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_STREAM_TIME);
-	stream_state_init(&node_state->kvs_stream_state, node, kvs_streaming_timeout, *((int*)stream_time_prop->val), kvs_streaming_start_delay_timeout, cam_kvs_stream_update_timeout, &node_state->kvs_data);
-	stream_state_init(&node_state->webrtc_stream_state, node, webrtc_streaming_timeout, *((int*)stream_time_prop->val), webrtc_streaming_start_delay_timeout, cam_webrtc_stream_update_timeout, &node_state->webrtc_data);
+	stream_state_init(&node_state->kvs_stream_state, node, kvs_streaming_timeout, kvs_streaming_start_delay_timeout, cam_kvs_stream_update_timeout, &node_state->kvs_data);
+	stream_state_init(&node_state->webrtc_stream_state, node, webrtc_streaming_timeout, webrtc_streaming_start_delay_timeout, cam_webrtc_stream_update_timeout, &node_state->webrtc_data);
 	
 	return node_state;
 }
@@ -1619,7 +1618,7 @@ static void start_kvs_streaming(struct node* node)
 
 //	argv[i++] = "/usr/bin/bash";
 //	argv[i++] = "-c";
-	argv[i++] = "/home/pi/ayla/bin/kvs_streaming_rtsp.sh";
+	argv[i++] = "/usr/bin/kvs_streaming_rtsp.sh";
 	argv[i++] = urlfull;
 	argv[i++] = kvs_ds->kvs_channel_name;
 	argv[i++] = storage_size;
@@ -1658,12 +1657,12 @@ static void start_kvs_streaming(struct node* node)
 	log_debug("now executing the KVS Scripts");
 
 //        if( execve("/usr/bin/bash", argv, env) == -1)
-	if( execve("/home/pi/ayla/bin/kvs_streaming_rtsp.sh", argv, env) == -1)
+	if( execve("/usr/bin/kvs_streaming_rtsp.sh", argv, env) == -1)
 		perror("Could not execve");
 
 	/* perhaps running locally on VM */
-	log_warn("executing %s failed, trying %s", KVS_STREAMING_NAME, "/usr/bin/bash");
-	execve("/usr/bin/bash", argv, env);
+	log_warn("executing %s failed, trying %s", KVS_STREAMING_NAME, "/bin/bash");
+	execve("/bin/bash", argv, env);
 	log_err("unable to start %s", KVS_STREAMING_NAME);
 	sleep(2);
 	exit(1);
@@ -1676,8 +1675,10 @@ static void start_webrtc_streaming(struct node* node)
 	char *env[12];
 	char aws_key_id[80],aws_secret[80],aws_region[40];
 	char aws_session_token[2048];
+	char cert_path[512];
 	char urlfull[512];
 	char webrtc_streaming_loc[160];
+	char debug_level[256];
 	int i = 0;
 
 	struct cam_node_state *cam_node = cam_node_state_get(node);
@@ -1698,20 +1699,23 @@ static void start_webrtc_streaming(struct node* node)
 	snprintf(aws_secret,sizeof(aws_secret),"AWS_SECRET_ACCESS_KEY=%s",kvs_ds->secret_access_key);
 	snprintf(aws_region,sizeof(aws_region),"AWS_DEFAULT_REGION=%s",kvs_ds->region);
 	snprintf(aws_session_token,sizeof(aws_session_token),"AWS_SESSION_TOKEN=%s",kvs_ds->session_token);
+	snprintf(cert_path,sizeof(cert_path),"AWS_KVS_CACERT_PATH=/etc/ssl/certs/cert.pem");
+	snprintf(debug_level,sizeof(debug_level),"AWS_KVS_LOG_LEVEL=2");
 
-	snprintf(webrtc_streaming_loc, sizeof(webrtc_streaming_loc), "/home/pi/ayla/bin/%s", WEBRTC_STREAMING_NAME);
+	snprintf(webrtc_streaming_loc, sizeof(webrtc_streaming_loc), "/usr/bin/%s", WEBRTC_STREAMING_NAME);
 
 //	argv[i++] = "/usr/bin/bash";
 //	argv[i++] = "-c";
 	argv[i++] = webrtc_streaming_loc;
 	argv[i++] = kvs_ds->webrtc_channel_name;
+	//argv[i++] = urlfull;
 	argv[i] = NULL;
 
 	ASSERT(i <= ARRAY_LEN(argv));
 	//if (debug)
 	{
 		int j = 0;
-		log_debug("Starting %s using args: ", "/usr/bin/bash");
+		log_debug("Starting %s using args: ", "/bin/bash");
 		for (j = 0; j < i; j++) {
 			log_debug("%s", argv[j]);
 		}
@@ -1723,10 +1727,12 @@ static void start_webrtc_streaming(struct node* node)
 	env[i++]=aws_secret;
 	env[i++]=aws_region;
 	env[i++]=aws_session_token;
+	env[i++]=cert_path;
+	env[i++]=debug_level;
 	env[i]=NULL;
 	{
 		int j = 0;
-		log_debug("Starting %s using env : ", "/usr/bin/bash");
+		log_debug("Starting %s using env : ", "/bin/bash");
 		for (j = 0; j < i; j++) {
 			log_debug("%s", env[j]);
 		}
@@ -1738,8 +1744,8 @@ static void start_webrtc_streaming(struct node* node)
 		perror("Could not execve");
 
 	/* perhaps running locally on VM */
-	log_warn("executing %s failed, trying %s", WEBRTC_STREAMING_NAME, "/usr/bin/bash");
-	execve("/usr/bin/bash", argv, env);
+	log_warn("executing %s failed, trying %s", WEBRTC_STREAMING_NAME, "/bin/bash");
+	execve("/bin/bash", argv, env);
 	log_err("unable to start %s", WEBRTC_STREAMING_NAME);
 	sleep(2);
 	exit(1);

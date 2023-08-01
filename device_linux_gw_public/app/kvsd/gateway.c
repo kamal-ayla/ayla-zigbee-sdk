@@ -60,6 +60,9 @@
 #include "../../lib/app/data_internal.h"			// @TODO: MAN: Fix relative paths.
 #include "ayla/json_interface.h"
 
+#define CHK_RET(x) if(0 != x) { return x; }
+#define CHK_PTR(x) if(NULL == x) { return -1; }
+
 /* Maximum # of datapoints allowed in a batch */
 #define APPD_MAX_BATCHED_DPS	64
 
@@ -631,7 +634,13 @@ static int appd_gw_add_nodes_set_helper(struct prop *prop,
 	const void *val, size_t len, const struct op_args *args,
 	enum camera_node_type type, u32 sample_secs)
 {
+	CHK_PTR(prop);
+	CHK_PTR(val);
+	CHK_PTR(args);
+
 	int *num_nodes = (int *)prop->arg;
+	CHK_PTR(num_nodes);
+
 	size_t curr_node_count = node_count();
 	if((*num_nodes) + curr_node_count >= CAM_NODES_MAX) {
 		log_err("Cannot add %d nodes, max node count is %d",
