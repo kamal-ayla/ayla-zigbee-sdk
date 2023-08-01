@@ -1514,17 +1514,18 @@ static void ds_reset_execute(struct device_state *dev, bool factory)
 {
 	log_info("%s reset", factory ? "factory" : "hard");
 
-	if (factory) {
-		if (conf_factory_reset() < 0) {
-			log_err("factory reset failed");
-		}
-		/* Perform any factory reset actions on system */
-		platform_factory_reset();
-		dev->factory_reset = 0;
-	}else{
-		platform_reset();
-		dev->hard_reset = 0;
-	}
+	// @TODO: MAN: revert this
+//	if (factory) {
+//		if (conf_factory_reset() < 0) {
+//			log_err("factory reset failed");
+//		}
+//		/* Perform any factory reset actions on system */
+//		platform_factory_reset();
+//		dev->factory_reset = 0;
+//	}else{
+//		platform_reset();
+//		dev->hard_reset = 0;
+//	}
 }
 
 /*

@@ -104,6 +104,7 @@ void platform_configure_led(bool cloud_up, bool registered,
  */
 void platform_factory_reset(void)
 {
+	log_debug("platform factory reset");
 }
 
 /*
@@ -111,7 +112,10 @@ void platform_factory_reset(void)
  */
 void platform_reset(void)
 {
+	log_debug("reboot");
+
+	/* @TODO: MAN: debug; revert this
 	if (system("reboot")) {
 		log_warn("reboot failed");
-	}
+	}*/
 }
