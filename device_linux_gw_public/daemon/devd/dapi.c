@@ -708,7 +708,7 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
 {
 	/*****************************Extract homeware version*****************************************/
 	
-    char *homeware_version;
+    char *homeware_version = NULL;
     log_debug("Extract homeware version");
     tf_ctx_t *ctx = tf_new_ctx(NULL, 0);
     tf_req_t req = {
@@ -739,7 +739,7 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
     tf_free_ctx(ctx);
 
     tf_ctx_t *ctx1 = tf_new_ctx(NULL, 0);
-	char *product;
+	char *product = NULL;
 	tf_req_t req1 = {
         .type = TF_REQ_GPV,
         .u.gpv.path = "uci.version.version.@version[0].product"};
@@ -766,6 +766,11 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
         }
     }
     tf_free_ctx(ctx1);
+
+	if(!homeware_version || !product)
+	{
+		goto homeware_end;
+	}
     
     char ayla_new_version_homeware[100];
     char *homeware_version_extract=NULL;
@@ -804,12 +809,15 @@ static json_t *ds_update_info(struct device_state *dev, json_t *dev_node)
 
     log_debug("ayla_new_version_homeware : %s\n",ayla_new_version_homeware);
     printf("Homeware version is :%s\n", ayla_new_version_homeware);
+
    /****************************************************************************************/
-	json_t *root;
-	json_t *update;
+
+	json_t *root = NULL;
+	json_t *update = NULL;
 	struct ether_addr mac_addr;
 	char hw_id[PLATFORM_HW_ID_MAX_SIZE];
 
+	homeware_end:
 	root = json_object();
 	update = json_object();
 	json_object_set_new(root, "device", update);
