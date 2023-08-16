@@ -1433,6 +1433,7 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 
 static void appd_wifi_bh_sta_get(struct timer *timer_gw_wifi_bh_sta_timer)
 {
+	log_debug("IOT_DEBUG appd_wifi_bh_sta_get timer cancel");
 	FILE *fp;
 	char bss_state[10];
 	timer_cancel(app_get_timers(), timer_gw_wifi_bh_sta_timer);
@@ -1528,7 +1529,7 @@ static int appd_backhaul_sta(struct prop *prop, const void *val,
 
 		log_debug("iot_debug: apscan %d",gw_wifi_bh_apscan);
 		if(gw_wifi_bh_apscan==1){
-			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 10000);
+			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 60000);
 /*			fp = popen(DISCONNECT_BACKHAUL_STA_ENABLE,"r");
 			if (fp == NULL) {
 				log_err("iot_debug: error in disconnect backhaul enable ");
@@ -2606,7 +2607,8 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 
 	//if(((gw_whitelist_active==0) && (!strcmp(whitelist_bssid,whitelist_mac_addr)) && strlen(whitelist_bssid)==17) || ((gw_whitelist_active==1) && (strcmp(whitelist_bssid,whitelist_mac_addr)) && strlen(whitelist_bssid)==17)){
 	if((gw_whitelist_active==1) && (!strcmp(whitelist_bssid,whitelist_mac_addr))){
-		log_debug("IOT_DEBUG whitelist config already done");
+		log_debug("IOT_DEBUG whitelist config already done, activating 10 sec timers to get the whitelist state");
+		timer_set(app_get_timers(), &gw_whitelist_timer, 10000);
 
 	}else
 	{
