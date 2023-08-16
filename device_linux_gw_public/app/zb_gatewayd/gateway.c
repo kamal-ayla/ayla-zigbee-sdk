@@ -2362,6 +2362,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 
 static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 {
+
 	
 	char whitelist_bssid[20];
 	log_debug("whitelist get timer cancel");
@@ -2783,6 +2784,8 @@ void appd_wifi_sta_poll()
         exec_systemcmd(command, data, DATA_SIZE);
         appd_send_wifi_sta_data(GW_WIFI_TXOP_2G, data);	
 
+	if(0 == appd_mesh_controller_status()){
+		
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
                 log_err("poll get: whitelist active failed");
@@ -2822,6 +2825,7 @@ void appd_wifi_sta_poll()
 	else{
 		strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
 		appd_send_wifi_sta_data(GW_WHITELIST_MAC_ADDR,whitelist_mac_addr);
+	}
 	}
 }
 
@@ -4115,7 +4119,9 @@ int appd_init(void)
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
-	timer_init(&gw_whitelist_timer, appd_whitelist_get);
+	if(0 == appd_mesh_controller_status()){
+		timer_init(&gw_whitelist_timer, appd_whitelist_get);
+	}
 	appd_prop_init();
 
 	return 0;
