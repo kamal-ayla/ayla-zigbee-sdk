@@ -5523,7 +5523,7 @@ int appd_init(void)
 int appd_start(void)
 {
 	log_info("application starting");
-
+	static int zb_reinit_count=0;
 	/*
 	 * Set gateway template version to select the correct cloud template.
 	 */
@@ -5532,7 +5532,11 @@ int appd_start(void)
 
 	/* Start the ZigBee interface */
 	if (zb_start() < 0) {
+		zb_reinit_count++;
 		log_err("zb_start returned error");
+		if(3==zb_reinit_count){
+			log_debug("zb reinit count reached 3, appd exit");
+		}
 		return -1;
 	}
 

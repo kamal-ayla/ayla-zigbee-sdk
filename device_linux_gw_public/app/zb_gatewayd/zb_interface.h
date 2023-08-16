@@ -15,7 +15,7 @@
 /*
  * Initialize the network co-processor (NCP)
  */
-void emAfResetAndInitNCP(void);
+int emAfResetAndInitNCP(void);
 
 
 /********************

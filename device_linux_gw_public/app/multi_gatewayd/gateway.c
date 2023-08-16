@@ -1810,6 +1810,7 @@ int appd_start(void)
 		.passkey_display_clear = app_bt_passkey_display_clear
 	};
 
+	static int zb_reinit_count=0;
 	log_info("application starting");
 
 	/*
@@ -1819,7 +1820,11 @@ int appd_start(void)
 
 	/* Start the ZigBee interface */
 	if (zb_start() < 0) {
+		zb_reinit_count++;
 		log_err("zb_start returned error");
+		if(3==zb_reinit_count){
+			log_debug("zb reinit reached count 3, appd exit");
+		}
 		return -1;
 	}
 

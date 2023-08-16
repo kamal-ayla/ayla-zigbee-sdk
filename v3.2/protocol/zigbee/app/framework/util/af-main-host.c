@@ -325,7 +325,7 @@ static void setPacketBufferCount(void)
 }
 
 // initialize the network co-processor (NCP)
-void emAfResetAndInitNCP(void)
+int emAfResetAndInitNCP(void)
 {
   uint8_t ep;
   EzspStatus ezspStatus;
@@ -345,7 +345,9 @@ void emAfResetAndInitNCP(void)
   }
 
   // send the version command before any other commands
-  emAfCliVersionCommand();
+  if(emAfCliVersionCommand() < 0 ){
+	  return -1;
+  }
 
   emSecureEzspInit();
 
@@ -467,6 +469,7 @@ void emAfResetAndInitNCP(void)
 
   // Initialize messageSentCallbacks table
   emAfInitializeMessageSentCallbackArray();
+  return 0;
 }
 
 // *******************************************************************
