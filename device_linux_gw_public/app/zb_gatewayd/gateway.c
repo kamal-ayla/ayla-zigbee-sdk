@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.8";
+const char *appd_template_version = "zigbee_gateway_demo_v3.9";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -99,7 +99,8 @@ static char up_time[UPTIME_LEN];
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
 #define WIFI_STA_ADDR_LEN               50
-extern char command[COMMAND_LEN];
+#define COMMAND_LENGTH	100
+extern char command[COMMAND_LENGTH];
 extern char data[DATA_SIZE];
 static pthread_t vnode_poll_thread = (pthread_t)NULL;
 static unsigned int wifi_sta_info_update_period_min;
@@ -233,12 +234,22 @@ static char ssid_key_2ghz[KEY_LEN];
 #define WHITELIST_LEN 100
 
 //whitelist variable
-//static char whitelist_cmd_buf[WHITELIST_LEN];
+static char whitelist_cmd_buf[WHITELIST_LEN];
 static char whitelist_mac_addr[20];
 
-#define WHITELIST_CMD "ubus call wireless.station connect '{\"name\":\"wl0\",\"bssid\":\"%s\"}'"
-#define SYSTEM_REBOOT "reboot"
+#define WHITELIST_CMD "ubus call wireless.supplicant.whitelist connect '{\"name\":\"wl0\",\"bssid\":\"%s\"}'"
+#define WHITELIST_ACTIVE "ubus call wireless.supplicant.whitelist get | grep \"whitelist_active\" | awk '{print $2}' | cut -b 1"
+#define WHITELIST_BSSID "ubus call wireless.supplicant.whitelist get | grep \"bssid\" | awk '{print $2}' | cut -b 2-18"
 static int appd_properties_get(void);
+
+/* Backhaul STA disable */
+//#define STA_LEN 100
+static int gw_wifi_bh_disable;
+#define BACKHAUL_BSS_STATE "wl -i wl0 bss"
+#define SET_BACKHAUL_STA_DISABLE "ubus call wireless.supplicant.apscan set '{\"name\":\"wl0\",\"state\":\"0\"}'"
+#define GET_BACKHAUL_STA_DISABLE "ubus call wireless.supplicant.apscan get '{\"name\":\"wl0\"}'"
+#define DISCONNECT_BACKHAUL_STA_DISABLE "wpa_cli -p /var/run/wl0_wpa_supplicant disconnect"
+
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -1368,6 +1379,52 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 }
 
 /*
+ * backhaul STA Disable
+ *
+ */
+static int appd_backhaul_sta_disable(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+	int apscan=2;
+	memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, SET_BACKHAUL_STA_DISABLE);
+        exec_systemcmd(command, data, DATA_SIZE);
+
+	memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, GET_BACKHAUL_STA_DISABLE);
+        exec_systemcmd(command, data, DATA_SIZE);
+	apscan=atoi(data);
+	log_debug("apscan %d",apscan);
+	if(apscan==0){
+		memset(command,'\0',sizeof(command));
+        	memset(data,'\0',sizeof(data));
+        	sprintf(command, DISCONNECT_BACKHAUL_STA_DISABLE);
+        	exec_systemcmd(command, data, DATA_SIZE);
+		
+		memset(command,'\0',sizeof(command));
+                memset(data,'\0',sizeof(data));
+                sprintf(command, BACKHAUL_BSS_STATE);
+                exec_systemcmd(command, data, DATA_SIZE);
+		log_debug("backhaul bss state %s",data);
+		sleep(7);
+		if(!strcmp(data,"down")){
+			gw_wifi_bh_disable=1;
+			prop_send_by_name("gw_wifi_bh_disable");
+		}
+		else{
+			log_debug("backhaul_bss_state is up");
+			gw_wifi_bh_disable=0;
+			prop_send_by_name("gw_wifi_bh_disable");
+		}
+	}
+	else{
+		log_debug("apscan is enabled");
+	}
+	return 0;
+}
+/*
  *WPS data update timer & gw led status update
  */
 
@@ -2240,21 +2297,19 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 
-#if 0	
-
    FILE *fp;
-   FILE *fp1;
 
    unsigned int validate;
    unsigned int status;
 
+   int active=2;
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
        return -1;
    }
 
    status=appd_mesh_controller_status();
-
+   log_debug("whitelist mesh controller status %d",status);
    if(status == 0) {
 
       validate = strlen(whitelist_mac_addr);
@@ -2275,17 +2330,30 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
             exit(1);
          }
          pclose(fp);
-
+	 
+	 sleep(5);
+	 memset(command,'\0',sizeof(command));
+         memset(data,'\0',sizeof(data));
+         sprintf(command, WHITELIST_ACTIVE);
+         exec_systemcmd(command, data, DATA_SIZE);
+	 active=atoi(data);
+	 log_debug("whitelist active %d",active);
+	 if(active==1){
+		memset(command,'\0',sizeof(command));
+		memset(data,'\0',sizeof(data));
+		sprintf(command, WHITELIST_BSSID);
+		exec_systemcmd(command, data, DATA_SIZE);
+		log_debug("WHITELIST_BSSID %s",data);
+		if(!strcmp(data,whitelist_cmd_buf)){
+			strcpy(whitelist_mac_addr,data);
+			prop_send_by_name("gw_whitelist_mac_address");
+		}
+	 }
+	else{
          memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
          strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
          prop_send_by_name("gw_whitelist_mac_address");
-	 
-	 fp1 = popen(SYSTEM_REBOOT, "r");
-         if (fp1 == NULL) {
-            log_err("reboot command failed");
-            exit(1);
-	 }
-         pclose(fp1);	 
+	}
       }
       else {
 	 log_debug("Invalid mac address try again");     
@@ -2299,11 +2367,10 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
       strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
 	   
    }
-#endif   
 
-    memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
-    strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
-    prop_send_by_name("gw_whitelist_mac_address");
+   // memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
+   // strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
+   // prop_send_by_name("gw_whitelist_mac_address");
 
    return 0;
 }
@@ -3606,7 +3673,16 @@ static struct prop appd_gw_prop_table[] = {
                 .len = sizeof(ssid_key_5ghz),
                 .skip_init_update_from_cloud = 1,
         },
-	
+
+	/* backhaul sta disable */
+	{
+                .name = "gw_wifi_bh_disable",
+                .type = PROP_INTEGER,
+                .set = appd_backhaul_sta_disable,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_bh_disable,
+                .len = sizeof(gw_wifi_bh_disable),
+        },	
 	
         /* Radio information */
         {
