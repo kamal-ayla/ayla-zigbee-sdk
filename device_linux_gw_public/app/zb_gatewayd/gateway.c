@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.10";
+const char *appd_template_version = "zigbee_gateway_demo_v4.1";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -108,7 +108,7 @@ static unsigned int wifi_sta_info_update_period_min;
 static int appd_check_wifi_sta_data_deviation(char *name, char *value);
 static int appd_send_wifi_sta_data(char *name, char *value);
 static int appd_is_ngrok_installed(void);
-
+int appd_mesh_controller_status();
 /* Station properties  */
 static int wifi_sta_info_update;
 static int wifi_sta_channel;
@@ -244,18 +244,21 @@ static int gw_whitelist_active;
 #define WHITELIST_CMD "ubus call wireless.supplicant.whitelist connect '{\"name\":\"wl0\",\"bssid\":\"%s\"}'"
 #define WHITELIST_ACTIVE "ubus call wireless.supplicant.whitelist get | grep \"whitelist_active\" | awk '{print $2}' | cut -b 1"
 #define WHITELIST_BSSID "ubus call wireless.supplicant.whitelist get | grep \"whitelist_bssid\" | awk '{print $2}' | cut -b 2-18"
+#define WHITELIST_BSS_ID "ubus call wireless.supplicant.whitelist get | grep \"bssid\" | awk '{print $2}' | cut -b 2-18"
 #define WHITELIST_STATE "ubus call wireless.supplicant.whitelist get | grep \"whitelist_state\" | awk '{print $2}' | cut -b 1"
 static int appd_properties_get(void);
 static struct timer gw_whitelist_timer;
 
-/* Backhaul STA disable */
-//#define STA_LEN 100
-static u8 gw_wifi_bh_disable;
+/* Backhaul STA  */
+
+static u8 gw_wifi_bh_sta;
 static int gw_wifi_bh_apscan;
 #define BACKHAUL_BSS_STATE "wl -i wl0 bss"
+#define SET_BACKHAUL_STA_ENABLE "ubus call wireless.supplicant.apscan set '{\"name\":\"wl0\",\"state\":\"1\"}'"
 #define SET_BACKHAUL_STA_DISABLE "ubus call wireless.supplicant.apscan set '{\"name\":\"wl0\",\"state\":\"0\"}'"
-#define GET_BACKHAUL_STA_DISABLE "ubus call wireless.supplicant.apscan get '{\"name\":\"wl0\"}' | grep \"ap_scan_mode\" | awk '{print $2}'"
-#define DISCONNECT_BACKHAUL_STA_DISABLE "wpa_cli -p /var/run/wl0_wpa_supplicant disconnect"
+#define GET_BACKHAUL_STA "ubus call wireless.supplicant.apscan get '{\"name\":\"wl0\"}' | grep \"ap_scan_mode\" | awk '{print $2}'"
+//#define DISCONNECT_BACKHAUL_STA_DISABLE "wpa_cli -p /var/run/wl0_wpa_supplicant disconnect"
+static struct timer gw_wifi_bh_sta_timer;
 
 
 /* ngrok properties */
@@ -1021,37 +1024,37 @@ void appd_prop_init()
 	prop_send_by_name("up_time");
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
-                log_err("init get: whitelist active failed");
+                log_err("IOT_DEBUG init get: whitelist active failed");
 		gw_whitelist_active=0;
         } else {
                 fscanf(fp, "%d", &gw_whitelist_active);
         }
 	pclose(fp);
 
-        log_debug("init get: whitelist active %d::",gw_whitelist_active);
+        log_debug("IOT_DEBUG init get: whitelist active %d::",gw_whitelist_active);
 	prop_send_by_name("gw_whitelist_active");
 
         fp1 = popen(WHITELIST_STATE,"r");
         if (fp1 == NULL) {
-                log_err("init get: whitelist state failed");
+                log_err("IOT_DEBUG init get: whitelist state failed");
 		gw_whitelist_state = 0;
         } else {
                 fscanf(fp1, "%d", &gw_whitelist_state);
                 
 	}
 	pclose(fp1);
-        log_debug("init get: whitelist state %d",gw_whitelist_state);
+        log_debug("IOT_DEBUG init get: whitelist state %d",gw_whitelist_state);
 	prop_send_by_name("gw_whitelist_state");
 
         fp2 = popen(WHITELIST_BSSID,"r");
         if (fp2 == NULL) {
-                log_err("init get: whitelist bssid failed");
+                log_err("IOT_DEBUG init get: whitelist bssid failed");
 		strcpy(whitelist_bssid,"00:00:00:00:00:00");
         } else {
                 fscanf(fp2, "%[^\n]", whitelist_bssid);
         }
 	pclose(fp2);
-        log_debug("init get: whitelist bssid %s",whitelist_bssid);
+        log_debug("IOT_DEBUG init get: whitelist bssid %s",whitelist_bssid);
 	if(strlen(whitelist_bssid)==17){	
         strcpy(whitelist_mac_addr,whitelist_bssid);
         prop_send_by_name("gw_whitelist_mac_address");
@@ -1060,6 +1063,8 @@ void appd_prop_init()
 	strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
 	prop_send_by_name("gw_whitelist_mac_address");
         }
+	log_debug("IOT_DEBUG : appd_prop_init gw_wifi_bh_sta %d",gw_wifi_bh_sta);
+	prop_send_by_name("gw_wifi_bh_sta");
 	appd_properties_get();
 }
 
@@ -1426,25 +1431,143 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 	return 0;
 }
 
+static void appd_wifi_bh_sta_get(struct timer *timer_gw_wifi_bh_sta_timer)
+{
+	FILE *fp;
+	char bss_state[10];
+	timer_cancel(app_get_timers(), timer_gw_wifi_bh_sta_timer);
+	                log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
+                        fp = popen(BACKHAUL_BSS_STATE,"r");
+                        if (fp == NULL) {
+                                log_err("IOT_DEBUG: ERROR Backhaul BSS state ");
+                                strcpy(bss_state,"NULL");
+                        } else {
+                                fscanf(fp,"%[^\n]",bss_state);
+                        }
+                        pclose(fp);
+                        log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
+                        if(!strcmp(bss_state,"up")){
+                                log_debug("IOT_DEBUG: gw wifi bh bss state is up");
+                                gw_wifi_bh_sta=1;
+                                prop_send_by_name("gw_wifi_bh_sta");
+                        }
+                        else {
+                                log_debug("IOT_DEBUG: gw wifi bss state is down");
+                                gw_wifi_bh_sta=0;
+                                prop_send_by_name("gw_wifi_bh_sta");
+                        }
+
+}
+
 /*
  * backhaul STA Disable
  *
  */
-static int appd_backhaul_sta_disable(struct prop *prop, const void *val,
+static int appd_backhaul_sta(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
 	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
                         log_err("prop_arg_set returned error");
                         return -1;
         }
+	FILE *fp;
+	
+	int gw_wifi_bh_apscan_get;
 
-	log_debug("gw_wifi_bh_disable %d",gw_wifi_bh_disable);
-	if(gw_wifi_bh_disable){
-		
+	char bss_state[10];
+	log_debug("IOT_DEBUG: GET_BACKHAUL_STA before gw_wifi_bh_sta %s",GET_BACKHAUL_STA);
+        fp = popen(GET_BACKHAUL_STA,"r");
+        if (fp == NULL) {
+               log_err("get backhaul enable ");
+               gw_wifi_bh_apscan_get=0;
+        } else {
+               fscanf(fp, "%d", &gw_wifi_bh_apscan_get);
+        }
+        pclose(fp);
+
+	log_debug("IOT_DEBUG: Check case BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
+        fp = popen(BACKHAUL_BSS_STATE,"r");
+                        if (fp == NULL) {
+                                log_err("IOT_DEBUG: check case ERROR Backhaul BSS state ");
+                                strcpy(bss_state,"NULL");
+                        } else {
+                                fscanf(fp,"%[^\n]",bss_state);
+                        }
+                        pclose(fp);
+                        log_debug("IOT_DEBUG: check case backhaul bss state %s",bss_state);
+
+
+	unsigned int status;
+	status = appd_mesh_controller_status();
+
+	if((status == 0)) {// && (gw_wifi_bh_apscan!=gw_wifi_bh_sta)){
+//	char bss_state[10];
+	log_debug("IOT_DEBUG: gw_wifi_bh_sta %d",gw_wifi_bh_sta);
+	if(gw_wifi_bh_sta){
+		if(gw_wifi_bh_apscan_get==1 && (!strcmp(bss_state,"up"))){
+			log_debug("IOT_DEBUG: BH already enabled");
+		}
+		else{
 		FILE *fp;
-		FILE *fp1;
-		char bss_state[10];
+		log_debug("IOT_DEBUG: SET_BACKHAUL_STA %s",SET_BACKHAUL_STA_ENABLE);
+		fp = popen(SET_BACKHAUL_STA_ENABLE,"r");
+		if (fp == NULL) {
+			log_err("IOT_DEBUG: set backhaul enable ");
+		}
+		pclose(fp);
 
+		log_debug("IOT_DEBUG: GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
+		fp = popen(GET_BACKHAUL_STA,"r");
+		if (fp == NULL) {
+			log_err("get backhaul enable ");
+			gw_wifi_bh_apscan=0;
+		} else {
+			fscanf(fp, "%d", &gw_wifi_bh_apscan);
+		}
+		pclose(fp);
+
+		log_debug("iot_debug: apscan %d",gw_wifi_bh_apscan);
+		if(gw_wifi_bh_apscan==1){
+			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 10000);
+/*			fp = popen(DISCONNECT_BACKHAUL_STA_ENABLE,"r");
+			if (fp == NULL) {
+				log_err("iot_debug: error in disconnect backhaul enable ");
+			}  else {
+				log_debug("iot_debug: disconnect bh sta enable");
+			}
+			pclose(fp);
+
+			log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
+			fp = popen(BACKHAUL_BSS_STATE,"r");
+			if (fp == NULL) {
+				log_err("IOT_DEBUG: ERROR Backhaul BSS state ");
+				strcpy(bss_state,"NULL");
+			} else {
+				fscanf(fp,"%[^\n]",bss_state);
+			}
+			pclose(fp);
+			log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
+			if(!strcmp(bss_state,"up")){
+				log_debug("IOT_DEBUG: gw wifi bh bss state is up");
+				gw_wifi_bh_sta=1;
+				prop_send_by_name("gw_wifi_bh_sta");
+			}
+			else {
+				log_debug("IOT_DEBUG: gw wifi bss state is down");
+				gw_wifi_bh_sta=0;
+				prop_send_by_name("gw_wifi_bh_sta");
+			}*/
+		}
+		}
+	}
+	else {
+                if(gw_wifi_bh_apscan_get==1 && (!strcmp(bss_state,"down"))){
+                        log_debug("IOT_DEBUG: BH already disabled");
+                }
+		else {
+		FILE *fp;
+		
+		log_debug("IOT_DEBUG: SET_BACKHAUL_STA_DISABLE %s",SET_BACKHAUL_STA_DISABLE);
 		fp = popen(SET_BACKHAUL_STA_DISABLE,"r");
                 if (fp == NULL) {
                         log_err("set backhaul disable ");
@@ -1452,49 +1575,53 @@ static int appd_backhaul_sta_disable(struct prop *prop, const void *val,
                 pclose(fp);
                 
 		
-		log_debug("GET_BACKHAUL_STA_DISABLE %s",GET_BACKHAUL_STA_DISABLE);
-		fp = popen(GET_BACKHAUL_STA_DISABLE,"r");
+		log_debug("IOT_DEBUG: GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
+		fp = popen(GET_BACKHAUL_STA,"r");
         	if (fp == NULL) {
         	        log_err("get backhaul disable ");
-			gw_wifi_bh_apscan=2;
+			gw_wifi_bh_apscan=0;
         	} else {
                 	fscanf(fp, "%d", &gw_wifi_bh_apscan);
         	}
 		pclose(fp);
 	
-		log_debug("apscan %d",gw_wifi_bh_apscan);
+		log_debug("IOT_DEBUG: apscan %d",gw_wifi_bh_apscan);
 		if(gw_wifi_bh_apscan==0){
-			memset(command,'\0',sizeof(command));
-        		memset(data,'\0',sizeof(data));
-        		sprintf(command, DISCONNECT_BACKHAUL_STA_DISABLE);
-        		exec_systemcmd(command, data, DATA_SIZE);
-		
-			
-			fp1 = popen(BACKHAUL_BSS_STATE,"r");
-        		if (fp1 == NULL) {
+			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 10000);
+			/*fp = popen(DISCONNECT_BACKHAUL_STA_DISABLE,"r");
+			if (fp == NULL) {
+				log_err("get backhaul disable ");
+
+			} else {
+				log_debug("iot_debug: disconnect sta disable");
+			}
+			pclose(fp);
+
+			log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
+			fp = popen(BACKHAUL_BSS_STATE,"r");
+        		if (fp == NULL) {
                 		log_err("Backhaul BSS state ");
 				strcpy(bss_state,"NULL");
         		} else {
-                		fscanf(fp1,"%[^\n]",bss_state);
+                		fscanf(fp,"%[^\n]",bss_state);
         		}
-			pclose(fp1);
-			log_debug("backhaul bss state %s",bss_state);
+			pclose(fp);
+			log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
 			if(!strcmp(bss_state,"down")){
-			//	gw_wifi_bh_disable=0;
-			//	prop_send_by_name("gw_wifi_bh_disable");
+				log_debug("IOT_DEBUG : gw wifi bss state is down");
+				gw_wifi_bh_sta=0;
+				prop_send_by_name("gw_wifi_bh_sta");
 			}
 			else{
-			//	log_debug("backhaul_bss_state is up");
-			//	gw_wifi_bh_disable=0;
-			//	prop_send_by_name("gw_wifi_bh_disable");
-			}
+				log_debug("IOT_DEBUG : gw wifi bss state is up");
+				gw_wifi_bh_sta=1;
+				prop_send_by_name("gw_wifi_bh_sta");
+			}*/
+		
 		}
-		else{
-			log_debug("apscan is enabled");
 		}
 	}
-			gw_wifi_bh_disable = 0;
-                        prop_send_by_name("gw_wifi_bh_disable");
+	}
 	return 0;
 }
 
@@ -2370,7 +2497,7 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 
 	
 	char whitelist_bssid[20];
-	log_debug("whitelist get timer cancel");
+	log_debug("IOT_DEBUG whitelist get timer cancel");
 	timer_cancel(app_get_timers(), timer_gw_whitelist_timer);
         
 	FILE *fp;
@@ -2379,37 +2506,37 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
         
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
-                log_err("whitelist active failed");
+                log_err("IOT_DEBUG whitelist active failed");
 		gw_whitelist_active=0;
         } else {
                 fscanf(fp, "%d", &gw_whitelist_active);
         }
 	pclose(fp);
 
-         log_debug("timer get: whitelist active %d::",gw_whitelist_active);
+         log_debug("IOT_DEBUG timer get: whitelist active %d::",gw_whitelist_active);
 	 prop_send_by_name("gw_whitelist_active");
 	 
 	 fp1 = popen(WHITELIST_STATE,"r");
                 if (fp1 == NULL) {
-                        log_err("timer get: whitelist state failed");
+                        log_err("IOT_DEBUG timer get: whitelist state failed");
 			gw_whitelist_state=0;
                 } else {
                         fscanf(fp1, "%d", &gw_whitelist_state);
          	}
 		pclose(fp1);
-         log_debug("timer get: whitelist state %d",gw_whitelist_state);
+         log_debug("IOT_DEBUG timer get: whitelist state %d",gw_whitelist_state);
 	 prop_send_by_name("gw_whitelist_state");
          
 	 if(gw_whitelist_active==1){
 		fp2 = popen(WHITELIST_BSSID,"r");
 		if (fp2 == NULL) {
-                	log_err("timer get: whitelist bssid failed");
+                	log_err("IOT_DEBUG timer get: whitelist bssid failed");
 			strcpy(whitelist_bssid,"00:00:00:00:00:00");
         	} else {
 			fscanf(fp2, "%[^\n]", whitelist_bssid);
         	}
 		pclose(fp2);
-		log_debug("timer get: whitelist bssid %s",whitelist_bssid);
+		log_debug("IOT_DEBUG timer get: whitelist bssid %s",whitelist_bssid);
                 if(!strcmp(whitelist_bssid,whitelist_cmd_buf)){
                         strcpy(whitelist_mac_addr,whitelist_bssid);
                         prop_send_by_name("gw_whitelist_mac_address");
@@ -2436,6 +2563,7 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 
    unsigned int validate;
    unsigned int status;
+   char whitelist_bssid[20];
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
@@ -2443,16 +2571,63 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
    }
 
    status=appd_mesh_controller_status();
-   log_debug("whitelist mesh controller status %d",status);
+   log_debug("IOT_DEBUG: whitelist mesh controller status %d",status);
    if(status == 0) {
 
       validate = strlen(whitelist_mac_addr);
 
-      log_debug("whitelist connect mac address value : %s and size of the value : %d",whitelist_mac_addr,validate);
+      log_debug("IOT_DEBUG: whitelist connect mac address value : %s and size of the value : %d",whitelist_mac_addr,validate);
 
       if(validate == 17 && strcmp(whitelist_mac_addr,"00:00:00:00:00:00") != 0){
 
-         log_debug("whitelist mac address connect value : %s",whitelist_mac_addr);
+
+	fp = popen(WHITELIST_ACTIVE,"r");
+        if (fp == NULL) {
+                log_err("whitelist active failed");
+                gw_whitelist_active=0;
+        } else {
+                fscanf(fp, "%d", &gw_whitelist_active);
+        }
+        pclose(fp);
+	log_debug("IOT_DEBUG: gw_whitelist_active %d",gw_whitelist_active);
+
+	log_debug("IOT_DEBUG: bssid get cmd: %s",WHITELIST_BSS_ID);
+	fp = popen(WHITELIST_BSS_ID,"r");
+	if (fp == NULL) {
+		log_err("IOT_DEBUG timer get: whitelist bssid failed");
+                strcpy(whitelist_bssid,"00:00:00:00:00");
+		
+        } else {
+                fscanf(fp, "%[^\n]", whitelist_bssid);
+        }
+        pclose(fp);
+        log_debug("IOT_DEBUG bssid %s:::  whitelist_mac_addr %s",whitelist_bssid,whitelist_mac_addr);
+
+
+	//if(((gw_whitelist_active==0) && (!strcmp(whitelist_bssid,whitelist_mac_addr)) && strlen(whitelist_bssid)==17) || ((gw_whitelist_active==1) && (strcmp(whitelist_bssid,whitelist_mac_addr)) && strlen(whitelist_bssid)==17)){
+	if((gw_whitelist_active==1) && (!strcmp(whitelist_bssid,whitelist_mac_addr))){
+		log_debug("IOT_DEBUG whitelist config already done");
+
+	}else
+	{
+		if(strlen(whitelist_bssid)==17){
+                log_debug("IOT_DEBUG whitelist bssid %s :: whitelist_mac_addr %s",whitelist_bssid,whitelist_mac_addr);
+		snprintf(whitelist_cmd_buf, sizeof(whitelist_cmd_buf), WHITELIST_CMD, whitelist_mac_addr);
+
+	        log_debug("IOT_DEBUG whitelist command : %s",whitelist_cmd_buf);
+
+		fp = popen(whitelist_cmd_buf, "r");
+	        if (fp == NULL) {
+        	log_err("whitelist connect command failed");
+            		exit(1);
+         	}
+         	pclose(fp);
+
+         	timer_set(app_get_timers(), &gw_whitelist_timer, 60000);
+		}
+
+	}
+        /* log_debug("whitelist mac address connect value : %s",whitelist_mac_addr);
 
          snprintf(whitelist_cmd_buf, sizeof(whitelist_cmd_buf), WHITELIST_CMD, whitelist_mac_addr);
 
@@ -2465,7 +2640,7 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
          }
          pclose(fp);
 
-         timer_set(app_get_timers(), &gw_whitelist_timer, 60000);
+         timer_set(app_get_timers(), &gw_whitelist_timer, 60000);*/
       }
       else {
 	 log_debug("Invalid mac address try again");     
@@ -2651,12 +2826,13 @@ static int appd_get_wifi_sta_info_update(struct prop *prop, const void *val,
 
 void appd_wifi_sta_poll()
 {
-	char whitelist_bssid[20];
+	/*char whitelist_bssid[20];
+	char bss_state[10];
 	char gw_poll_whitelist_active[5];
 	char gw_poll_whitelist_state[5];
         FILE *fp;
         FILE *fp1;
-        FILE *fp2;
+        FILE *fp2;*/
 
 	if (wifi_sta_info_update == 0) {
 		 wifi_sta_info_update = WIFI_STA_DEFAULT_UPDATE_PERIOD_MINS;
@@ -2788,7 +2964,7 @@ void appd_wifi_sta_poll()
         exec_systemcmd(command, data, DATA_SIZE);
         appd_send_wifi_sta_data(GW_WIFI_TXOP_2G, data);	
 
-	if(0 == appd_mesh_controller_status()){
+/*	if(0 == appd_mesh_controller_status()){
 		
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
@@ -2830,7 +3006,45 @@ void appd_wifi_sta_poll()
 		strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
 		appd_send_wifi_sta_data(GW_WHITELIST_MAC_ADDR,whitelist_mac_addr);
 	}
-	}
+
+		log_debug("IOT_DEBUG: poll GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
+                fp = popen(GET_BACKHAUL_STA,"r");
+                if (fp == NULL) {
+                        log_err("get backhaul enable ");
+                        gw_wifi_bh_apscan=0;
+                } else {
+                        fscanf(fp, "%d", &gw_wifi_bh_apscan);
+                }
+                pclose(fp);
+
+                log_debug("iot_debug: poll apscan %d",gw_wifi_bh_apscan);
+
+                        log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
+                        fp = popen(BACKHAUL_BSS_STATE,"r");
+                        if (fp == NULL) {
+                                log_err("IOT_DEBUG: ERROR Backhaul BSS state ");
+                                strcpy(bss_state,"NULL");
+                        } else {
+                                fscanf(fp,"%[^\n]",bss_state);
+                        }
+                        pclose(fp);
+                        log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
+                        if((!strcmp(bss_state,"up")) && (gw_wifi_bh_apscan==1)){
+                                log_debug("IOT_DEBUG: poll gw wifi bh bss state is up");
+                                gw_wifi_bh_sta=1;
+                                prop_send_by_name("gw_wifi_bh_sta");
+                        }
+                        else if((!strcmp(bss_state,"down")) && (gw_wifi_bh_apscan==0)) {
+                                log_debug("IOT_DEBUG: poll gw wifi bss state is down");
+		
+                                gw_wifi_bh_sta=0;
+                                prop_send_by_name("gw_wifi_bh_sta");
+                        }
+			else{
+				log_debug("iot_debug failure case");
+			}
+
+	}*/
 }
 
 
@@ -3023,7 +3237,7 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 
                 prop_send_by_name(name);
 
-        }else if (!strcmp(name, GW_WHITELIST_ACTIVE)) {
+        }/*else if (!strcmp(name, GW_WHITELIST_ACTIVE)) {
 		tmp = atoi(value);
 
                 if (tmp == gw_whitelist_active) {
@@ -3044,9 +3258,12 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 
                 prop_send_by_name(name);
         }else if (!strcmp(name, GW_WHITELIST_MAC_ADDR)) {
+		if (!strcmp(value, whitelist_mac_addr)) {
+                        return 0;
+                }
                 strcpy(whitelist_mac_addr,value);
                 prop_send_by_name(name);
-        }
+        }*/
 
 
 	return 0;
@@ -3871,14 +4088,14 @@ static struct prop appd_gw_prop_table[] = {
           //      .skip_init_update_from_cloud = 1,
         },
 
-	/* backhaul sta disable */
+	/* backhaul sta enable/disable */
 	{
-                .name = "gw_wifi_bh_disable",
+                .name = "gw_wifi_bh_sta",
                 .type = PROP_BOOLEAN,
-                .set = appd_backhaul_sta_disable,
+                .set = appd_backhaul_sta,
                 .send = prop_arg_send,
-                .arg = &gw_wifi_bh_disable,
-		.len = sizeof(gw_wifi_bh_disable),
+                .arg = &gw_wifi_bh_sta,
+		.len = sizeof(gw_wifi_bh_sta),
 		.skip_init_update_from_cloud = 1,
         },	
 	
@@ -4125,6 +4342,7 @@ int appd_init(void)
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
 	if(0 == appd_mesh_controller_status()){
 		timer_init(&gw_whitelist_timer, appd_whitelist_get);
+		timer_init(&gw_wifi_bh_sta_timer, appd_wifi_bh_sta_get); 
 	}
 	appd_prop_init();
 
