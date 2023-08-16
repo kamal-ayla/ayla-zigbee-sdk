@@ -1061,6 +1061,10 @@ static int appd_update_whitelist_get()
                 strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
         } else {
                 fscanf(fp, "%[^\n]", gw_whitelist_bssid);
+		log_debug("IOT_DEBUG: gw_whitelist_bssid poll %s",gw_whitelist_bssid);
+		if(strlen(gw_whitelist_bssid)==0){
+			strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
+		}
         }
         pclose(fp);
         log_debug("IOT_DEBUG: appd update whitelist bssid %s",gw_whitelist_bssid);
@@ -1168,7 +1172,7 @@ static int appd_ngrok_update(void)
    memset(tmp_ngrok,'\0',sizeof(tmp_ngrok));
    strcpy(tmp_ngrok,ngrok_status);
 
-   log_debug("IOT_DEBUG : GET_NGROK_STATUS");
+   log_debug("IOT_DEBUG : GET_NGROK_STATUS %s",GET_NGROK_STATUS);
    fp = popen(GET_NGROK_STATUS,"r");
    if (fp == NULL || appd_is_ngrok_installed()) {
       log_err("Get ngrok status failed");
@@ -1176,7 +1180,7 @@ static int appd_ngrok_update(void)
    } else {
       memset(ngrok_status,'\0',sizeof(ngrok_status));	   
       fscanf(fp, "%[^\n]", ngrok_status);
-      log_debug("Get ngrok_status value : %s during sysinfo",ngrok_status);
+      log_debug("Get ngrok_status value : %s during sysinfo tmp %s",ngrok_status,tmp_ngrok);
       if ( strcmp(tmp_ngrok, ngrok_status ) ) {
            prop_send_by_name("ngrok_status");
       }      
@@ -1421,7 +1425,6 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
                 memset(data,'\0',sizeof(data));
                 sprintf(command, GET_NGROK_START);
                 exec_systemcmd(command, data, DATA_SIZE);
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
         } else if ((strcmp(ngrok_status,"ngrok not running") == 0) && ngrok_enable == 0) {
                  log_debug("ngrok status : ngrok not running and ngrok enable set to 0");
         } else if ((strcmp(ngrok_status,"ngrok running") == 0) && ngrok_enable == 1) {
@@ -1433,10 +1436,10 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
                 sprintf(command, GET_NGROK_STOP);
                 exec_systemcmd(command, data, DATA_SIZE);
                 log_debug("ngrok status : ngrok running and ngrok enable set to 0");
-		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
         } else {
                 log_debug("get ngrok_info failed");
         }
+	timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
        return 0;
 }
 
