@@ -1025,8 +1025,8 @@ void appd_prop_init()
 		gw_whitelist_active=0;
         } else {
                 fscanf(fp, "%d", &gw_whitelist_active);
-                pclose(fp);
         }
+	pclose(fp);
 
         log_debug("init get: whitelist active %d::",gw_whitelist_active);
 	prop_send_by_name("gw_whitelist_active");
@@ -1037,8 +1037,9 @@ void appd_prop_init()
 		gw_whitelist_state = 0;
         } else {
                 fscanf(fp1, "%d", &gw_whitelist_state);
-                pclose(fp1);
-        }
+                
+	}
+	pclose(fp1);
         log_debug("init get: whitelist state %d",gw_whitelist_state);
 	prop_send_by_name("gw_whitelist_state");
 
@@ -1048,8 +1049,8 @@ void appd_prop_init()
 		strcpy(whitelist_bssid,"00:00:00:00:00:00");
         } else {
                 fscanf(fp2, "%[^\n]", whitelist_bssid);
-                pclose(fp2);
         }
+	pclose(fp2);
         log_debug("init get: whitelist bssid %s",whitelist_bssid);
 	if(strlen(whitelist_bssid)==17){	
         strcpy(whitelist_mac_addr,whitelist_bssid);
@@ -1439,23 +1440,27 @@ static int appd_backhaul_sta_disable(struct prop *prop, const void *val,
 
 	log_debug("gw_wifi_bh_disable %d",gw_wifi_bh_disable);
 	if(gw_wifi_bh_disable){
+		
 		FILE *fp;
 		FILE *fp1;
 		char bss_state[10];
-		memset(command,'\0',sizeof(command));
-        	memset(data,'\0',sizeof(data));
-        	sprintf(command, SET_BACKHAUL_STA_DISABLE);
-        	exec_systemcmd(command, data, DATA_SIZE);
 
-
+		fp = popen(SET_BACKHAUL_STA_DISABLE,"r");
+                if (fp == NULL) {
+                        log_err("set backhaul disable ");
+                }
+                pclose(fp);
+                
+		
+		log_debug("GET_BACKHAUL_STA_DISABLE %s",GET_BACKHAUL_STA_DISABLE);
 		fp = popen(GET_BACKHAUL_STA_DISABLE,"r");
         	if (fp == NULL) {
         	        log_err("get backhaul disable ");
 			gw_wifi_bh_apscan=2;
         	} else {
                 	fscanf(fp, "%d", &gw_wifi_bh_apscan);
-                	pclose(fp);
         	}
+		pclose(fp);
 	
 		log_debug("apscan %d",gw_wifi_bh_apscan);
 		if(gw_wifi_bh_apscan==0){
@@ -1471,8 +1476,8 @@ static int appd_backhaul_sta_disable(struct prop *prop, const void *val,
 				strcpy(bss_state,"NULL");
         		} else {
                 		fscanf(fp1,"%[^\n]",bss_state);
-                		pclose(fp1);
         		}
+			pclose(fp1);
 			log_debug("backhaul bss state %s",bss_state);
 			if(!strcmp(bss_state,"down")){
 			//	gw_wifi_bh_disable=0;
@@ -2378,9 +2383,8 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 		gw_whitelist_active=0;
         } else {
                 fscanf(fp, "%d", &gw_whitelist_active);
-                pclose(fp);
         }
-	
+	pclose(fp);
 
          log_debug("timer get: whitelist active %d::",gw_whitelist_active);
 	 prop_send_by_name("gw_whitelist_active");
@@ -2391,8 +2395,8 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 			gw_whitelist_state=0;
                 } else {
                         fscanf(fp1, "%d", &gw_whitelist_state);
-                        pclose(fp1);
-         }
+         	}
+		pclose(fp1);
          log_debug("timer get: whitelist state %d",gw_whitelist_state);
 	 prop_send_by_name("gw_whitelist_state");
          
@@ -2403,8 +2407,8 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 			strcpy(whitelist_bssid,"00:00:00:00:00:00");
         	} else {
 			fscanf(fp2, "%[^\n]", whitelist_bssid);
-                	pclose(fp2);
         	}
+		pclose(fp2);
 		log_debug("timer get: whitelist bssid %s",whitelist_bssid);
                 if(!strcmp(whitelist_bssid,whitelist_cmd_buf)){
                         strcpy(whitelist_mac_addr,whitelist_bssid);
@@ -2792,8 +2796,8 @@ void appd_wifi_sta_poll()
 		strcpy(gw_poll_whitelist_active,"0");
         } else {
                 fscanf(fp, "%[^\n]", gw_poll_whitelist_active);
-                pclose(fp);
         }
+	pclose(fp);
 
 	log_debug("poll get: whitelist active %s::",gw_poll_whitelist_active);
 	appd_send_wifi_sta_data(GW_WHITELIST_ACTIVE,gw_poll_whitelist_active);
@@ -2804,8 +2808,8 @@ void appd_wifi_sta_poll()
 		strcpy(gw_poll_whitelist_state,"0");
 	} else {
 		fscanf(fp1, "%[^\n]", gw_poll_whitelist_state);
-		pclose(fp1);
 	}
+	pclose(fp1);
 	log_debug("poll get: whitelist state %s",gw_poll_whitelist_state);
 	appd_send_wifi_sta_data(GW_WHITELIST_STATE,gw_poll_whitelist_state);
 
@@ -2815,8 +2819,8 @@ void appd_wifi_sta_poll()
 		strcpy(whitelist_bssid,"00:00:00:00:00:00");
 	} else {
 		fscanf(fp2, "%[^\n]", whitelist_bssid);
-		pclose(fp2);
 	}
+	pclose(fp2);
 	log_debug("poll get: whitelist bssid %s",whitelist_bssid);
 	if(strlen(whitelist_bssid)==17){
 		strcpy(whitelist_mac_addr,whitelist_bssid);
