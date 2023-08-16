@@ -439,6 +439,17 @@ get_backhaul_network_up_time()
 	echo $status
 }
 
+get_txop_5g()
+{
+	status=`wl -i wl0 chanim_stats | awk '{print $8}' | cut -d "t" -f 1`
+	echo $status
+}
+
+get_txop_2g()
+{
+	status=`wl -i wl1 chanim_stats | awk '{print $8}' | cut -d "t" -f 1`
+        echo $status
+}
 
 Macaddr=$2
 
@@ -514,9 +525,15 @@ case "$1" in
 	-backhaul_nw_up_time)
                 get_backhaul_network_up_time
                 ;;
+	-sta_txop_5g)
+		get_txop_5g
+		;;
+	-sta_txop_2g)
+		get_txop_2g
+		;;
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time|-sta_txop_5g|-sta_txop_2g]"
 		exit 1
 		;;
 esac

@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v3.7";
+const char *appd_template_version = "zigbee_gateway_demo_v3.8";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -113,6 +113,8 @@ static int wifi_sta_info_update;
 static int wifi_sta_channel;
 static int wifi_sta_noise;
 static int wifi_sta_RSSI;
+static int gw_wifi_txop_5g;
+static int gw_wifi_txop_2g;
 static char wifi_sta_associated_BSSID[WIFI_STA_ADDR_LEN];
 static char wifi_sta_associated_SSID[WIFI_STA_ADDR_LEN];
 static char gw_wifi_BSSID_fronthaul_5G[WIFI_STA_ADDR_LEN];
@@ -137,6 +139,8 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define EM_BACKHAUL_TYPE		"em_backhaul_type"
 #define GW_AGENT_ALMAC_ADDRESS          "gw_agent_almac_address"
 #define GW_CTRL_ALMAC_ADDRESS           "gw_ctrl_almac_address"
+#define GW_WIFI_TXOP_5G			"gw_wifi_txop_5g"
+#define GW_WIFI_TXOP_2G			"gw_wifi_txop_2g"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
@@ -151,6 +155,8 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define GET_EM_BACKHAUL_TYPE            "get_stainfo.sh -sta_bh_type"
 #define GET_GW_AGENT_ALMAC_ADDRESS      "get_stainfo.sh -sta_agent_almac"
 #define GET_GW_CTRL_ALMAC_ADDRESS       "get_stainfo.sh -sta_controller_almac"
+#define GET_GW_WIFI_TXOP_5G		"get_stainfo.sh -sta_txop_5g"
+#define GET_GW_WIFI_TXOP_2G		"get_stainfo.sh -sta_txop_2g"
 
 #define CHANNEL_COMMAND_LEN 80
 static int channel_2ghz;
@@ -2593,7 +2599,18 @@ void appd_wifi_sta_poll()
         exec_systemcmd(command, data, DATA_SIZE);
         uppercase_convert(data);
         appd_send_wifi_sta_data(GW_CTRL_ALMAC_ADDRESS, data);
-	
+
+	memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, GET_GW_WIFI_TXOP_5G);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(GW_WIFI_TXOP_5G, data);
+
+	memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        sprintf(command, GET_GW_WIFI_TXOP_2G);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(GW_WIFI_TXOP_2G, data);	
 }
 
 
@@ -2762,6 +2779,30 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 gw_ctrl_almac_address[WIFI_STA_ADDR_LEN - 1] = '\0';
 
                 prop_send_by_name(name);
+        }else if (!strcmp(name, GW_WIFI_TXOP_5G)) {
+
+                tmp = atoi(value);
+
+                if (tmp == gw_wifi_txop_5g) {
+                      return 0;
+                }
+
+                gw_wifi_txop_5g = tmp;
+
+                prop_send_by_name(name);
+
+        }else if (!strcmp(name, GW_WIFI_TXOP_2G)) {
+
+                tmp = atoi(value);
+
+                if (tmp == gw_wifi_txop_2g) {
+                      return 0;
+                }
+
+                gw_wifi_txop_2g = tmp;
+
+                prop_send_by_name(name);
+
         }	
 
 	return 0;
@@ -3366,6 +3407,22 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_ctrl_almac_address,
                 .len = sizeof(gw_ctrl_almac_address),
+        },
+
+	{
+                .name = "gw_wifi_txop_5g",
+                .type = PROP_INTEGER,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_txop_5g,
+                .len = sizeof(gw_wifi_txop_5g),
+        },
+
+	{
+                .name = "gw_wifi_txop_2g",
+                .type = PROP_INTEGER,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_txop_2g,
+                .len = sizeof(gw_wifi_txop_2g),
         },
 
 		/*  ngrok properties */

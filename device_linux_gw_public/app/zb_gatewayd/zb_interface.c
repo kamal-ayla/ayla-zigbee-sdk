@@ -759,6 +759,69 @@ static void zb_print_network_info(void)
 	return;
 }
 
+static void getInfoCommand(void)
+{
+        uint16_t version, manufacturerId;
+        EmberStatus status;
+
+        status = ezspGetXncpInfo(&manufacturerId, &version);
+
+        emberAfCorePrintln("Get XNCP info: status: 0x%X", status);
+        emberAfCorePrintln("  manufacturerId: 0x%X, version: 0x%X",
+        manufacturerId, version);
+        log_debug("#################################################################");
+        log_debug("Get XNCP info: status: 0x%X", status);
+        log_debug("  manufacturerId: 0x%X, version: 0x%X",
+        manufacturerId, version);
+        log_debug("#################################################################");
+
+        if(status==0){
+        const char *radio_fw_versions;
+        char zigbee_ver[50];
+
+        json_t*radio_fw_versions_obj_json;
+        json_error_t error;
+        radio_fw_versions_obj_json = json_load_file("/etc/config/radio_fw_version.conf", 0, &error);
+        if(!radio_fw_versions_obj_json) {
+        /*the error variable contains error information*/
+        }else{
+        json_t*config_obj_json;
+        config_obj_json=json_object_get(radio_fw_versions_obj_json,"config");
+        radio_fw_versions=json_dumps(config_obj_json,JSON_COMPACT);
+        log_debug("Config: %s",radio_fw_versions);
+        json_t*config_versions_obj_json;
+        config_versions_obj_json=json_object_get(config_obj_json,"radio_FW_version");
+        radio_fw_versions=json_dumps(config_versions_obj_json,JSON_COMPACT);
+        log_debug("FW versions: %s",radio_fw_versions);
+        json_t*config_versions_radio2_obj_json;
+        config_versions_radio2_obj_json=json_object_get(config_versions_obj_json,"radio2");
+        radio_fw_versions=json_string_value(config_versions_radio2_obj_json);
+        log_debug("Radio2 zigbee FW version: %s",radio_fw_versions);
+
+        memset(zigbee_ver,0,sizeof(zigbee_ver));
+        sprintf(zigbee_ver,"zigbee_%X",version);
+        // read actual version
+        int status=json_object_set(config_versions_obj_json,"radio2",json_string(zigbee_ver));
+        status=json_object_set(config_obj_json,"radio_FW_version",config_versions_obj_json);
+        status=json_object_set(radio_fw_versions_obj_json,"config",config_obj_json);
+
+
+        //status=json_object_set(radio_fw_versions_obj_json,"radio2",json_string("zigbee_test"));
+        log_debug("Return after json set is %d",status);
+        radio_fw_versions=json_dumps(radio_fw_versions_obj_json,JSON_COMPACT);
+        log_debug("FW version: %s",radio_fw_versions);
+
+        status=json_dump_file(radio_fw_versions_obj_json, "/etc/config/radio_fw_version.conf", 0);
+        log_debug("Return after json set in file is= %d",status);
+        }
+        }
+        else{
+                /*error case of status*/
+                log_debug("zb status error");
+        }
+
+}
+
 /*
  * Enable ZigBee radio and form network
  */
@@ -772,6 +835,8 @@ static int zb_network_enable(void)
 	emberAfMainInitCallback();
 	/* Initialize the ZCL Utilities */
 	emberAfInit();
+
+	getInfoCommand();
 
 	log_debug("network startup complete");
 
