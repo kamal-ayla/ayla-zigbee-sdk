@@ -17,6 +17,9 @@
 
 #include "app/framework/include/af.h"
 
+// log
+#include "app/framework/include/log.h"
+
 // ZCL - ZigBee Cluster Library
 #include "app/framework/util/attribute-storage.h"
 #include "app/framework/util/util.h"
@@ -1130,7 +1133,7 @@ void emberReverseMemCopy(uint8_t* dest, const uint8_t* src, uint16_t length)
 //
 // version <no arguments>
 // *****************************
-void emAfCliVersionCommand(void)
+int emAfCliVersionCommand(void)
 {
   // Note that NCP == Network Co-Processor
 
@@ -1154,17 +1157,24 @@ void emAfCliVersionCommand(void)
 
   // verify that the stack type is what is expected
   if (ncpStackType != EZSP_STACK_TYPE_MESH) {
+    log_debug("ERROR: stack type 0x%x is not expected!",
+                    ncpStackType);
     emberAfAppPrint("ERROR: stack type 0x%x is not expected!",
                     ncpStackType);
-    assert(false);
+    return -1;
+    //assert(false);
   }
 
   // verify that the NCP EZSP Protocol version is what is expected
   if (ncpEzspProtocolVer != EZSP_PROTOCOL_VERSION) {
+    log_debug("ERROR: NCP EZSP protocol version of 0x%x does not match Host version 0x%x\r\n",
+                    ncpEzspProtocolVer,
+                    hostEzspProtocolVer);
     emberAfAppPrint("ERROR: NCP EZSP protocol version of 0x%x does not match Host version 0x%x\r\n",
                     ncpEzspProtocolVer,
                     hostEzspProtocolVer);
-    assert(false);
+    return -1;
+    //assert(false);
   }
 
   emberAfAppPrint("ezsp ver 0x%x stack type 0x%x ",
@@ -1173,11 +1183,13 @@ void emAfCliVersionCommand(void)
   if (EZSP_SUCCESS != ezspGetVersionStruct(&versionStruct)) {
     // NCP has Old style version number
     emberAfAppPrintln("stack ver [0x%2x]", ncpStackVer);
+    log_debug("Old style stack ver [0x%2x]", ncpStackVer);
   } else {
     // NCP has new style version number
     emAfParseAndPrintVersion(versionStruct);
   }
   emberAfAppFlush();
+  return 0;
 }
 
 uint8_t emAfGetPacketBufferFreeCount(void)

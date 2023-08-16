@@ -62,7 +62,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.5";
+const char *appd_template_version = "zigbee_gateway_demo_v4.6.1";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -79,6 +79,8 @@ static unsigned int zb_num_nodes;
 static unsigned int num_nodes;
 static unsigned int bh_num_nodes;
 
+/* file exist */
+static char file_path[50];
 
 /* system info*/
 #define UPTIME_LEN						50
@@ -99,6 +101,13 @@ static char up_time[UPTIME_LEN];
 #define GET_RAM_TOTAL "transformer-cli get sys.mem.RAMTotal | grep -o '[0-9]*'"
 #define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
+
+//#define GET_FILE "ls /root/*.log"
+#define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
+#define GET_CORE_DUMP_FILE "ls /root/*.gz"
+#define GET_TAR_FILE "ls /root/core.tar"
+#define CREATE_TAR_FILE "tar -cvf /root/core.tar /root/*.gz %s"
+#define DELETE_CORE_TAR_FILE "rm -rf /root/core.tar"
 
 #define WIFI_STA_ADDR_LEN               50
 #define COMMAND_LENGTH	100
@@ -368,8 +377,32 @@ static struct gw_node_prop_batch_list *node_batched_dps;
 /* file location of the latest value of file_up */
 static char file_upload_path[512];
 
+//#define GET_TIMESTAMP "date | awk '{print $2,$3,$4}' | cut -d: -f -2"
+#define GET_TIMESTAMP "date +'%Y-%m-%d %H:%M:%S'"
+#define CORE_DUMP_LOG_FILES_LIST "/tmp/files_list.txt"
 
+/* core dump log files verifing one by one */
+static void core_dump_file_verfication(void);
+/* timestamp conversion */
+static int timestamp_conversion(char buff1[]);
+/* To set the current timestamp */
+static void gw_set_core_dump_timestamp(void);
+/* To get the timestamp from the conf file */
+static void gw_get_core_dump_timestamp(void);
+/* To get timestamp buffer */
+static char core_timestamp[40];
+static char log_file_path[40];
+/* flag will be verifed in the fileupload callback function */
+static int file_push_confirm = 0;
 /* data convert to the UPPER CASE */
+
+/* serial number command  */
+#define GET_SERIAL_NUMBER "uci get env.var.serial"
+
+#define STATUS_LEN 20
+/* serial number buffer */
+static char dev_serial_number[STATUS_LEN];
+
 void uppercase_convert(char str[])
 {
     int i;
@@ -1207,13 +1240,294 @@ static int appd_update_wifi_bh_sta()
  */
 void appd_prop_init()
 {
-	prop_send_by_name("controller_status");
-	prop_send_by_name("up_time");
-	prop_send_by_name("radio1_fw_version");
-        prop_send_by_name("radio2_fw_version");
-        prop_send_by_name("radio0_fw_version");
-	appd_properties_get();
+   prop_send_by_name("controller_status");
+   prop_send_by_name("up_time");
+   prop_send_by_name("radio1_fw_version");
+   prop_send_by_name("radio2_fw_version");
+   prop_send_by_name("radio0_fw_version");
+   prop_send_by_name("gw_serial_number");
+   appd_properties_get();
+
+   // Get the last checked timestamp from the attributes conf file
+   gw_get_core_dump_timestamp();
+
+   // verifing the timestamp available or not in the conf file
+   if ( strcmp ( core_timestamp, "" ) == 0 ) {
+     // set the current timestamp in the conf file because timestamp not availble
+      gw_set_core_dump_timestamp();
+   }
 }
+
+/*
+ *To get the Device number serial and send to the gw_serial_number property.
+ */
+static enum err_t gw_serial_number_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+   FILE *fp;
+   //serial number command will be execute in the device and get the serial number
+   fp = popen(GET_SERIAL_NUMBER,"r");
+   if (fp == NULL ) {
+      log_err("Get device serial number failed");
+      // if serial number failed to get from the device. send zero to the property
+      strcpy(dev_serial_number, "0");
+   } else {
+      fscanf(fp, "%[^\n]", dev_serial_number);
+      log_debug("Get device serial number value : %s",dev_serial_number);
+      pclose(fp);
+   }
+   return prop_arg_send(prop, req_id, opts);
+}
+
+
+/*
+ * check the log files in the device and get the timestamp and file name
+ */
+static void  core_dump_file_verfication(void)
+{
+   FILE *fp;
+   FILE *fp1;
+
+   char line[100];
+   int log_file = 0;
+   int conf_file = 0;
+   char file_timestamp[20];
+   char tar_cmd[150];
+   int i = 0;
+   char *array[3];
+   unsigned int core_dump_exist = 0;
+
+   // To list of core dump log file names and timestamp  routing to the log list file
+   fp = popen(GET_CORE_DUMP_LOG_FILE,"r");
+   if (fp == NULL) {
+      log_debug("Get log file failed");
+      exit(1);
+   }
+   pclose(fp);
+
+  // To verify the log list file availble or not
+   fp1 =  fopen ( CORE_DUMP_LOG_FILES_LIST, "r" );
+   if (fp1 == NULL ) {
+	 log_debug ("log list file failed !!!");
+	exit(1);
+   }
+   else {
+
+      // Read date & time, file name line by line
+      while(fgets(line, sizeof(line), fp1)) {
+         memset(file_timestamp,'\0',sizeof(file_timestamp));
+	 memcpy(file_timestamp,line, 19);
+         log_debug("file timestamp : %s",file_timestamp);
+
+	 // log file date & time convert into integer format
+         log_file = timestamp_conversion(file_timestamp);
+
+	 // last checked timestamp convert into integer format
+	 conf_file = timestamp_conversion(core_timestamp);
+
+	 // check log file timestamp should be greate than last checked timestamp
+         if ( log_file > conf_file ) {
+            log_debug("file timestamp is greater than last check timestamp !!!");
+
+
+            char *token = strtok( line, " ");
+
+	    /* Verify other tokens */
+            while( token != NULL ) {
+	       array[i++] = token;
+               token = strtok(NULL, " ");
+            }
+            // to get log file name alone from the file using token
+	    sprintf(log_file_path, " %s", array[2]);
+	    log_debug("Available log file : %s",log_file_path);
+
+	    // To get the core dump file name
+            fp = popen(GET_CORE_DUMP_FILE,"r");
+            if (fp == NULL) {
+               log_debug("Get core dump file failed");
+               exit(1);
+            } else {
+               memset(file_path,'\0',sizeof(file_path));
+               fscanf(fp, "%s", file_path);
+
+               if(strcmp(file_path, "")) {
+                  log_debug("core dump file name : %s\n",file_path);
+                  core_dump_exist = 1;
+               }
+
+            }
+            pclose(fp);
+
+	    if ( core_dump_exist == 1) {
+               // Added log file path to the tar command
+	       snprintf(tar_cmd, sizeof(tar_cmd), CREATE_TAR_FILE, log_file_path);
+	       log_debug("TAR create command : %s", tar_cmd);
+               // execute the tar command
+	       fp = popen(tar_cmd, "r");
+               if (fp == NULL) {
+                  log_err("TAR command failed");
+                  exit(1);
+               }
+               pclose(fp);
+
+
+               // To check the tar file name
+               fp = popen(GET_TAR_FILE,"r");
+               if (fp == NULL) {
+                  log_debug("Get TAR file failed");
+                  exit(1);
+               } else {
+                  memset(file_path,'\0',sizeof(file_path));
+                  fscanf(fp, "%s", file_path);
+
+                  if(strcmp(file_path, "")) {
+                     log_debug("TAR file name: %s\n",file_path);
+		     // push core dump files in to the property
+                     prop_send_by_name("gw_core_dump_file");
+
+                  }
+
+               }
+               pclose(fp);
+
+            }
+
+
+         }
+
+      }
+
+   }
+   fclose(fp1);
+
+   // enable file push flag and verify in the file upload callback function .
+   file_push_confirm = 1;
+}
+
+/*
+ * date & time is in string format which is convert into integer format
+ */
+
+static int timestamp_conversion(char buff1[])
+{
+
+   char string[40];
+   char timeval[10];
+   int i=0;
+   int j=0;
+   int ret = 0;
+
+   memset(string, '\0', sizeof(string));
+
+   for (i=0; i < strlen(buff1); i++) {
+      if ((buff1[i] == '-') || (buff1[i] == ':') || (buff1[i] == ' ')) {
+      }
+      else {
+         string[j] = buff1[i];
+        j++;
+      }
+   }
+
+   memset(timeval,'\0',sizeof(timeval));
+   memcpy(timeval, string+4, 10);
+
+   ret = atoi(timeval);
+
+   return ret;
+}
+
+
+/*
+ *  *To get the last checked timestamp from attributes.conf file
+ *   */
+static void gw_get_core_dump_timestamp(void)
+{
+
+   const char *core_dump_timestamp;
+   json_t*attributes_obj_json;
+   json_error_t error;
+   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+   if(!attributes_obj_json) {
+      log_debug("attributes.conf is not having a valid json");
+   }else{
+      json_t*config_obj_json;
+      config_obj_json=json_object_get(attributes_obj_json,"attributes");
+      core_dump_timestamp=json_dumps(config_obj_json,JSON_COMPACT);
+      log_debug("attributes: %s",core_dump_timestamp);
+
+      json_t*config_core_obj_json;
+      config_core_obj_json=json_object_get(config_obj_json,"core_dump_upload_file");
+      core_dump_timestamp=json_dumps(config_core_obj_json,JSON_COMPACT);
+      log_debug("Core dump timestamp: %s",core_dump_timestamp);
+
+      json_t*config_timestamp_obj_json;
+      config_timestamp_obj_json=json_object_get(config_core_obj_json,"last_checked_timestamp");
+      core_dump_timestamp=json_string_value(config_timestamp_obj_json);
+
+      strcpy(core_timestamp,core_dump_timestamp);
+      log_debug("Get timestamp from conf file : %s",core_timestamp);
+   }
+}
+/*
+ *  *To set the current timestamp in the attributes.conf.
+ *   */
+static void gw_set_core_dump_timestamp(void)
+{
+
+   char current_timestamp[25];
+   const char *core_dump_timestamp_1;
+   json_t*attributes_obj_json;
+   json_error_t error;
+   FILE *fp;
+
+   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+
+   if(!attributes_obj_json) {
+   /*the error variable contains error information*/
+   }
+   else{
+      json_t*config_obj_json_1;
+      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
+      core_dump_timestamp_1=json_dumps(config_obj_json_1,JSON_COMPACT);
+      log_debug("set attributes: %s",core_dump_timestamp_1);
+
+      json_t*config_core_obj_json_1;
+      config_core_obj_json_1=json_object_get(config_obj_json_1,"core_dump_upload_file");
+      core_dump_timestamp_1=json_dumps(config_core_obj_json_1,JSON_COMPACT);
+      log_debug("set Core dump upload file: %s",core_dump_timestamp_1);
+
+      json_t*config_timestamp_obj_json_1;
+      config_timestamp_obj_json_1=json_object_get(config_core_obj_json_1,"last_checked_timestamp");
+      core_dump_timestamp_1=json_string_value(config_timestamp_obj_json_1);
+      log_debug("set last_checked_timestamp: %s",core_dump_timestamp_1);
+
+      fp = popen(GET_TIMESTAMP,"r");
+      if( fp == NULL) {
+         log_debug("GET TIMESTAMP FAILED\n");
+         exit(1);
+      }
+      fscanf(fp, "%[^\n]", data);
+      log_debug("Get timestamp from conf file : %s\n",data);
+      pclose(fp);
+
+      memset(current_timestamp,0,sizeof(current_timestamp));
+      memcpy(current_timestamp, data, strlen(data));
+
+      int status=json_object_set(config_core_obj_json_1,"last_checked_timestamp",json_string(current_timestamp));
+      status=json_object_set(config_obj_json_1,"core_dump_upload_file",config_core_obj_json_1);
+      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
+
+      log_debug("Return after json set is %d",status);
+      core_dump_timestamp_1=json_dumps(attributes_obj_json,JSON_COMPACT);
+      log_debug("file timestamp: %s",core_dump_timestamp_1);
+
+      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
+      log_debug("Return after json set in file is= %d",status);
+   }
+}
+
+
+
 
 static int appd_ngrok_update(void)
 {
@@ -3496,7 +3810,7 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 	fp = popen(WHITELIST_BSS_ID,"r");
 	if (fp == NULL) {
 		log_err("IOT_DEBUG timer get: whitelist bssid failed");
-                strcpy(whitelist_bssid,"00:00:00:00:00");
+                strcpy(whitelist_bssid,"00:00:00:00:00:00");
 		
         } else {
                 fscanf(fp, "%[^\n]", whitelist_bssid);
@@ -3510,7 +3824,7 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 
 	}else
 	{
-		if(strlen(whitelist_bssid)==17){
+		if(validate==17){
                 log_debug("IOT_DEBUG whitelist bssid %s :: whitelist_mac_addr %s",whitelist_bssid,whitelist_mac_addr);
 		snprintf(whitelist_cmd_buf, sizeof(whitelist_cmd_buf), WHITELIST_CMD, whitelist_mac_addr);
 
@@ -4645,8 +4959,41 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
 		    confirm_info->err, opts->dev_time_ms);
 	}
 
+       if( file_push_confirm == 1 ) {
+	       gw_set_core_dump_timestamp();
+	       file_push_confirm = 0;
+       }
+
 	remove(file_upload_path);
 	return 0;
+}
+
+/*
+ send core dump file and log file to the property
+*/
+static enum err_t gw_core_dump_file(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+   enum err_t ret;
+   struct op_options opt = {.confirm = 1};
+   struct prop_metadata *metadata;
+
+   /* Include some datapoint metadata with the file */
+   metadata = prop_metadata_alloc();
+
+   memset(file_upload_path,0x00, sizeof(file_upload_path));
+   memcpy(file_upload_path, file_path, strlen(file_path));
+   log_info("core dump sending file name is %s", file_upload_path);
+
+   /* file exist */
+   prop_metadata_add(metadata, "path", file_upload_path);
+   prop_metadata_add(metadata, "trigger", prop->name);
+
+   opt.metadata = metadata;
+   ret = prop_arg_send(prop, req_id, &opt);
+   prop_metadata_free(metadata);
+
+    return ret;
 }
 
 /*
@@ -5325,7 +5672,22 @@ static struct prop appd_gw_prop_table[] = {
                 .arg = file_upload_path,
                 .len = sizeof(file_upload_path),
                 .confirm_cb = file_upload_confirm_cb,
-        }
+        },
+	{
+                .name = "gw_core_dump_file",
+                .type = PROP_FILE,
+                .send = gw_core_dump_file,
+                .arg = file_upload_path,
+                .len = sizeof(file_upload_path),
+                .confirm_cb = file_upload_confirm_cb,
+        },
+	{
+		.name = "gw_serial_number",
+		.type = PROP_STRING,
+		.send = gw_serial_number_send,
+		.arg = &dev_serial_number,
+		.len = sizeof(dev_serial_number),
+	}
 };
 
 
@@ -5510,6 +5872,7 @@ int appd_init(void)
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
+
 	appd_prop_init();
 
 	return 0;
@@ -5530,14 +5893,15 @@ int appd_start(void)
     
    	app_set_template_version(appd_template_version);
 
+zb_reinit:
 	/* Start the ZigBee interface */
 	if (zb_start() < 0) {
 		zb_reinit_count++;
-		log_err("zb_start returned error");
+		log_err("zb_start returned error zb_reinit in progress");
 		if(3==zb_reinit_count){
 			log_debug("zb reinit count reached 3, appd exit");
 		}
-		return -1;
+		goto zb_reinit;
 	}
 
 	node_mgmt_clear_vnodes(VNODE_OEM_MODEL, &att_node_left_handler);
@@ -5747,6 +6111,9 @@ void appd_connectivity_event(enum app_conn_type type, bool up)
 			prop_request_to_dev();
 
 			first_connection = false;
+
+			core_dump_file_verfication();
+
 		}
 		/*
 		 * Run the node management state machine in case any operations

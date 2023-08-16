@@ -1818,14 +1818,15 @@ int appd_start(void)
 	 */
 	app_set_template_version(appd_template_version);
 
+zb_reinit:
 	/* Start the ZigBee interface */
 	if (zb_start() < 0) {
 		zb_reinit_count++;
-		log_err("zb_start returned error");
+		log_err("zb_start returned error zb reinit in progress");
 		if(3==zb_reinit_count){
 			log_debug("zb reinit reached count 3, appd exit");
 		}
-		return -1;
+		goto zb_reinit;
 	}
 
 	/* Start the Bluetooth interface */

@@ -557,6 +557,7 @@ static void data_recv(void *arg, int sock)
 			jint_incr_id(&data_req_id);
 			return;
 		}
+		memset(buf,0,buf_size);
 		len = recv(sock, buf, buf_size, MSG_PEEK);
 		if (len <= 0) {
 			if (buf) {
@@ -586,6 +587,7 @@ disconn:
 		return;
 	}
 
+	memset(tmp,0,sizeof(tmp));
 	/* drop the socket pkt, already in buffer due to PEEKs */
 	recv(sock, tmp, sizeof(tmp), 0);
 	root = json_loadb(buf, len, 0, &jerr);

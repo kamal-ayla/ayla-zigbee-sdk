@@ -571,7 +571,10 @@ static int zb_network_enable(void)
 	log_debug("begin network startup");
 
 	/* Initialize the network co-processor (NCP) */
-	emAfResetAndInitNCP();
+	if( emAfResetAndInitNCP() < 0 ){
+		log_debug("emAfResetAndInitNCP failed reinit in progress");
+		return -1;
+	}
 	/* Main init callback */
 	emberAfMainInitCallback();
 	/* Initialize the ZCL Utilities */
@@ -640,7 +643,10 @@ static int zb_ember_stack_init(void)
 	that they are correctly added by emAfResetAndInitNCP() */
 	emberAfEndpointConfigure();
 
-	zb_network_enable();
+	if( zb_network_enable() < 0 ){
+		log_debug("zb_network_enable failed reinit in progress");
+		return -1;
+	}
 
 	log_debug("stack init complete");
 	return 0;
@@ -829,8 +835,8 @@ int zb_init(void)
 	appd_interface_init();
 
 	/* Initialize ember ZigBee protocol stack */
-	if (zb_ember_stack_init()) {
-		log_err("zb_ember_stack_init failed");
+	if (zb_ember_stack_init() < 0) {
+		log_err("zb_ember_stack_init failed reinit in progress");
 		return -1;
 	}
 
@@ -847,7 +853,7 @@ int zb_start(void)
 {
 	/* Initialize protocol stack */
 	if (zb_init() < 0) {
-		log_err("ZigBee network stack initialization failed");
+		log_err("ZigBee network stack initialization failed reinit in progress");
 		return -1;
 	}
 

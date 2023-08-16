@@ -107,7 +107,7 @@ uint8_t emberAfGetSourceRouteTableFilledSize(void);
 EmberStatus emberAfGetChildData(uint8_t index,
                                 EmberChildData* childData);
 
-void emAfCliVersionCommand(void);
+int emAfCliVersionCommand(void);
 
 EmberStatus emAfPermitJoin(uint8_t duration,
                            bool broadcastMgmtPermitJoin);

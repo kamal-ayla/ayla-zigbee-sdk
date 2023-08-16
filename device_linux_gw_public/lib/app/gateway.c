@@ -790,6 +790,11 @@ static int gw_batch_confirm_cb(void *arg, enum confirm_status status,
 	if (!batch_sent_list) {
 		return 0;
 	}
+	log_debug("IOT_DEBUG gw_batch_confirm_cb dests : %d",dests);
+	if (dests==0){
+		log_debug("gw_batch_confirm_cb dests is 0");
+		return 0;
+	}
 	/*
 	 * Go through every datapoint to see which need confirmation
 	 */
