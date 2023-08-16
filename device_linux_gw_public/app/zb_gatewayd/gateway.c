@@ -62,7 +62,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.4";
+const char *appd_template_version = "zigbee_gateway_demo_v4.5";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -211,12 +211,18 @@ static char single_channel_buf[CHANNEL_SCAN_CMD_LEN];
 // 5GHZ variables
 static char ssid_5ghz[SSID_LEN];
 static char ssid_key_5ghz[KEY_LEN];
-//static char ssid_5ghz_get[SSID_LEN];
 
 // 2GHZ variables
 static char ssid_2ghz[SSID_LEN];
 static char ssid_key_2ghz[KEY_LEN];
-//static char ssid_2ghz_get[SSID_LEN];
+
+// 5GHZ guest variables
+static char guest_ssid_5ghz[SSID_LEN];
+static char guest_ssid_key_5ghz[KEY_LEN];
+
+// 2GHZ guest variables
+static char guest_ssid_2ghz[SSID_LEN];
+static char guest_ssid_key_2ghz[KEY_LEN];
 
 #define TWO_GHZ_SET_SSID "uci set mesh_broker.cred0.ssid=\"%s\""
 #define TWO_GHZ_SET_KEY "uci set mesh_broker.cred0.wpa_psk_key=\"%s\""
@@ -228,6 +234,53 @@ static char ssid_key_2ghz[KEY_LEN];
 #define FIVE_GHZ_GET_SSID "uci get mesh_broker.cred1.ssid"
 #define TWO_GHZ_GET_KEY   "uci get mesh_broker.cred0.wpa_psk_key"
 #define FIVE_GHZ_GET_KEY  "uci get mesh_broker.cred1.wpa_psk_key"
+
+
+#define TWO_GHZ_SET_GUEST_SSID "uci set mesh_broker.cred3.ssid=\"%s\""
+#define TWO_GHZ_SET_GUEST_KEY "uci set mesh_broker.cred3.wpa_psk_key=\"%s\""
+#define FIVE_GHZ_SET_GUEST_SSID "uci set mesh_broker.cred4.ssid=\"%s\""
+#define FIVE_GHZ_SET_GUEST_KEY "uci set mesh_broker.cred4.wpa_psk_key=\"%s\""
+
+#define TWO_GHZ_GET_GUEST_SSID  "uci get mesh_broker.cred3.ssid"
+#define FIVE_GHZ_GET_GUEST_SSID "uci get mesh_broker.cred4.ssid"
+#define TWO_GHZ_GET_GUEST_KEY   "uci get mesh_broker.cred3.wpa_psk_key"
+#define FIVE_GHZ_GET_GUEST_KEY  "uci get mesh_broker.cred4.wpa_psk_key"
+
+/* GUEST SSID 2G/5G ENABLE/DISABLE */
+#define GUEST_COMMAND_LEN 80
+static unsigned int guest_ssid_2g_enable;
+static char guest_5g_state_change[GUEST_COMMAND_LEN];
+static unsigned int guest_ssid_5g_enable;
+static char guest_2g_state_change[GUEST_COMMAND_LEN];
+
+// set commands 2GHZ
+#define WIRELESS_GUEST_SSID_2G_ENABLE "uci set wireless.wl1_1.state=%d"
+#define MESH_GUEST_SSID_2G_ENABLE "uci set mesh_broker.cred3.state=%d"
+// set commands 5GHZ
+#define WIRELESS_GUEST_SSID_5G_ENABLE "uci set wireless.wl0_2.state=%d"
+#define MESH_GUEST_SSID_5G_ENABLE "uci set mesh_broker.cred4.state=%d"
+// get commands 2ghz 
+#define GET_WIRELESS_GUEST_SSID_2G "uci get wireless.wl1_1.state"
+#define GET_MESH_GUEST_SSID_2G "uci get mesh_broker.cred3.state"
+// get commands 5ghz 
+#define GET_WIRELESS_GUEST_SSID_5G "uci get wireless.wl0_2.state"
+#define GET_MESH_GUEST_SSID_5G "uci get mesh_broker.cred4.state"
+// get traffic seperation
+#define GET_TRAFFIC_SEPERATION "uci get smartmesh.sm_traffic_separation.enabled"
+
+#define TRAFFIC_SEPERATION_ENABLE "uci set smartmesh.sm_traffic_separation.enabled='1'"
+#define TRAFFIC_SEPERATION_DISABLE "uci set smartmesh.sm_traffic_separation.enabled='0'"
+#define WIRELESS_RELOAD "ubus call wireless reload"
+#define SMART_MESH_RELOAD "/etc/init.d/mesh-broker reload"
+
+#define GET_GUEST_SSID_5G_STATUS "wireless_get_overview.sh | grep wl0.2 | awk '{print $3}'"
+#define GET_GUEST_SSID_2G_STATUS "wireless_get_overview.sh | grep wl1.1 | awk '{print $3}'"
+#define GET_GUEST_SSID_5G_AGENT_STATUS "wireless_get_overview.sh | grep wl0.3 | awk '{print $3}'"
+
+unsigned int guest_2g_status;
+unsigned int guest_5g_status;
+
+static void appd_guest_status_update(void);
 
 /* whitelist property */
 #define WHITELIST_LEN 100
@@ -2534,66 +2587,861 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
   return 0;
 }
 
-/* Get whitelist mac */
-
-/*static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
+/*
+ *Set 2GHZ GUEST SSID  from cloud.
+ */
+static int appd_guest_ssid_2ghz(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
 {
 
-	
-	char whitelist_bssid[20];
-	log_debug("IOT_DEBUG whitelist get timer cancel");
-	timer_cancel(app_get_timers(), timer_gw_whitelist_timer);
-        
-	FILE *fp;
-	FILE *fp1;
-	FILE *fp2;
-        
-	fp = popen(WHITELIST_ACTIVE,"r");
-        if (fp == NULL) {
-                log_err("IOT_DEBUG whitelist active failed");
-		gw_whitelist_active=0;
-        } else {
-                fscanf(fp, "%d", &gw_whitelist_active);
-        }
+   FILE *fp;
+   FILE *fp1;
+
+   char two_ghz_guest_ssid_command[150];
+   unsigned int validate;
+   unsigned int status;
+   char guest_ssid[50];
+
+   memset(two_ghz_guest_ssid_command,'\0',sizeof(two_ghz_guest_ssid_command));
+
+   if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+      log_err("prop_arg_set returned error");
+     return -1;
+  }
+
+  // To get 2ghz guest ssid
+  fp = popen(TWO_GHZ_GET_GUEST_SSID,"r");
+  if (fp == NULL) {
+     log_err("Get 2ghz guest ssid  failed");
+     exit(1);
+  } else {
+     memset(guest_ssid,'\0',sizeof(guest_ssid));
+     fscanf(fp, "%[^\n]", guest_ssid);
+     log_debug("guest ssid 2ghz get value for verification : %s",guest_ssid);
+  }
+  pclose(fp);
+
+  status=appd_mesh_controller_status();
+
+  if(status == 1 && strcmp(guest_ssid,guest_ssid_2ghz) != 0) {
+
+     validate = strlen(guest_ssid_2ghz);
+
+     log_debug("set guest ssid 2ghz value : %s and size of the value : %d",guest_ssid_2ghz,validate);
+
+     if(validate  > 0 && validate < 33 && guest_ssid_2ghz[0] != ' ' && guest_ssid_2ghz[validate-1] != ' '){
+
+        snprintf(two_ghz_guest_ssid_command, sizeof(two_ghz_guest_ssid_command), TWO_GHZ_SET_GUEST_SSID, guest_ssid_2ghz);
+
+	fp = popen(two_ghz_guest_ssid_command, "r");
+	if (fp == NULL) {
+           log_err("set 2.4GHZ guest ssid failed");
+	   exit(1);
+	}
 	pclose(fp);
 
-         log_debug("IOT_DEBUG timer get: whitelist active %d::",gw_whitelist_active);
-	 prop_send_by_name("gw_whitelist_active");
-	 
-	 fp1 = popen(WHITELIST_STATE,"r");
-                if (fp1 == NULL) {
-                        log_err("IOT_DEBUG timer get: whitelist state failed");
-			gw_whitelist_state=0;
-                } else {
-                        fscanf(fp1, "%d", &gw_whitelist_state);
-         	}
-		pclose(fp1);
-         log_debug("IOT_DEBUG timer get: whitelist state %d",gw_whitelist_state);
-	 prop_send_by_name("gw_whitelist_state");
-         
-	 if(gw_whitelist_active==1){
-		fp2 = popen(WHITELIST_BSSID,"r");
-		if (fp2 == NULL) {
-                	log_err("IOT_DEBUG timer get: whitelist bssid failed");
-			strcpy(whitelist_bssid,"00:00:00:00:00:00");
-        	} else {
-			fscanf(fp2, "%[^\n]", whitelist_bssid);
-        	}
-		pclose(fp2);
-		log_debug("IOT_DEBUG timer get: whitelist bssid %s",whitelist_bssid);
-                if(!strcmp(whitelist_bssid,whitelist_cmd_buf)){
-                        strcpy(whitelist_mac_addr,whitelist_bssid);
-                        prop_send_by_name("gw_whitelist_mac_address");
-			
-                }
-         }
-        else{
-         memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
-         strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
-         prop_send_by_name("gw_whitelist_mac_address");
-        }
+	memset(guest_ssid_2ghz,'\0',sizeof(guest_ssid_2ghz));
 
-}*/
+	fp1 = popen(RESTART_MESH_BROKER, "r");
+	if( fp1 == NULL) {
+	   log_err("restart mesh broker failed");
+	   exit(1);
+	}
+	pclose(fp1);
+     }
+     else {
+	 log_err("Invalid guest ssid 2ghz");
+    }
+  }
+  else {
+        log_debug("set guest ssid 2ghz failed due to gateway configured as an agent or tried with exisitng value to set in the device !!!");
+  }
+
+  // To get 2ghz guest ssid
+  fp = popen(TWO_GHZ_GET_GUEST_SSID,"r");
+  if (fp == NULL) {
+     log_err("Get 2ghz guestssid  failed");
+     exit(1);
+  } else {
+        memset(guest_ssid_2ghz,'\0',sizeof(guest_ssid_2ghz));
+	fscanf(fp, "%[^\n]", guest_ssid_2ghz);
+	log_debug("guest ssid 2ghz get value : %s",guest_ssid_2ghz);
+  }
+  prop_send_by_name("gw_wifi_guest_ssid_2G");
+  pclose(fp);
+
+  return 0;
+}
+
+/*
+ *Set 2GHZ SSID GUEST KEY  from cloud.
+ */
+static int appd_guest_ssid_key_2ghz(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+  FILE *fp;
+  FILE *fp1;
+
+  char two_ghz_guest_key_command[150];
+  unsigned int validate;
+  unsigned int status;
+  unsigned int value = 1;
+  char guest_ssid_key[100];
+
+  // Variable to store initial regex()
+  regex_t reegex;
+  memset(two_ghz_guest_key_command,'\0',sizeof(two_ghz_guest_key_command));
+
+  if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+     log_err("prop_arg_set returned error");
+     return -1;
+  }
+
+  // To get 2ghz guest ssid key
+  fp = popen(TWO_GHZ_GET_GUEST_KEY,"r");
+  if (fp == NULL) {
+     log_err("Get 2ghz guest ssid key failed");
+     exit(1);
+  } else {
+     memset(guest_ssid_key,'\0',sizeof(guest_ssid_key));
+     fscanf(fp, "%[^\n]", guest_ssid_key);
+     log_debug("guest ssid key 2ghz get value for verification : %s",guest_ssid_key);
+  }
+  pclose(fp);
+
+  status=appd_mesh_controller_status();
+
+  if(status == 1 && strcmp(guest_ssid_key,guest_ssid_key_2ghz) != 0) {
+
+     validate = strlen(guest_ssid_key_2ghz);
+
+     log_debug("set guest ssid 2ghz key value : %s and size of the value : %d",guest_ssid_key_2ghz,validate);
+
+     value = regcomp( &reegex, "^[%x]+$", 0);
+     value = regexec( &reegex, guest_ssid_2ghz, 0, NULL, 0);
+
+     if(validate  > 7 && validate < 64 && value != 0 ){
+
+        snprintf(two_ghz_guest_key_command, sizeof(two_ghz_guest_key_command), TWO_GHZ_SET_GUEST_KEY, guest_ssid_key_2ghz);
+
+	fp = popen(two_ghz_guest_key_command, "r");
+	if (fp == NULL) {
+	   log_err("set 2.4GHZ guest ssid failed");
+	   exit(1);
+	}
+	pclose(fp);
+
+        memset(guest_ssid_key_2ghz,'\0',sizeof(guest_ssid_key_2ghz));
+
+	fp1 = popen(RESTART_MESH_BROKER, "r");
+	if( fp1 == NULL) {
+	   log_err("restart mesh broker failed");
+	   exit(1);
+	}
+	pclose(fp1);
+     }
+     else {
+        log_err("Invalid guest ssid key 2ghz");
+     }
+  }
+  else {
+        log_debug("set guest ssid 2ghz key failed due to gateway configured as an agent  or tried with exisitng value to set in the device !!!");
+  }
+
+
+  // To get 2ghz guest ssid key
+  fp = popen(TWO_GHZ_GET_GUEST_KEY,"r");
+  if (fp == NULL) {
+     log_err("Get 2ghz guest ssid key failed");
+     exit(1);
+  } else {
+     memset(guest_ssid_key_2ghz,'\0',sizeof(guest_ssid_key_2ghz));
+     fscanf(fp, "%[^\n]", guest_ssid_key_2ghz);
+     log_debug("guest ssid key 2ghz get value : %s",guest_ssid_key_2ghz);
+  }
+  prop_send_by_name("gw_wifi_guest_ssid_key_2G");
+  pclose(fp);
+
+  return 0;
+
+}
+
+
+/*
+ *Set 5GHZ GUEST SSID  from cloud.
+ */
+static int appd_guest_ssid_5ghz(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+  FILE *fp;
+  FILE *fp1;
+
+  char five_ghz_guest_ssid_command[150];
+  unsigned int validate;
+  unsigned int status;
+  char guest_ssid[50];
+
+  memset(five_ghz_guest_ssid_command,'\0',sizeof(five_ghz_guest_ssid_command));
+
+  if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+     log_err("prop_arg_set returned error");
+     return -1;
+  }
+
+  fp = popen(FIVE_GHZ_GET_GUEST_SSID,"r");
+  if (fp == NULL) {
+     log_err("Get 5ghz guest ssid  failed");
+     exit(1);
+  } else {
+     memset(guest_ssid,'\0',sizeof(guest_ssid));
+     fscanf(fp, "%[^\n]", guest_ssid);
+     log_debug("guest ssid 5ghz get value for verification: %s",guest_ssid);
+  }
+
+  status=appd_mesh_controller_status();
+
+  if(status == 1 && strcmp(guest_ssid,guest_ssid_5ghz) != 0) {
+
+     validate = strlen(guest_ssid_5ghz);
+
+     log_debug("set guest ssid 5ghz value : %s and size of the value : %d",guest_ssid_5ghz,validate);
+
+     if(validate  > 0 && validate < 33  && guest_ssid_5ghz[0] != ' ' && guest_ssid_5ghz[validate-1] != ' '){
+        snprintf(five_ghz_guest_ssid_command, sizeof(five_ghz_guest_ssid_command), FIVE_GHZ_SET_GUEST_SSID, guest_ssid_5ghz);
+
+	   fp = popen(five_ghz_guest_ssid_command, "r");
+	   if (fp == NULL) {
+	      log_err("set 5GHZ guest ssid failed");
+	      exit(1);
+	   }
+	   pclose(fp);
+
+	   memset(guest_ssid_5ghz,'\0',sizeof(guest_ssid_5ghz));
+
+	   fp1 = popen(RESTART_MESH_BROKER, "r");
+	   if( fp1 == NULL) {
+	      log_err("restart mesh broker failed");
+	      exit(1);
+	   }
+	   pclose(fp1);
+	}
+	else {
+	   log_err("Invalid guest ssid 5ghz");
+	}
+     }
+     else {
+	   log_debug("set guest ssid 5ghz failed due to gateway configured as an agent  or tried with exisitng value to set in the device !!!");
+     }
+
+     // To get 5ghz guest ssid
+     fp = popen(FIVE_GHZ_GET_GUEST_SSID,"r");
+     if (fp == NULL) {
+        log_err("Get 5ghz guest ssid  failed");
+	exit(1);
+     } else {
+        memset(guest_ssid_5ghz,'\0',sizeof(guest_ssid_5ghz));
+	fscanf(fp, "%[^\n]", guest_ssid_5ghz);
+	log_debug("guest ssid 5ghz get value : %s",guest_ssid_5ghz);
+     }
+     prop_send_by_name("gw_wifi_guest_ssid_5G");
+     pclose(fp);
+
+     return 0;
+}
+
+
+/*
+ *Set 5GHZ GUEST SSID KEY  from cloud.
+ */
+static int appd_guest_ssid_key_5ghz(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+   FILE *fp;
+   FILE *fp1;
+
+   char five_ghz_guest_key_command[150];
+   unsigned int validate;
+   unsigned int status;
+   unsigned int value = 1;
+   char guest_ssid_key[100];
+
+   // Variable to store initial regex()
+   regex_t reegex;
+
+   memset(five_ghz_guest_key_command,'\0',sizeof(five_ghz_guest_key_command));
+
+   if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+      log_err("prop_arg_set returned error");
+      return -1;
+   }
+
+
+   fp = popen(FIVE_GHZ_GET_GUEST_KEY,"r");
+   if (fp == NULL) {
+      log_err("Get 5ghz guest ssid key failed");
+      exit(1);
+   } else {
+      memset(guest_ssid_key,'\0',sizeof(guest_ssid_key));
+      fscanf(fp, "%[^\n]", guest_ssid_key);
+      log_debug("guest ssid key 5ghz get value for verification: %s",guest_ssid_key);
+   }
+
+
+   status=appd_mesh_controller_status();
+
+   if(status == 1 && strcmp(guest_ssid_key, guest_ssid_key_5ghz) != 0) {
+
+      validate = strlen(guest_ssid_key_5ghz);
+
+      log_debug("set guest ssid 5ghz key value : %s and size of the value : %d",guest_ssid_key_5ghz,validate);
+
+      value = regcomp( &reegex, "^[%x]+$", 0);
+      value = regexec( &reegex, guest_ssid_2ghz, 0, NULL, 0);
+
+      if(validate  > 7 && validate < 64 && value != 0){
+
+         snprintf(five_ghz_guest_key_command, sizeof(five_ghz_guest_key_command), FIVE_GHZ_SET_GUEST_KEY, guest_ssid_key_5ghz);
+
+	 fp = popen(five_ghz_guest_key_command, "r");
+	 if (fp == NULL) {
+	    log_err("set 5GHZ guest ssid key failed");
+	    exit(1);
+	 }
+	 pclose(fp);
+
+	 memset(guest_ssid_key_5ghz,'\0',sizeof(guest_ssid_key_5ghz));
+
+	 fp1 = popen(RESTART_MESH_BROKER, "r");
+	 if( fp1 == NULL) {
+	    log_err("restart mesh broker failed");
+	    exit(1);
+	 }
+	 pclose(fp1);
+      }
+      else {
+           log_err("Invalid guest ssid key 5ghz");
+      }
+   }
+   else {
+        log_debug("set guest ssid 5ghz key failed due to gateway configured as an agent  or tried with exisitng value to set in the device !!!");
+   }
+
+   // To get 5ghz guest ssid key
+   fp = popen(FIVE_GHZ_GET_GUEST_KEY,"r");
+   if (fp == NULL) {
+      log_err("Get 5ghz guest ssid key failed");
+      exit(1);
+   } else {
+      memset(guest_ssid_key_5ghz,'\0',sizeof(guest_ssid_key_5ghz));
+      fscanf(fp, "%[^\n]", guest_ssid_key_5ghz);
+      log_debug("guest ssid key 5ghz get value : %s",guest_ssid_key_5ghz);
+   }
+   prop_send_by_name("gw_wifi_guest_ssid_key_5G");
+   pclose(fp);
+
+   return 0;
+}
+
+/*
+ *enable/disable GUEST SSID 2G  from cloud.
+ */
+
+static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+   FILE *fp;
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
+   FILE *fp4;
+
+   int wl_enable;
+   int mesh_enable;
+   int traffic_enable;
+   unsigned int traffic_flag = 0;
+   unsigned int tmp = 0;
+   unsigned int control_status = 0;
+   char status[10];
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
+
+   control_status = appd_mesh_controller_status();   
+
+   if ( control_status == 1 ) {
+
+      // To get wirless guest ssid state  value
+      fp = popen(GET_WIRELESS_GUEST_SSID_2G,"r");
+      if(fp == NULL) {
+         log_err("Get wireless guest ssid value failed");
+         exit(1);
+      } else {
+         fscanf(fp, "%d", &wl_enable);
+         log_debug("wireless guest ssid enable/disable : %d",wl_enable);
+      }
+      pclose(fp);
+
+      // To get mesh guest ssid state  value
+      fp1 = popen(GET_MESH_GUEST_SSID_2G,"r");
+      if(fp1 == NULL) {
+         log_err("Get mesh guest ssid value failed");
+         exit(1);
+      } else {
+         fscanf(fp1, "%d", &mesh_enable);
+         log_debug("mesh guest ssid enable/disable : %d",mesh_enable);
+      }
+      pclose(fp1);
+   
+      // To get traffic seperation value
+      fp2 = popen(GET_TRAFFIC_SEPERATION,"r");
+      if(fp2 == NULL) {
+         log_err("Get traffic seperation command failed");
+         exit(1);
+      } else {
+         fscanf(fp2, "%d", &traffic_enable);
+         log_debug("traffic seperation enable/disable : %d",traffic_enable);
+      }
+      pclose(fp2);
+
+      if(guest_ssid_2g_enable > 1) {
+         guest_ssid_2g_enable  = 1;
+      }
+
+      if(wl_enable != guest_ssid_2g_enable) {
+
+         log_debug("guest ssid 2g  set value : %d",guest_ssid_2g_enable);
+
+         snprintf(guest_2g_state_change, sizeof(guest_2g_state_change), WIRELESS_GUEST_SSID_2G_ENABLE, guest_ssid_2g_enable);
+
+         fp = popen(guest_2g_state_change, "r");
+         if(fp == NULL) {
+            log_err("enable/disable wireless guest ssid failed !!!");
+            exit(1);
+         }
+         pclose(fp);
+
+         fp1 = popen(UCI_COMMIT, "r");
+         if(fp1 == NULL) {
+            log_err("uci commit command failed");
+            exit(1);
+         }
+         pclose(fp1);
+
+         fp2 = popen(WIRELESS_RELOAD, "r");
+         if(fp2 == NULL) {
+            log_err("wireless reload command  failed");
+            exit(1);
+         }
+         pclose(fp2);
+      }
+      else {
+	 log_debug("wireless guest ssid failed due to tried with exisitng value to set in the device !!!");
+      }
+
+      if(mesh_enable != guest_ssid_2g_enable) {
+
+         log_debug("guest ssid 2g  set value : %d",guest_ssid_2g_enable);
+
+         memset(guest_2g_state_change,'\0',sizeof(guest_2g_state_change));
+
+         snprintf(guest_2g_state_change, sizeof(guest_2g_state_change), MESH_GUEST_SSID_2G_ENABLE, guest_ssid_2g_enable);
+
+         fp = popen(guest_2g_state_change, "r");
+         if(fp == NULL) {
+            log_err("enable/disable mesh guest ssid failed !!!");
+            exit(1);
+         }
+         pclose(fp);
+      } else {
+           log_debug("mesh guest ssid failed due to tried with existing value to set in the device !!!");
+      }
+     
+
+      if ((traffic_enable == 1) && (guest_ssid_2g_enable == 1)) {
+
+    	 fp1 = popen(TRAFFIC_SEPERATION_DISABLE, "r");
+     
+	 if(fp1 == NULL) {
+            log_err("disable traffic seperation disable failed !!!");
+            exit(1);
+         } else {
+	    traffic_flag = 1;
+	 }
+
+         pclose(fp1);
+	     
+      }
+      else if ( guest_ssid_2g_enable == 0 ) {
+
+         fp2 = popen(TRAFFIC_SEPERATION_ENABLE, "r");
+
+         if(fp2 == NULL) {
+            log_err("disable traffic seperation disable failed !!!");
+            exit(1);
+	 } else {
+		traffic_flag = 2;
+	 }
+         pclose(fp2);
+
+      } else {
+           log_debug("traffic seperation failed due to tried with existing value to set in the device !!!");     
+      }
+
+
+      if ( ( mesh_enable != guest_ssid_2g_enable ) || ( traffic_flag == 1 ) || ( traffic_flag == 2 )) {   
+
+         fp3 = popen(UCI_COMMIT, "r");
+         if(fp3 == NULL) {
+            log_err("uci commit command failed");
+            exit(1);
+         }
+         pclose(fp3);
+
+         fp4 = popen(SMART_MESH_RELOAD, "r");
+         if(fp4 == NULL) {
+            log_err("wireless reload command  failed");
+            exit(1);
+         }
+         pclose(fp4);
+
+      }
+
+      tmp = guest_2g_status;
+
+      fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
+      if (fp == NULL) {
+	  log_err("Get GUEST SSID 2G status failed");
+	  exit(1);
+      } else {
+	  fscanf(fp, "%[^\n]", status);
+	  pclose(fp);
+      }  
+
+      if ( strcmp (status, "1/1") == 0 ) {
+	   guest_2g_status = 1;
+      }
+      else {
+	   guest_2g_status = 0;
+      }  
+
+      if ( tmp != guest_2g_status ) {
+	   prop_send_by_name("gw_wifi_guest_2g_status");
+      }
+   } else {
+      log_debug("set guest ssid 2ghz  enable failed due to gateway configured as an agent !!!");
+   }
+
+      return 0;
+}
+
+
+/*
+ *enable/disable GUEST SSID 5G  from cloud.
+ */
+
+static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+
+   FILE *fp;
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
+   FILE *fp4;
+
+   int wl_enable;
+   int mesh_enable;
+   int traffic_enable;
+   unsigned int traffic_flag = 0;
+   unsigned int tmp = 0;
+   unsigned int control_status = 0;
+   char status[10];
+
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
+
+   control_status = appd_mesh_controller_status();   
+
+   if ( control_status == 1 ) {
+
+      // To get wirless guest ssid state  value
+      fp = popen(GET_WIRELESS_GUEST_SSID_5G,"r");
+      if(fp == NULL) {
+         log_err("Get wireless guest ssid value failed");
+         exit(1);
+      } else {
+         fscanf(fp, "%d", &wl_enable);
+         log_debug("wireless guest ssid enable/disable : %d",wl_enable);
+      }
+      pclose(fp);
+
+      // To get mesh guest ssid state  value
+      fp1 = popen(GET_MESH_GUEST_SSID_5G,"r");
+      if(fp1 == NULL) {
+         log_err("Get mesh guest ssid value failed");
+         exit(1);
+      } else {
+         fscanf(fp1, "%d", &mesh_enable);
+         log_debug("mesh guest ssid enable/disable : %d",mesh_enable);
+      }
+      pclose(fp1);
+
+      // To get traffic seperation value
+      fp2 = popen(GET_TRAFFIC_SEPERATION,"r");
+      if(fp2 == NULL) {
+         log_err("Get traffic seperation command failed");
+         exit(1);
+      } else {
+         fscanf(fp2, "%d", &traffic_enable);
+         log_debug("traffic seperation enable/disable : %d",traffic_enable);
+      }
+      pclose(fp2);
+
+      if(guest_ssid_5g_enable > 1) {
+          guest_ssid_5g_enable  = 1;
+      }
+
+      if(wl_enable != guest_ssid_5g_enable) {
+
+        log_debug("guest ssid 5g  set value : %d",guest_ssid_5g_enable);
+
+        snprintf(guest_5g_state_change, sizeof(guest_5g_state_change), WIRELESS_GUEST_SSID_5G_ENABLE, guest_ssid_5g_enable);
+
+        fp = popen(guest_5g_state_change, "r");
+        if(fp == NULL) {
+           log_err("enable/disable wireless guest ssid failed !!!");
+           exit(1);
+        }
+        pclose(fp);
+
+        fp1 = popen(UCI_COMMIT, "r");
+        if(fp1 == NULL) {
+           log_err("uci commit command failed");
+           exit(1);
+        }
+        pclose(fp1);
+
+        fp2 = popen(WIRELESS_RELOAD, "r");
+        if(fp2 == NULL) {
+           log_err("wireless reload command  failed");
+           exit(1);
+        }
+        pclose(fp2);
+     }
+     else {
+	log_debug("wireless guest ssid failed due to tried with exisitng value to set in the device !!!");
+     }
+
+     if(mesh_enable != guest_ssid_5g_enable) {
+
+        log_debug("guest ssid 5g  set value : %d",guest_ssid_5g_enable);
+
+        memset(guest_5g_state_change,'\0',sizeof(guest_5g_state_change));
+
+        snprintf(guest_5g_state_change, sizeof(guest_5g_state_change), MESH_GUEST_SSID_5G_ENABLE, guest_ssid_5g_enable);
+
+        fp = popen(guest_5g_state_change, "r");
+        if(fp == NULL) {
+           log_err("enable/disable mesh guest ssid failed !!!");
+           exit(1);
+        }
+        pclose(fp);
+      } else {
+           log_debug("mesh guest ssid failed due to tried with existing value to set in the device !!!");
+      }
+
+
+      if ((traffic_enable == 1) && (guest_ssid_5g_enable == 1)) {
+
+         fp1 = popen(TRAFFIC_SEPERATION_DISABLE, "r");
+
+	 if(fp1 == NULL) {
+            log_err("disable traffic seperation disable failed !!!");
+            exit(1);
+         } else {
+	    traffic_flag = 1;
+	 }
+
+         pclose(fp1);
+
+      }
+      else if ( guest_ssid_5g_enable == 0 ) {
+
+         fp2 = popen(TRAFFIC_SEPERATION_ENABLE, "r");
+
+         if(fp2 == NULL) {
+            log_err("disable traffic seperation disable failed !!!");
+            exit(1);
+	 } else {
+		traffic_flag = 2;
+	 }
+         pclose(fp2);
+
+      } else {
+           log_debug("traffic seperation failed due to tried with existing value to set in the device !!!");
+      }
+
+
+      if ( ( mesh_enable != guest_ssid_5g_enable ) || ( traffic_flag == 1 ) || ( traffic_flag == 2 )) {
+
+         fp3 = popen(UCI_COMMIT, "r");
+         if(fp3 == NULL) {
+            log_err("uci commit command failed");
+            exit(1);
+         }
+         pclose(fp3);
+
+         fp4 = popen(SMART_MESH_RELOAD, "r");
+         if(fp4 == NULL) {
+            log_err("wireless reload command  failed");
+            exit(1);
+         }
+         pclose(fp4);
+
+      }
+
+      tmp = guest_5g_status;
+
+      fp = popen(GET_GUEST_SSID_5G_STATUS,"r");
+      if (fp == NULL) {
+	   log_err("Get GUEST SSID 5G status failed");
+	   exit(1);
+      } else {
+	   fscanf(fp, "%[^\n]", status);
+	   pclose(fp);
+      }
+
+      if ( strcmp (status, "1/1") == 0 ) {
+	   guest_5g_status = 1;
+      }
+      else {
+	   guest_5g_status = 0;
+      }
+
+      if ( tmp != guest_5g_status ) {
+	   prop_send_by_name("gw_wifi_guest_5g_status");
+      }
+   } else {
+	   log_debug("set guest ssid 5ghz  enable failed due to gateway configured as an agent !!!");
+
+           tmp = guest_5g_status;
+
+           fp = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
+           if (fp == NULL) {
+              log_err("Get GUEST SSID 5G AGENT status failed");
+              exit(1);
+           } else {
+              fscanf(fp, "%[^\n]", status);
+              pclose(fp);
+           }
+
+           if ( strcmp (status, "1/1") == 0 ) {
+              guest_5g_status = 1;
+           }
+           else {
+              guest_5g_status = 0;
+           }
+
+           if ( tmp != guest_5g_status ) {
+              prop_send_by_name("gw_wifi_guest_5g_status");
+           }
+	   
+   }
+  return 0;
+}
+
+/*
+ *To get the guest ssid 2g Status.
+ */
+static enum err_t appd_guest_ssid_2g_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+   char status[10];
+   FILE *fp;
+
+   // Run the command and get the status of the Guest 2g ssid enable/disable and update in the property
+   fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
+   if (fp == NULL) {
+      log_err("Get GUEST SSID 2G status failed");
+      exit(1);
+   } else {
+      fscanf(fp, "%[^\n]", status);
+      pclose(fp);
+   }
+
+   if ( strcmp(status,"1/1") == 0 ) {
+      guest_2g_status = 1;
+   }
+   else {
+      guest_2g_status = 0;
+   }
+   
+   return prop_arg_send(prop, req_id, opts);
+}
+
+/*
+ *To get the guest ssid 5g Status.
+ */
+static enum err_t appd_guest_ssid_5g_status_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+   char status[10];
+   unsigned int control_status = 0;
+   FILE *fp;
+
+   control_status = appd_mesh_controller_status();
+   
+   if ( control_status == 1 ) {
+
+      // if device is controller, Run the command and get the status of the Guest 5g ssid enable/disable and update  in the property	   
+
+      fp = popen(GET_GUEST_SSID_5G_STATUS,"r");
+      if (fp == NULL) {
+         log_err("Get GUEST SSID 5G status failed");
+         exit(1);
+      } else {
+         fscanf(fp, "%[^\n]", status);
+         pclose(fp);
+      }
+
+      if ( strcmp(status,"1/1") == 0 ) {
+         guest_5g_status = 1;
+      }
+      else {
+         guest_5g_status = 0;
+      }
+   } else {
+      
+      // if device is Agent, Run the command and get the status of the Guest 5g ssid enable/disable and update in the property
+      fp = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
+      if (fp == NULL) {
+         log_err("Get GUEST SSID 5G AGENT status failed");
+         exit(1);
+      } else {
+         fscanf(fp, "%[^\n]", status);
+         pclose(fp);
+      }
+
+      if ( strcmp(status,"1/1") == 0 ) {
+         guest_5g_status = 1;
+      }
+      else {
+         guest_5g_status = 0;
+      }
+	   
+   }
+
+   return prop_arg_send(prop, req_id, opts);
+}
 
 /*
  *Connect with specified mac address.
@@ -2701,14 +3549,6 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 static int appd_properties_get(void)
 {
         FILE *fp;
-	FILE *fp1;
-	FILE *fp2;
-	FILE *fp3;
-	FILE *fp4;
-	FILE *fp5;
-	FILE *fp6;
-        FILE *fp7;
-        FILE *fp8;
 
 	int tmp;
 	char tmp_string[80];
@@ -2730,15 +3570,15 @@ static int appd_properties_get(void)
 
 	tmp=channel_5ghz;
 	// To get 5ghz channel value
-	fp1 = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
-	if (fp1 == NULL) {
+	fp = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
+	if (fp == NULL) {
 			log_err("Get 5ghz channel failed");
 			exit(1);
 	} else {
-		fscanf(fp1, "%d", &channel_5ghz);
+		fscanf(fp, "%d", &channel_5ghz);
 		log_debug("get 5ghz channel value : %d",channel_5ghz);
 	}
-	pclose(fp1);
+	pclose(fp);
 
 	if(tmp!=channel_5ghz){
                 prop_send_by_name("gw_wifi_channel_5G");
@@ -2746,16 +3586,16 @@ static int appd_properties_get(void)
 
 	strcpy(tmp_string,ssid_2ghz);
 	// To get 2ghz ssid 
-	fp2 = popen(TWO_GHZ_GET_SSID,"r");
-	if (fp2 == NULL) {
+	fp = popen(TWO_GHZ_GET_SSID,"r");
+	if (fp == NULL) {
 			log_err("Get 2ghz ssid  failed");
 			exit(1);
 	} else {
 		memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));	
-		fscanf(fp2, "%[^\n]", ssid_2ghz);
+		fscanf(fp, "%[^\n]", ssid_2ghz);
 		log_debug("ssid 2ghz get value : %s",ssid_2ghz);
 	}
-	pclose(fp2);
+	pclose(fp);
 
 	if(strcmp(tmp_string,ssid_2ghz)){
 		prop_send_by_name("gw_wifi_ssid_2G");
@@ -2763,8 +3603,8 @@ static int appd_properties_get(void)
 
 	strcpy(tmp_string,ssid_5ghz);
 	// To get 5ghz ssid
-	fp3 = popen(FIVE_GHZ_GET_SSID,"r");
-	if (fp3 == NULL) {
+	fp = popen(FIVE_GHZ_GET_SSID,"r");
+	if (fp == NULL) {
 			log_err("Get 5ghz ssid  failed");
 			exit(1);
 	} else {
@@ -2772,7 +3612,7 @@ static int appd_properties_get(void)
 		fscanf(fp, "%[^\n]", ssid_5ghz);
 		log_debug("ssid 5ghz get value : %s",ssid_5ghz);
 	}
-	pclose(fp3);
+	pclose(fp);
 
 	if(strcmp(tmp_string,ssid_5ghz)){
                 prop_send_by_name("gw_wifi_ssid_5G");
@@ -2780,15 +3620,15 @@ static int appd_properties_get(void)
 
 	tmp=bh_optimization;
 	// To get backhaul optimization value
-	fp4 = popen(GET_BH_OPTIMIZATION,"r");
-	if (fp4 == NULL) {
+	fp = popen(GET_BH_OPTIMIZATION,"r");
+	if (fp == NULL) {
 			log_err("Get backhaul optimization failed");
 			exit(1);
 	} else {
-		fscanf(fp4, "%d", &bh_optimization);
+		fscanf(fp, "%d", &bh_optimization);
 		log_debug("backhaul optimization enable/disable : %d",bh_optimization);
 	}
-	pclose(fp4);
+	pclose(fp);
 
 	if(tmp!=bh_optimization){
 		prop_send_by_name("gw_wifi_bh_optimization");
@@ -2796,15 +3636,15 @@ static int appd_properties_get(void)
 
 	tmp=multi_channel_scan;
         // To get multi channel value
-        fp5 = popen(GET_MULTI_CHANNEL_SCAN,"r");
-        if (fp5 == NULL) {
+        fp = popen(GET_MULTI_CHANNEL_SCAN,"r");
+        if (fp == NULL) {
                         log_err("Get multi channel scan failed");
                         exit(1);
         } else {
-                fscanf(fp5, "%d", &multi_channel_scan);
+                fscanf(fp, "%d", &multi_channel_scan);
                 log_debug("Get multi channel scan value : %d",multi_channel_scan);
         }
-        pclose(fp5);
+        pclose(fp);
 
 	if(tmp!=multi_channel_scan){
 		prop_send_by_name("gw_wifi_multi_channel_scan");
@@ -2813,15 +3653,15 @@ static int appd_properties_get(void)
 	tmp=single_channel_scan;
 
         // To get single channel value
-        fp6 = popen(GET_SINGLE_CHANNEL_SCAN,"r");
-        if (fp6 == NULL) {
+        fp = popen(GET_SINGLE_CHANNEL_SCAN,"r");
+        if (fp == NULL) {
                         log_err("Get single channel scan failed");
                         exit(1);
         } else {
-                fscanf(fp6, "%d", &single_channel_scan);
+                fscanf(fp, "%d", &single_channel_scan);
                 log_debug("Get single channel scan value : %d",single_channel_scan);
         }
-        pclose(fp6);
+        pclose(fp);
 
 	if(tmp!=single_channel_scan){
 		prop_send_by_name("gw_wifi_single_channel_scan");
@@ -2829,16 +3669,16 @@ static int appd_properties_get(void)
 
 	strcpy(tmp_string,ssid_key_2ghz);
         // To get 2ghz ssid key
-        fp7 = popen(TWO_GHZ_GET_KEY,"r");
-        if (fp7 == NULL) {
+        fp = popen(TWO_GHZ_GET_KEY,"r");
+        if (fp == NULL) {
                         log_err("Get 2ghz ssid key failed");
                         exit(1);
         } else {
                 memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));
-                fscanf(fp7, "%[^\n]", ssid_key_2ghz);
+                fscanf(fp, "%[^\n]", ssid_key_2ghz);
                 log_debug("Get ssid key 2ghz value : %s",ssid_key_2ghz);
         }
-	pclose(fp7);
+	pclose(fp);
 
 	if(strcmp(tmp_string,ssid_key_2ghz)){
 		prop_send_by_name("gw_wifi_ssid_key_2G");
@@ -2846,19 +3686,91 @@ static int appd_properties_get(void)
 
 	strcpy(tmp_string,ssid_key_5ghz);
         // To get 5ghz ssid key
-        fp8 = popen(FIVE_GHZ_GET_KEY,"r");
-        if (fp8 == NULL) {
+        fp = popen(FIVE_GHZ_GET_KEY,"r");
+        if (fp == NULL) {
                         log_err("Get 5ghz ssid key failed");
                         exit(1);
         } else {
                 memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
-                fscanf(fp8, "%[^\n]", ssid_key_5ghz);
+                fscanf(fp, "%[^\n]", ssid_key_5ghz);
                 log_debug("Get ssid key 5ghz value : %s",ssid_key_5ghz);
         }
-        pclose(fp8);
+        pclose(fp);
 
 	if(strcmp(tmp_string,ssid_key_5ghz)){
 		prop_send_by_name("gw_wifi_ssid_key_5G");
+        }
+
+	memset( tmp_string, ' ', sizeof(tmp_string));
+	strcpy(tmp_string,guest_ssid_2ghz);
+	// To get 2ghz guest ssid 
+	fp = popen(TWO_GHZ_GET_GUEST_SSID,"r");
+	if (fp == NULL) {
+			log_err("Get 2ghz guest ssid  failed");
+			exit(1);
+	} else {
+		memset(guest_ssid_2ghz,'\0',sizeof(guest_ssid_2ghz));	
+		fscanf(fp, "%[^\n]", guest_ssid_2ghz);
+		log_debug("guest ssid 2ghz get value : %s",guest_ssid_2ghz);
+	}
+	pclose(fp);
+
+	if(strcmp(tmp_string,guest_ssid_2ghz)){
+		prop_send_by_name("gw_wifi_guest_ssid_2G");
+	}
+        
+	memset( tmp_string, ' ', sizeof(tmp_string));
+	strcpy(tmp_string,guest_ssid_5ghz);
+	// To get 5ghz guest ssid
+	fp = popen(FIVE_GHZ_GET_GUEST_SSID,"r");
+	if (fp == NULL) {
+			log_err("Get 5ghz guest ssid  failed");
+			exit(1);
+	} else {
+		memset(guest_ssid_5ghz,'\0',sizeof(guest_ssid_5ghz));	
+		fscanf(fp, "%[^\n]", guest_ssid_5ghz);
+		log_debug("ssid 5ghz get value : %s",guest_ssid_5ghz);
+	}
+	pclose(fp);
+
+	if(strcmp(tmp_string,guest_ssid_5ghz)){
+                prop_send_by_name("gw_wifi_guest_ssid_5G");
+        }
+        
+	memset( tmp_string, ' ', sizeof(tmp_string));
+        strcpy(tmp_string,guest_ssid_key_2ghz);
+        // To get 2ghz guest ssid key
+        fp = popen(TWO_GHZ_GET_GUEST_KEY,"r");
+        if (fp == NULL) {
+                        log_err("Get 2ghz ssid key failed");
+                        exit(1);
+        } else {
+                memset(guest_ssid_key_2ghz,'\0',sizeof(guest_ssid_key_2ghz));
+                fscanf(fp, "%[^\n]", guest_ssid_key_2ghz);
+                log_debug("Get guest ssid key 2ghz value : %s",guest_ssid_key_2ghz);
+        }
+        pclose(fp);
+        
+        if(strcmp(tmp_string,guest_ssid_key_2ghz)){
+                prop_send_by_name("gw_wifi_guest_ssid_key_2G");
+        }
+
+        memset( tmp_string, ' ', sizeof(tmp_string));	
+        strcpy(tmp_string,guest_ssid_key_5ghz);
+        // To get 5ghz guest ssid key
+        fp = popen(FIVE_GHZ_GET_GUEST_KEY,"r");
+        if (fp == NULL) {
+                        log_err("Get 5ghz guest ssid key failed");
+                        exit(1);
+        } else {
+                memset(guest_ssid_key_5ghz,'\0',sizeof(guest_ssid_key_5ghz));
+                fscanf(fp, "%[^\n]", guest_ssid_key_5ghz);
+                log_debug("Get guest ssid key 5ghz value : %s",guest_ssid_key_5ghz);
+        }
+        pclose(fp);
+
+        if(strcmp(tmp_string,guest_ssid_key_5ghz)){
+                prop_send_by_name("gw_wifi_guest_ssid_key_5G");
         }
 
     return 0;
@@ -3041,6 +3953,9 @@ void appd_wifi_sta_poll()
 		appd_update_whitelist_get();
 
         }
+        
+	// guest ssid 2g & 5g enable/disable properties update only when the change status
+	appd_guest_status_update();
 	
 }
 
@@ -4211,6 +5126,76 @@ static struct prop appd_gw_prop_table[] = {
 		.skip_init_update_from_cloud = 1,
         },
         {
+                .name = "gw_wifi_guest_ssid_2G",
+                .type = PROP_STRING,
+                .set = appd_guest_ssid_2ghz,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_2ghz,
+                .len = sizeof(guest_ssid_2ghz),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_ssid_key_2G",
+                .type = PROP_STRING,
+                .set = appd_guest_ssid_key_2ghz,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_key_2ghz,
+                .len = sizeof(guest_ssid_key_2ghz),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_ssid_5G",
+                .type = PROP_STRING,
+                .set = appd_guest_ssid_5ghz,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_5ghz,
+                .len = sizeof(guest_ssid_5ghz),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_ssid_key_5G",
+                .type = PROP_STRING,
+                .set = appd_guest_ssid_key_5ghz,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_key_5ghz,
+                .len = sizeof(guest_ssid_key_5ghz),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_2G_enable",
+                .type = PROP_INTEGER,
+                .set = appd_guest_ssid_2g_enable,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_2g_enable,
+                .len = sizeof(guest_ssid_2g_enable),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_5G_enable",
+                .type = PROP_INTEGER,
+                .set = appd_guest_ssid_5g_enable,
+                .send = prop_arg_send,
+                .arg = &guest_ssid_5g_enable,
+                .len = sizeof(guest_ssid_5g_enable),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_2g_status",
+                .type = PROP_INTEGER,
+                .send = appd_guest_ssid_2g_status_send,
+                .arg = &guest_2g_status,
+                .len = sizeof(guest_2g_status),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_guest_5g_status",
+                .type = PROP_INTEGER,
+                .send = appd_guest_ssid_5g_status_send,
+                .arg = &guest_5g_status,
+                .len = sizeof(guest_5g_status),
+                .skip_init_update_from_cloud = 1,
+        },	
+        {
                 .name = "gw_whitelist_mac_address",
                 .type = PROP_STRING,
                 .set = appd_whitelist_mac_address,
@@ -4578,11 +5563,103 @@ static void vnode_poll_thread_fun(void)
 		 att_poll();
 
 		 appd_wifi_sta_poll();
-
+		 
 		 sleep(60);
 	 }
 }
 
+
+/* 
+ * GUEST ssid 5g & 2g enable/disable status will be updated in the corresponding properies 
+ */ 
+
+static void appd_guest_status_update(void)
+{
+    int tmp;
+    char tmp_string[10];
+    unsigned int control_status = 0;
+
+    FILE *fp;
+    FILE *fp1;
+
+    tmp = guest_2g_status;
+    memset( tmp_string, ' ', sizeof(tmp_string));
+
+    // Run the command in the board and get the status of the Guest 2g ssid enable/disable
+    fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
+    if (fp == NULL) {
+       log_err("Get GUEST SSID 2G status failed");
+       exit(1);
+    } else {
+       fscanf(fp, "%[^\n]", tmp_string);
+       pclose(fp);
+    }
+
+   if ( strcmp (tmp_string, "1/1") == 0 ) {
+	   guest_2g_status = 1;
+   }
+   else {
+	   guest_2g_status = 0;
+   }
+
+   if ( tmp != guest_2g_status ) {
+	   prop_send_by_name("gw_wifi_guest_2g_status");
+   }
+
+
+   tmp = guest_5g_status;
+   memset( tmp_string, ' ', sizeof(tmp_string));
+
+   control_status = appd_mesh_controller_status();
+   
+   if ( control_status == 1) {
+      
+      // If device is controller, Run the command in the board and get the status of the Guest 5g ssid enable/disable	   
+      fp1 = popen(GET_GUEST_SSID_5G_STATUS,"r");
+      if (fp1 == NULL) {
+         log_err("Get GUEST SSID 5G status failed");
+         exit(1);
+      } else {
+         fscanf(fp1, "%[^\n]", tmp_string);
+         pclose(fp1);
+      }
+
+      if ( strcmp (tmp_string, "1/1") == 0 ) {
+	   guest_5g_status = 1;
+      }
+      else {
+	   guest_5g_status = 0;
+      }
+
+      if ( tmp != guest_5g_status ) {
+	   prop_send_by_name("gw_wifi_guest_5g_status");
+      } 
+   }else {
+      
+      // If device is Agent, Run the command in the board and get the status of the Guest 5g ssid enable/disable	   
+      fp1 = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
+      if (fp1 == NULL) {
+         log_err("Get GUEST SSID 5G AGENT status failed");
+         exit(1);
+      } else {
+         fscanf(fp1, "%[^\n]", tmp_string);
+         pclose(fp1);
+      }
+
+      if ( strcmp (tmp_string, "1/1") == 0 ) {
+         guest_5g_status = 1;
+      }
+      else {
+         guest_5g_status = 0;
+      }
+
+      if ( tmp != guest_5g_status ) {
+          prop_send_by_name("gw_wifi_guest_5g_status");
+      
+      }
+   }
+
+}
 
 /*
  * Function called during each main loop iteration.  This may be used to
