@@ -281,10 +281,6 @@ static char radio1_fw_version[RADIO_FW_LEN];
 static char radio2_fw_version[RADIO_FW_LEN];
 static char radio0_fw_version[RADIO_FW_LEN];
 
-#define GET_RADIO_BLE_FW                "cat /etc/config/radio_fw_version.conf  | awk '/\"radio1\"/ {print $2}' | tr -d '\"' | tr -d \",\""
-#define GET_RADIO_ZIGBEE_FW             "cat /etc/config/radio_fw_version.conf  | awk '/\"radio2\"/ {print $2}' | tr -d '\"' | tr -d \",\""
-#define GET_RADIO_ZWAVE_FW              "cat /etc/config/radio_fw_version.conf  | awk '/\"radio0\"/ {print $2}' | tr -d '\"' | tr -d \",\""
-
 /*Network up time command*/
 static char network_up_time[40];
 #define GET_NETWORK_UP_TIME				"get_stainfo.sh -backhaul_nw_up_time"
@@ -2905,26 +2901,6 @@ static int appd_gw_wps_button(struct prop *prop, const void *val,
 }
 
 /*
- *  *To get the Radio BLE FW.
- *   */
-static enum err_t appd_ble_fw(struct prop *prop, int req_id,
-                                   const struct op_options *opts)
-{
-        FILE *fp;
-        char ble_fw[50];
-        fp = popen(GET_RADIO_BLE_FW,"r");
-        if (fp == NULL) {
-                log_err("Radio FW list get failed");
-                exit(1);
-        }
-        fscanf(fp, "%s", ble_fw);
-        pclose(fp);
-        strcpy(radio1_fw_version,ble_fw);
-        log_debug("Radio1 FW version: %s",radio1_fw_version);
-        return prop_arg_send(prop, req_id, opts);
-}
-
-/*
  *  *To get Network up time.
  *   */
 static enum err_t get_gw_wifi_bh_uptime(struct prop *prop, int req_id,
@@ -2982,43 +2958,95 @@ static enum err_t get_gw_wifi_bh_uptime(struct prop *prop, int req_id,
 }
 
 /*
+ *  *To get the Radio BLE FW.
+ *   */
+static enum err_t appd_ble_fw(struct prop *prop, int req_id,
+				   const struct op_options *opts)
+{
+	const char *radio_fw_versions;
+	json_t*radio_fw_versions_obj_json;
+	json_error_t error;
+	radio_fw_versions_obj_json = json_load_file("/etc/config/radio_fw_version.conf", 0, &error);
+	if(!radio_fw_versions_obj_json) {
+		log_debug("radio_fw_version.conf is not having a valid json");
+	}else{
+		json_t*config_obj_json;
+		config_obj_json=json_object_get(radio_fw_versions_obj_json,"config");
+		radio_fw_versions=json_dumps(config_obj_json,JSON_COMPACT);
+		log_debug("Config: %s",radio_fw_versions);
+		json_t*config_versions_obj_json;
+		config_versions_obj_json=json_object_get(config_obj_json,"radio_FW_version");
+		radio_fw_versions=json_dumps(config_versions_obj_json,JSON_COMPACT);
+		log_debug("FW versions: %s",radio_fw_versions);
+		json_t*config_versions_radio1_obj_json;
+		config_versions_radio1_obj_json=json_object_get(config_versions_obj_json,"radio1");
+		radio_fw_versions=json_string_value(config_versions_radio1_obj_json);
+		strcpy(radio1_fw_version,radio_fw_versions);
+		log_debug("Radio1 FW version: %s",radio1_fw_version);
+	}
+	return prop_arg_send(prop, req_id, opts);
+}
+
+/*
  *  *To get the Radio ZIGBEE FW.
  *   */
 static enum err_t appd_zigbee_fw(struct prop *prop, int req_id,
-                                   const struct op_options *opts)
+				   const struct op_options *opts)
 {
-        FILE *fp;
-        char zigbee_fw[50];
-        fp = popen(GET_RADIO_ZIGBEE_FW,"r");
-        if (fp == NULL) {
-                log_err("Radio zigbee FW list get failed");
-                exit(1);
-        }
-        fscanf(fp, "%s", zigbee_fw);
-        pclose(fp);
-        strcpy(radio2_fw_version,zigbee_fw);
-        log_debug("Radio2 FW version: %s",radio2_fw_version);
-        return prop_arg_send(prop, req_id, opts);
+	const char *radio_fw_versions;
+	json_t*radio_fw_versions_obj_json;
+	json_error_t error;
+	radio_fw_versions_obj_json = json_load_file("/etc/config/radio_fw_version.conf", 0, &error);
+	if(!radio_fw_versions_obj_json) {
+	/*the error variable contains error information*/
+		log_debug("radio_fw_version.conf is not having a valid json");
+	}else{
+		json_t*config_obj_json;
+		config_obj_json=json_object_get(radio_fw_versions_obj_json,"config");
+		radio_fw_versions=json_dumps(config_obj_json,JSON_COMPACT);
+		log_debug("Config: %s",radio_fw_versions);
+		json_t*config_versions_obj_json;
+		config_versions_obj_json=json_object_get(config_obj_json,"radio_FW_version");
+		radio_fw_versions=json_dumps(config_versions_obj_json,JSON_COMPACT);
+		log_debug("FW versions: %s",radio_fw_versions);
+		json_t*config_versions_radio2_obj_json;
+		config_versions_radio2_obj_json=json_object_get(config_versions_obj_json,"radio2");
+		radio_fw_versions=json_string_value(config_versions_radio2_obj_json);
+		strcpy(radio2_fw_version,radio_fw_versions);
+		log_debug("Radio2 FW version: %s",radio2_fw_version);
+	}
+	return prop_arg_send(prop, req_id, opts);
 }
 
 /*
  *  *To get the Radio ZWAVE FW.
  *   */
 static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
-                                   const struct op_options *opts)
+				   const struct op_options *opts)
 {
-        FILE *fp;
-        char zwave_fw[50];
-        fp = popen(GET_RADIO_ZWAVE_FW,"r");
-        if (fp == NULL) {
-                log_err("Radio Zwave FW list get failed");
-                exit(1);
-        }
-        fscanf(fp, "%s", zwave_fw);
-        pclose(fp);
-        strcpy(radio0_fw_version,zwave_fw);
-        log_debug("Radio0 FW version: %s",radio0_fw_version);
-        return prop_arg_send(prop, req_id, opts);
+	const char *radio_fw_versions;
+	json_t*radio_fw_versions_obj_json;
+	json_error_t error;
+	radio_fw_versions_obj_json = json_load_file("/etc/config/radio_fw_version.conf", 0, &error);
+	if(!radio_fw_versions_obj_json) {
+	/*the error variable contains error information*/
+		log_debug("radio_fw_version.conf is not having a valid json");
+	}else{
+		json_t*config_obj_json;
+		config_obj_json=json_object_get(radio_fw_versions_obj_json,"config");
+		radio_fw_versions=json_dumps(config_obj_json,JSON_COMPACT);
+		log_debug("Config: %s",radio_fw_versions);
+		json_t*config_versions_obj_json;
+		config_versions_obj_json=json_object_get(config_obj_json,"radio_FW_version");
+		radio_fw_versions=json_dumps(config_versions_obj_json,JSON_COMPACT);
+		log_debug("FW versions: %s",radio_fw_versions);
+		json_t*config_versions_radio0_obj_json;
+		config_versions_radio0_obj_json=json_object_get(config_versions_obj_json,"radio0");
+		radio_fw_versions=json_string_value(config_versions_radio0_obj_json);
+		strcpy(radio0_fw_version,radio_fw_versions);
+		log_debug("Radio0 FW version: %s",radio0_fw_version);
+	}
+	return prop_arg_send(prop, req_id, opts);
 }
 
 /*
