@@ -129,7 +129,8 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.gbl 2> /dev/null | wc -l) != "0" ]; then
 		echo -e "1" > /dev/ttyUSB1
 		sx $AYLA_OTA_BUILD_DIR/radio1_*.gbl </dev/ttyUSB1> /dev/ttyUSB1
 		if [ $? -eq 0 ]; then
-			sed -i "s/"\"radio1\":.*"/"\"radio1\":' '$(ls $AYLA_OTA_BUILD_DIR/radio1_*.gbl | awk -F 'radio1_|.gbl' '{print "\""$2"\","}')"/g" /etc/config/radio_fw_version.conf
+			radio1_value=`(ls $AYLA_OTA_BUILD_DIR/radio1_*.gbl | awk -F 'radio1_|.gbl' '{print "\""$2"\""}')`
+			sed -i 's/"radio1": *"[^"]*"/"radio1": '$radio1_value'/' /etc/config/radio_fw_version.conf
 			logger "Radio1 Transfer Complete"
 		else
 			logger "Radio1 Transfer Incomplete"
@@ -145,7 +146,8 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.gbl 2> /dev/null | wc -l) != "0" ]; then
 		echo -e "1" > /dev/ttyUSB2
 		sx $AYLA_OTA_BUILD_DIR/radio2_*.gbl </dev/ttyUSB2> /dev/ttyUSB2
 		if [ $? -eq 0 ]; then
-			sed -i "s/"\"radio2\":.*"/"\"radio2\":' '$(ls $AYLA_OTA_BUILD_DIR/radio2_*.gbl | awk -F 'radio2_|.gbl' '{print "\""$2"\""}')"/g" /etc/config/radio_fw_version.conf	
+			radio2_value=`(ls $AYLA_OTA_BUILD_DIR/radio2_*.gbl | awk -F 'radio2_|.gbl' '{print "\""$2"\""}')`
+			sed -i 's/"radio2": *"[^"]*"/"radio2": '$radio2_value'/' /etc/config/radio_fw_version.conf
 			logger "Radio2 Transfer Complete"
 		else
 			logger "Radio2 Transfer Incomplete"
@@ -161,7 +163,8 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.gbl 2> /dev/null | wc -l) != "0" ]; then
 		echo -e "1" > /dev/ttyUSB0
 		sx $AYLA_OTA_BUILD_DIR/radio0_*.gbl </dev/ttyUSB0> /dev/ttyUSB0
 		if [ $? -eq 0 ]; then
-			sed -i "s/"\"radio0\":.*"/"\"radio0\":' '$(ls $AYLA_OTA_BUILD_DIR/radio0_*.gbl | awk -F 'radio0_|.gbl' '{print "\""$2"\","}')"/g" /etc/config/radio_fw_version.conf
+			radio0_value=`(ls $AYLA_OTA_BUILD_DIR/radio0_*.gbl | awk -F 'radio0_|.gbl' '{print "\""$2"\""}')`
+			sed -i 's/"radio0": *"[^"]*"/"radio0": '$radio0_value'/' /etc/config/radio_fw_version.conf
 			logger "Radio0 Transfer Complete"
 		else
 			logger "Radio0 Transfer Incomplete"
