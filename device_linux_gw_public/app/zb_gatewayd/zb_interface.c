@@ -817,7 +817,39 @@ static void getInfoCommand(void)
         }
         else{
                 /*error case of status*/
-                log_debug("zb status error");
+        const char *radio_fw_versions;
+
+        json_t*radio_fw_versions_obj_json;
+        json_error_t error;
+        radio_fw_versions_obj_json = json_load_file("/etc/config/radio_fw_version.conf", 0, &error);
+        if(!radio_fw_versions_obj_json) {
+        /*the error variable contains error information*/
+        }else{
+        json_t*config_obj_json;
+        config_obj_json=json_object_get(radio_fw_versions_obj_json,"config");
+        radio_fw_versions=json_dumps(config_obj_json,JSON_COMPACT);
+        log_debug("Config: %s",radio_fw_versions);
+        json_t*config_versions_obj_json;
+        config_versions_obj_json=json_object_get(config_obj_json,"radio_FW_version");
+        radio_fw_versions=json_dumps(config_versions_obj_json,JSON_COMPACT);
+        log_debug("FW versions: %s",radio_fw_versions);
+        json_t*config_versions_radio2_obj_json;
+        config_versions_radio2_obj_json=json_object_get(config_versions_obj_json,"radio2");
+        radio_fw_versions=json_string_value(config_versions_radio2_obj_json);
+        log_debug("Radio2 zigbee FW version: %s",radio_fw_versions);
+
+        // read actual version
+        int status=json_object_set(config_versions_obj_json,"radio2",json_string("zigbee_0"));
+        status=json_object_set(config_obj_json,"radio_FW_version",config_versions_obj_json);
+        status=json_object_set(radio_fw_versions_obj_json,"config",config_obj_json);
+
+
+        log_debug("Return after json set is %d",status);
+        radio_fw_versions=json_dumps(radio_fw_versions_obj_json,JSON_COMPACT);
+        status=json_dump_file(radio_fw_versions_obj_json, "/etc/config/radio_fw_version.conf", 0);
+        log_debug("Return after json set in file is= %d",status);
+        }
+
         }
 
 }
