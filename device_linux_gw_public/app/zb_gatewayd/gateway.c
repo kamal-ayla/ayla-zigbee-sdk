@@ -60,7 +60,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.2";
+const char *appd_template_version = "zigbee_gateway_demo_v4.3";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -162,8 +162,8 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define CHANNEL_COMMAND_LEN 80
 static int channel_2ghz;
 static int channel_5ghz;
-//static int get_channel_2ghz_value;
-//static int get_channel_5ghz_value;
+unsigned int channel_2g_tmp;
+unsigned int channel_5g_tmp;
 static char channel_command[CHANNEL_COMMAND_LEN];
 
 #define GET_TWO_GHZ_CHANNEL_VALUE "uci get wireless.radio1.channel"
@@ -177,12 +177,9 @@ static char channel_command[CHANNEL_COMMAND_LEN];
 /* backhaul optimization */
 #define OPTIMIZE_COMMAND_LEN 80
 static unsigned int bh_optimization;
-//static unsigned int get_bh_optimization;
 static char bh_optimization_command[OPTIMIZE_COMMAND_LEN];
 
 #define BH_OPTIMIZE "uci set smartmesh.sm_steering.bhsta_optimization=%d"
-//#define ENABLE_BH_OPTIMIZATION "uci set smartmesh.sm_steering.bhsta_optimization=1"
-//#define DISABLE_BH_OPTIMIZATION "uci set smartmesh.sm_steering.bhsta_optimization=0"
 #define GET_BH_OPTIMIZATION "uci get smartmesh.sm_steering.bhsta_optimization"
 
 
@@ -236,19 +233,22 @@ static char ssid_key_2ghz[KEY_LEN];
 //whitelist variable
 #define GW_WHITELIST_STATE                 "gw_whitelist_state"
 #define GW_WHITELIST_ACTIVE                "gw_whitelist_active"
+#define GW_WHITELIST_BSSID		   "gw_whitelist_bssid"
 #define GW_WHITELIST_MAC_ADDR              "gw_whitelist_mac_address"
 static char whitelist_cmd_buf[WHITELIST_LEN];
 static char whitelist_mac_addr[20];
+static char gw_whitelist_bssid[20];
 static int gw_whitelist_state;
 static int gw_whitelist_active;
 #define WHITELIST_CMD "ubus call wireless.supplicant.whitelist connect '{\"name\":\"wl0\",\"bssid\":\"%s\"}'"
+#define WHITELIST_CLEAR "ubus call wireless.supplicant.whitelist clear '{\"name\":\"wl0\"}'"
 #define WHITELIST_ACTIVE "ubus call wireless.supplicant.whitelist get | grep \"whitelist_active\" | awk '{print $2}' | cut -b 1"
 #define WHITELIST_BSSID "ubus call wireless.supplicant.whitelist get | grep \"whitelist_bssid\" | awk '{print $2}' | cut -b 2-18"
 #define WHITELIST_BSS_ID "ubus call wireless.supplicant.whitelist get | grep \"bssid\" | awk '{print $2}' | cut -b 2-18"
 #define WHITELIST_STATE "ubus call wireless.supplicant.whitelist get | grep \"whitelist_state\" | awk '{print $2}' | cut -b 1"
 static int appd_properties_get(void);
-static struct timer gw_whitelist_timer;
-static struct timer gw_whitelist_init_timer;
+static int appd_update_whitelist_get();
+static int appd_ngrok_update(void);
 
 /* Backhaul STA  */
 
@@ -259,10 +259,7 @@ static int gw_wifi_bh_bss_state;
 #define SET_BACKHAUL_STA_ENABLE "ubus call wireless.supplicant.apscan set '{\"name\":\"wl0\",\"state\":\"1\"}'"
 #define SET_BACKHAUL_STA_DISABLE "ubus call wireless.supplicant.apscan set '{\"name\":\"wl0\",\"state\":\"0\"}'"
 #define GET_BACKHAUL_STA "ubus call wireless.supplicant.apscan get '{\"name\":\"wl0\"}' | grep \"ap_scan_mode\" | awk '{print $2}'"
-//#define DISCONNECT_BACKHAUL_STA_DISABLE "wpa_cli -p /var/run/wl0_wpa_supplicant disconnect"
-static struct timer gw_wifi_bh_sta_timer;
-static struct timer gw_wifi_bh_sta_init_timer;
-
+static int appd_update_wifi_bh_sta();
 
 /* ngrok properties */
 #define AUTH_COMMAND_LEN			80
@@ -271,6 +268,7 @@ static struct timer gw_wifi_bh_sta_init_timer;
 static char auth_command[AUTH_COMMAND_LEN];
 static u8 ngrok_enable;
 static int ngrok_port;
+static unsigned int timeout_flag;
 static unsigned int ngrok_update_counter;
 static char ngrok_status[NGROK_STATUS_LEN];
 static char ngrok_error_status[NGROK_STATUS_LEN];
@@ -1016,76 +1014,93 @@ static int appd_gw_change_channel_set(struct prop *prop, const void *val,
 
 /* Get whitelist state, active in init */
 
-static void appd_init_whitelist_get(struct timer *timer_gw_whitelist_init_timer)
+static int appd_update_whitelist_get()
 {
-        timer_cancel(app_get_timers(), timer_gw_whitelist_init_timer);
-	char whitelist_bssid[20];
+	char tmp_string[20];
+	int tmp;
         FILE *fp;
-        FILE *fp1;
-        FILE *fp2;
+
+	tmp = gw_whitelist_active;
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
-                log_err("IOT_DEBUG init get: whitelist active failed");
+                log_err("IOT_DEBUG poll get: whitelist active failed");
                 gw_whitelist_active=0;
         } else {
                 fscanf(fp, "%d", &gw_whitelist_active);
         }
         pclose(fp);
 
-        log_debug("IOT_DEBUG init timer get: whitelist active %d::",gw_whitelist_active);
-        prop_send_by_name("gw_whitelist_active");
+        log_debug("IOT_DEBUG: appd update whitelist active %d::tmp : %d",gw_whitelist_active,tmp);
 
-        fp1 = popen(WHITELIST_STATE,"r");
-        if (fp1 == NULL) {
-                log_err("IOT_DEBUG timer init get: whitelist state failed");
+        if (tmp != gw_whitelist_active) {
+		prop_send_by_name("gw_whitelist_active");
+		log_debug("IOT_DEBUG : Change in  gw_whitelist_active");
+        }
+
+	tmp=gw_whitelist_state;
+        fp = popen(WHITELIST_STATE,"r");
+        if (fp == NULL) {
+                log_err("IOT_DEBUG: appd update whitelist state failed");
                 gw_whitelist_state = 0;
         } else {
-                fscanf(fp1, "%d", &gw_whitelist_state);
+                fscanf(fp, "%d", &gw_whitelist_state);
 
         }
-        pclose(fp1);
-	log_debug("IOT_DEBUG init timer get: whitelist state %d",gw_whitelist_state);
-        prop_send_by_name("gw_whitelist_state");
+        pclose(fp);
+	log_debug("IOT_DEBUG: appd update whitelist state %d tmp %d",gw_whitelist_state,tmp);
 
-        fp2 = popen(WHITELIST_BSSID,"r");
-        if (fp2 == NULL) {
-                log_err("IOT_DEBUG init get: whitelist bssid failed");
-                strcpy(whitelist_bssid,"00:00:00:00:00:00");
+        if (tmp != gw_whitelist_state) {	
+		log_debug("IOT_DEBUG : change in gw_whitelist_state");
+		prop_send_by_name("gw_whitelist_state");
+        }
+
+	strcpy(tmp_string,gw_whitelist_bssid);
+        fp = popen(WHITELIST_BSSID,"r");
+        if (fp == NULL) {
+                log_err("IOT_DEBUG: appd update whitelist bssid failed");
+                strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
         } else {
-                fscanf(fp2, "%[^\n]", whitelist_bssid);
+                fscanf(fp, "%[^\n]", gw_whitelist_bssid);
         }
-        pclose(fp2);
-        log_debug("IOT_DEBUG init timer get: whitelist bssid %s",whitelist_bssid);
-        if(strlen(whitelist_bssid)==17){
-        strcpy(whitelist_mac_addr,whitelist_bssid);
-        prop_send_by_name("gw_whitelist_mac_address");
+        pclose(fp);
+        log_debug("IOT_DEBUG: appd update whitelist bssid %s",gw_whitelist_bssid);
+        if(strlen(gw_whitelist_bssid)==17){
+		if (strcmp(tmp_string,gw_whitelist_bssid)) {
+			log_debug("IOT_DEBUG: appd update different mac address whitelist_bssid_previous_mac_addr %s gw_whitelist_bssid %s",tmp_string,gw_whitelist_bssid);
+			prop_send_by_name("gw_whitelist_bssid");
+
+                }
         }
         else {
-        strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
-        prop_send_by_name("gw_whitelist_mac_address");
+		log_debug("IOT_DEBUG: Invalid mac length");
         }
+
+	return 0;
 
 }
 
 
-static void appd_wifi_bh_sta_init_get(struct timer *timer_gw_wifi_bh_sta_init_timer)
+static int appd_update_wifi_bh_sta()
 {
-        log_debug("IOT_DEBUG appd_wifi_bh_sta_init_get 180 timer cancel");
         FILE *fp;
         char bss_state[10];
-        timer_cancel(app_get_timers(), timer_gw_wifi_bh_sta_init_timer);
+	int tmp=0;
+
+	tmp=gw_wifi_bh_apscan;
 	log_debug("IOT_DEBUG: GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
                 fp = popen(GET_BACKHAUL_STA,"r");
                 if (fp == NULL) {
-                        log_err("get backhaul enable ");
-     //                   gw_wifi_bh_apscan=0;
+                        log_err("Erro : get backhaul enable ");
                 } else {
                         fscanf(fp, "%d", &gw_wifi_bh_apscan);
                 }
-                log_debug("IOT_DEBUG init apscan %d",gw_wifi_bh_apscan);
+                log_debug("IOT_DEBUG: appd update wifi bh STA apscan %d tmp %d",gw_wifi_bh_apscan,tmp);
                 pclose(fp);
 
-		prop_send_by_name("gw_wifi_bh_apscan");
+                if (tmp != gw_wifi_bh_apscan) {
+			log_debug("IOT_DEBUG : appd update wifi bh sta change in gw_wifi_bh_poll_apscan");
+			prop_send_by_name("gw_wifi_bh_apscan");
+                }
 
                         log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
                         fp = popen(BACKHAUL_BSS_STATE,"r");
@@ -1096,22 +1111,30 @@ static void appd_wifi_bh_sta_init_get(struct timer *timer_gw_wifi_bh_sta_init_ti
                                 fscanf(fp,"%[^\n]",bss_state);
                         }
                         pclose(fp);
+			tmp=gw_wifi_bh_bss_state;
                         log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
                         if(!strcmp(bss_state,"up")){
                                 log_debug("IOT_DEBUG: gw wifi bh bss state is up");
                                 gw_wifi_bh_bss_state=1;
-				prop_send_by_name("gw_wifi_bh_bss_state");
-//                                prop_send_by_name("gw_wifi_bh_sta");
                         }
                         else if(!strcmp(bss_state,"down")){
                                 log_debug("IOT_DEBUG: gw wifi bss state is down");
                                 gw_wifi_bh_bss_state=0;
-				prop_send_by_name("gw_wifi_bh_bss_state");
-//                                prop_send_by_name("gw_wifi_bh_sta");
                         }
 			else{
 				log_debug("IOT_DEBUG : BH BSS STATE ERROR");
 			}
+			
+			log_debug("IOI_DEBUG: tmp %d gw_wifi_bh_bss_state %d",tmp,gw_wifi_bh_bss_state);
+
+                	if (tmp != gw_wifi_bh_bss_state) {
+				log_debug("IOT_DEBUG : appd wifi bh STA change in gw_wifi_bh_bss_state");
+				prop_send_by_name("gw_wifi_bh_bss_state");
+        	        }
+
+			
+
+	return 0;
 
 }
 
@@ -1123,13 +1146,117 @@ void appd_prop_init()
 {
 	prop_send_by_name("controller_status");
 	prop_send_by_name("up_time");
-	if(0 == appd_mesh_controller_status()){
-
-		timer_set(app_get_timers(), &gw_wifi_bh_sta_init_timer, 180000);
-		timer_set(app_get_timers(), &gw_whitelist_init_timer, 180000);
-	}
+	prop_send_by_name("radio1_fw_version");
+        prop_send_by_name("radio2_fw_version");
+        prop_send_by_name("radio0_fw_version");
 	appd_properties_get();
 }
+
+static int appd_ngrok_update(void)
+{
+
+
+#if 1  
+   FILE *fp;	
+   FILE *fp1;
+   FILE *fp2;
+   FILE *fp3;
+
+   unsigned int tmp;
+   char tmp_ngrok[80];
+
+   memset(tmp_ngrok,'\0',sizeof(tmp_ngrok));
+   strcpy(tmp_ngrok,ngrok_status);
+
+   log_debug("IOT_DEBUG : GET_NGROK_STATUS");
+   fp = popen(GET_NGROK_STATUS,"r");
+   if (fp == NULL || appd_is_ngrok_installed()) {
+      log_err("Get ngrok status failed");
+      strcpy(ngrok_status , "ngrok not installed");
+   } else {
+      memset(ngrok_status,'\0',sizeof(ngrok_status));	   
+      fscanf(fp, "%[^\n]", ngrok_status);
+      log_debug("Get ngrok_status value : %s during sysinfo",ngrok_status);
+      if ( strcmp(tmp_ngrok, ngrok_status ) ) {
+           prop_send_by_name("ngrok_status");
+      }      
+   }
+   pclose(fp);
+   
+   memset(tmp_ngrok,'\0',sizeof(tmp_ngrok));
+   strcpy(tmp_ngrok,ngrok_hostname);
+
+   log_debug("IOT_DEBUG: GET_NGROK_HOST_NAME");
+   fp1 = popen(GET_NGROK_HOST_NAME,"r");
+   if (fp1 == NULL || appd_is_ngrok_installed()) {
+      log_err("Get ngrok hostname failed");
+       strcpy(ngrok_hostname, "0");
+   } else {
+       memset(ngrok_hostname,'\0',sizeof(ngrok_hostname));
+       fscanf(fp1, "%[^\n]", ngrok_hostname);
+       log_debug("Get ngrok_hostname value : %s  during sysinfo",ngrok_hostname);
+       if ( strcmp(tmp_ngrok, ngrok_hostname ) ) {
+           prop_send_by_name("ngrok_hostname");
+       }       
+   }
+   pclose(fp1);
+
+   tmp = ngrok_port;
+   
+   log_debug("IOT_DEBUG; GET_NGROK_PORT_NUM");
+   fp2 = popen(GET_NGROK_PORT_NUM,"r");
+   if (fp2 == NULL || appd_is_ngrok_installed()) {
+      log_err("Get ngrok port failed");
+      ngrok_port=0;
+   } else {
+      fscanf(fp2, "%d", &ngrok_port);
+      log_debug("Get ngrok_port value : %d during sysinfo",ngrok_port);
+      if(tmp != ngrok_port) {
+	 prop_send_by_name("ngrok_port");
+      }
+   }
+   pclose(fp2);
+
+   memset(tmp_ngrok,' ',sizeof(tmp_ngrok));
+   if ( strcmp(ngrok_error_status, "") ) {
+       strcpy(tmp_ngrok,ngrok_error_status);
+   }
+  
+ 
+   log_debug("IOT_DEBUG : GET_NGROK_ERROR_STATUS status %s:: %d",ngrok_status,ngrok_enable);
+   if((!strcmp(ngrok_status,"ngrok not running")) && (ngrok_enable == 1) && ngrok_port!=0){
+   fp3 = popen(GET_NGROK_ERROR_STATUS,"r");
+   if (fp3 == NULL || appd_is_ngrok_installed()) {
+       log_err("Get ngrok error status failed");
+       strcpy(ngrok_error_status , "ngrok not installed");
+   } else {
+       memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+       fscanf(fp3, "%[^\n]", ngrok_error_status);
+       log_debug("Get ngrok error status  : %s during sysinfo",ngrok_error_status);
+
+       if(strcmp(ngrok_error_status, "") == 0 ) {
+          memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+          strcpy(ngrok_error_status , "NONE");
+	  log_debug("Get ngrok error status  1: %s during sysinfo",ngrok_error_status);
+       }
+       
+       if ( strcmp(tmp_ngrok, ngrok_error_status) ) {
+           prop_send_by_name("ngrok_error_status");
+       }
+   }
+   pclose(fp3);
+   }
+   if(!strcmp(ngrok_status,"ngrok not installed")){
+	prop_send_by_name("ngrok_port");
+	prop_send_by_name("ngrok_status");
+   	prop_send_by_name("ngrok_hostname");	   
+
+   }
+#endif
+
+   return 0;
+}
+
 
 /*
  *To get the sysinfo:
@@ -1137,34 +1264,36 @@ void appd_prop_init()
 static int appd_sysinfo_set(struct prop *prop, const void *val,
         size_t len, const struct op_args *args)
 {
-	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
-			log_err("prop_arg_set returned error");
-			return -1;
-	}
+   if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+	log_err("prop_arg_set returned error");
+	return -1;
+   }
 
-	if (get_sysinfo_status) {
-			prop_send_by_name("controller_status");
-			prop_send_by_name("up_time");
-			prop_send_by_name("ram_usage");
-			prop_send_by_name("cpu_usage");
-			prop_send_by_name("radio1_fw_version");
-			prop_send_by_name("radio2_fw_version");
-			prop_send_by_name("radio0_fw_version");
-			prop_send_by_name("gw_wifi_bh_uptime");
-			prop_send_by_name("gw_led_status");
-                        if((controller_status == 1) && (appd_is_ngrok_installed > 0)) {
-                                prop_send_by_name("ngrok_status");
-                                prop_send_by_name("ngrok_hostname");
-                                prop_send_by_name("ngrok_port");
-                        }
-			appd_properties_get();
-			log_debug("get sysinfo success");
-	}
+   if (get_sysinfo_status) {
+      prop_send_by_name("controller_status");
+      prop_send_by_name("up_time");
+      prop_send_by_name("ram_usage");
+      prop_send_by_name("cpu_usage");
+      prop_send_by_name("radio1_fw_version");
+      prop_send_by_name("radio2_fw_version");
+      prop_send_by_name("radio0_fw_version");
+      prop_send_by_name("gw_wifi_bh_uptime");
+      prop_send_by_name("gw_led_status");
+      
+      if(appd_is_ngrok_installed > 0) {
+         appd_ngrok_update();
+      }
+      else {
+	prop_send_by_name("ngrok_status");
+      }
+      appd_properties_get();
+      log_debug("get sysinfo success");
+   }
 
-	get_sysinfo_status = 0;
-	prop_send_by_name("get_sysinfo_status");
+   get_sysinfo_status = 0;
+   prop_send_by_name("get_sysinfo_status");
 
-	return 0;
+   return 0;
 }
 
 /*
@@ -1177,6 +1306,8 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
 	FILE *fp1;
 	FILE *fp2;
 
+	int tmp;
+	tmp=controller_status;
         fp1 = popen(BOARD_TYPE,"r");
         if (fp1 == NULL) {
                 log_err("Board Type Command failed");
@@ -1212,7 +1343,9 @@ static enum err_t appd_controller_status_send(struct prop *prop, int req_id,
 	      pclose(fp2);
         }
 
-	
+	if(tmp==controller_status){
+		return 0;
+	}
 	return prop_arg_send(prop, req_id, opts);
 
 }
@@ -1255,29 +1388,6 @@ static int appd_is_ngrok_installed(void)
 }
 
 /*
- *To get the authtoken.
- */
-static int appd_ngrok_send_authtoken(void)
-{
-	FILE *fp;
-	char get_authtoken[SET_AUTHTOKEN_LEN];
-
-	fp = popen(GET_AUTHTOKEN,"r");
-	if(fp == NULL || appd_is_ngrok_installed()) {
-		log_err("Failed to get authtoken");
-		strcpy(ngrok_set_authtoken, "0");
-	} else {
-		fscanf(fp, "%[^\n]", get_authtoken);
-		strcpy(ngrok_set_authtoken,get_authtoken);
-	}
-
-	prop_send_by_name("ngrok_set_authtoken");
-	return 0;
-}
-
-
-
-/*
  *To get the ngrok info
  */
 static int appd_ngrok_enable(struct prop *prop, const void *val,
@@ -1288,7 +1398,17 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
                 log_err("prop_arg_set returned error");
                 return -1;
         }
-        prop_send_by_name("ngrok_status");
+
+	FILE *fp;
+
+        fp = popen(GET_NGROK_STATUS,"r");
+        if (fp == NULL || appd_is_ngrok_installed()) {
+                log_err("Get ngrok status failed");
+                strcpy(ngrok_status , "ngrok not installed");
+        } else {
+                fscanf(fp, "%[^\n]", ngrok_status);
+        }
+        pclose(fp);
 
         if ((strcmp(ngrok_status,"ngrok not running") == 0) && ngrok_enable == 1) {
 
@@ -1301,6 +1421,7 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
                 memset(data,'\0',sizeof(data));
                 sprintf(command, GET_NGROK_START);
                 exec_systemcmd(command, data, DATA_SIZE);
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
         } else if ((strcmp(ngrok_status,"ngrok not running") == 0) && ngrok_enable == 0) {
                  log_debug("ngrok status : ngrok not running and ngrok enable set to 0");
         } else if ((strcmp(ngrok_status,"ngrok running") == 0) && ngrok_enable == 1) {
@@ -1312,11 +1433,10 @@ static int appd_ngrok_enable(struct prop *prop, const void *val,
                 sprintf(command, GET_NGROK_STOP);
                 exec_systemcmd(command, data, DATA_SIZE);
                 log_debug("ngrok status : ngrok running and ngrok enable set to 0");
+		timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
         } else {
                 log_debug("get ngrok_info failed");
         }
-        timer_set(app_get_timers(), &ngrok_data_update_timer, 4000);
-	
        return 0;
 }
 
@@ -1348,13 +1468,23 @@ static void appd_ngrok_data_update(struct timer *timer_ngrok_update)
 		log_debug("port 0 adding again & ngrok_update_counter = %d",ngrok_update_counter);
 		ngrok_update_counter++;
         } else {
+		timeout_flag = 0;
                 ngrok_update_counter = 0;
                 log_debug("either number of iterations completed or port number available");
-		prop_send_by_name("ngrok_error_status");
-		prop_send_by_name("ngrok_hostname");
+		
 		prop_send_by_name("ngrok_port");
-		appd_ngrok_send_authtoken();
-	} 	
+		prop_send_by_name("ngrok_hostname");
+		
+		if ((ngrok_enable == 1) && (( ngrok_port == 0) || ( strcmp(ngrok_hostname, "io timeout\"") == 0))) {
+			timeout_flag = 1;
+			log_debug(" ngrok port number : %d, host name : %s",ngrok_port,ngrok_hostname);
+			prop_send_by_name("ngrok_error_status");
+		}
+		else {
+			log_debug(" Available port number : %d, host name : %s",ngrok_port,ngrok_hostname);
+			prop_send_by_name("ngrok_error_status");
+		}
+	}    
 }
 
 /*
@@ -1364,7 +1494,6 @@ static enum err_t appd_ngrok_hostname_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
 	FILE *fp;
-
 	fp = popen(GET_NGROK_HOST_NAME,"r");
 	if (fp == NULL || appd_is_ngrok_installed()) {
 		log_err("Get ngrok hostname failed");
@@ -1374,7 +1503,6 @@ static enum err_t appd_ngrok_hostname_send(struct prop *prop, int req_id,
 		log_debug("Get ngrok_hostname value : %s",ngrok_hostname);
 		pclose(fp);
 	}
-
 	return prop_arg_send(prop, req_id, opts);
 
 }
@@ -1386,20 +1514,13 @@ static enum err_t appd_ngrok_port_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
 	FILE *fp;
-
 	fp = popen(GET_NGROK_PORT_NUM,"r");
 	if (fp == NULL || appd_is_ngrok_installed()) {
 		log_err("Get ngrok port failed");
 		ngrok_port = 0;
-		ngrok_enable = 0;
-		prop_send_by_name("ngrok_enable");
 	} else {
 		fscanf(fp, "%d", &ngrok_port);
 		log_debug("Get ngrok_port value : %d",ngrok_port);
-		if (ngrok_port == 0) {
-			ngrok_enable = 0;
-			prop_send_by_name("ngrok_enable");
-		}
 		pclose(fp);
 	}
 	return prop_arg_send(prop, req_id, opts);
@@ -1413,7 +1534,6 @@ static enum err_t appd_ngrok_status_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
 	FILE *fp;
-
 	fp = popen(GET_NGROK_STATUS,"r");
 	if (fp == NULL || appd_is_ngrok_installed()) {
 		log_err("Get ngrok status failed");
@@ -1422,6 +1542,7 @@ static enum err_t appd_ngrok_status_send(struct prop *prop, int req_id,
 		fscanf(fp, "%[^\n]", ngrok_status);
 		pclose(fp);
 	}
+
 	return prop_arg_send(prop, req_id, opts);
 
 }
@@ -1436,31 +1557,36 @@ static enum err_t appd_ngrok_error_status_send(struct prop *prop, int req_id,
 
    if((strcmp(ngrok_status,"ngrok not running") == 0) && (ngrok_enable == 1)){
 
-        fp = popen(GET_NGROK_ERROR_STATUS,"r");
-        if (fp == NULL || appd_is_ngrok_installed()) {
-                log_err("Get ngrok error status failed");
-                strcpy(ngrok_error_status , "ngrok not installed");
-                ngrok_enable = 0;
-                prop_send_by_name("ngrok_enable");
-        } else {
-                memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
-                fscanf(fp, "%[^\n]", ngrok_error_status);
+   fp = popen(GET_NGROK_ERROR_STATUS,"r");
+      if (fp == NULL || appd_is_ngrok_installed()) {
+          log_err("Get ngrok error status failed");
+          strcpy(ngrok_error_status , "ngrok not installed");
+      } else {
+          memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+          fscanf(fp, "%[^\n]", ngrok_error_status);
 
-
-                if(strlen(ngrok_error_status) < 10)
-                {
-                        memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
-                        strcpy(ngrok_error_status , "NONE");
-                }
-
-                pclose(fp);
-        }
+          if(strcmp(ngrok_error_status, "") == 0 ) {
+              memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+              strcpy(ngrok_error_status , "NONE");
+          } 
+      }
+      pclose(fp);
    }
    else {
-            memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
-            strcpy(ngrok_error_status , "NONE");
+      memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+      strcpy(ngrok_error_status , "NONE");
+      log_debug("ngrok error status : %s",ngrok_error_status);
    }
-        return prop_arg_send(prop, req_id, opts);
+
+   if ((timeout_flag == 1 ) && (strcmp(ngrok_error_status, "NONE") == 0)) {
+	   
+      memset(ngrok_error_status, ' ', sizeof(ngrok_error_status));
+      strcpy(ngrok_error_status , "TIMEOUT");
+      log_debug("timeout flag :%d, and ngrok error status : %s",timeout_flag, ngrok_error_status);
+      timeout_flag = 0;
+  }
+   
+  return prop_arg_send(prop, req_id, opts);
 
 }
 
@@ -1478,66 +1604,18 @@ static int appd_ngrok_set_authtoken(struct prop *prop, const void *val,
 		return -1;
 	}
 
-	if(strlen(ngrok_set_authtoken) >= 10) {
-		snprintf(auth_command, sizeof(auth_command), SET_NGROK_AUTHTOKEN,
-				ngrok_set_authtoken);
-
-		fp = popen(auth_command, "r");
-		if (fp == NULL) {
-			log_err("set ngrok authtoken failed");
-			exit(1);
-		}
-		pclose(fp);
-	} else {
-		log_err("invalid authtoken");
+        snprintf(auth_command, sizeof(auth_command), SET_NGROK_AUTHTOKEN, ngrok_set_authtoken);
+	
+	fp = popen(auth_command, "r");
+	if (fp == NULL) {
+           log_err("set ngrok authtoken failed");
+	   exit(1);
 	}
+	pclose(fp);
+	
 	return 0;
 }
 
-static void appd_wifi_bh_sta_get(struct timer *timer_gw_wifi_bh_sta_timer)
-{
-	log_debug("IOT_DEBUG appd_wifi_bh_sta_get timer 180 sec cancel");
-	FILE *fp;
-	char bss_state[10];
-	timer_cancel(app_get_timers(), timer_gw_wifi_bh_sta_timer);
-	fp = popen(GET_BACKHAUL_STA,"r");
-                if (fp == NULL) {
-                        log_err("Error: get backhaul enable ");
-                        gw_wifi_bh_apscan=2;
-                } else {
-                        fscanf(fp, "%d", &gw_wifi_bh_apscan);
-                }
-                log_debug("IOT_DEBUG init apscan %d",gw_wifi_bh_apscan);
-                pclose(fp);
-
-                prop_send_by_name("gw_wifi_bh_apscan");
-
-	                log_debug("IOT_DEBUG: BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
-                        fp = popen(BACKHAUL_BSS_STATE,"r");
-                        if (fp == NULL) {
-                                log_err("IOT_DEBUG: ERROR Backhaul BSS state ");
-                                strcpy(bss_state,"NULL");
-                        } else {
-                                fscanf(fp,"%[^\n]",bss_state);
-                        }
-                        pclose(fp);
-                        log_debug("IOT_DEBUG: backhaul bss state %s",bss_state);
-                        if(!strcmp(bss_state,"up")){
-                                log_debug("IOT_DEBUG: gw wifi bh bss state is up");
-				gw_wifi_bh_bss_state=1;
-				prop_send_by_name("gw_wifi_bh_bss_state");
-                                gw_wifi_bh_sta=1;
-                                prop_send_by_name("gw_wifi_bh_sta");
-                        }
-                        else {
-                                log_debug("IOT_DEBUG: gw wifi bss state is down");
-                                gw_wifi_bh_bss_state=0;
-                                prop_send_by_name("gw_wifi_bh_bss_state");
-				gw_wifi_bh_sta=0;
-                                prop_send_by_name("gw_wifi_bh_sta");
-                        }
-
-}
 
 /*
  * backhaul STA Disable
@@ -1552,42 +1630,12 @@ static int appd_backhaul_sta(struct prop *prop, const void *val,
         }
 	FILE *fp;
 	
-	char bss_state[10];
-	log_debug("IOT_DEBUG: GET_BACKHAUL_STA before gw_wifi_bh_sta %s",GET_BACKHAUL_STA);
-        fp = popen(GET_BACKHAUL_STA,"r");
-        if (fp == NULL) {
-               log_err("Error: get backhaul enable ");
-               gw_wifi_bh_apscan=2;
-        } else {
-               fscanf(fp, "%d", &gw_wifi_bh_apscan);
-        }
-        pclose(fp);
-
-	log_debug("IOT_DEBUG: Check case BACKHAUL_BSS_STATE %s",BACKHAUL_BSS_STATE);
-        fp = popen(BACKHAUL_BSS_STATE,"r");
-                        if (fp == NULL) {
-                                log_err("IOT_DEBUG: check case ERROR Backhaul BSS state ");
-                                strcpy(bss_state,"NULL");
-                        } else {
-                                fscanf(fp,"%[^\n]",bss_state);
-                        }
-                        pclose(fp);
-                        log_debug("IOT_DEBUG: check case backhaul bss state %s",bss_state);
-
-
 	unsigned int status;
 	status = appd_mesh_controller_status();
 
 	if((status == 0)) {// && (gw_wifi_bh_apscan!=gw_wifi_bh_sta)){
-//	char bss_state[10];
 	log_debug("IOT_DEBUG: gw_wifi_bh_sta %d",gw_wifi_bh_sta);
 	if(gw_wifi_bh_sta){
-		if(gw_wifi_bh_apscan==1 && (!strcmp(bss_state,"up"))){
-			log_debug("IOT_DEBUG: BH already enabled");
-			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 1000);
-		}
-		else{
-		FILE *fp;
 		log_debug("IOT_DEBUG: SET_BACKHAUL_STA %s",SET_BACKHAUL_STA_ENABLE);
 		fp = popen(SET_BACKHAUL_STA_ENABLE,"r");
 		if (fp == NULL) {
@@ -1595,30 +1643,8 @@ static int appd_backhaul_sta(struct prop *prop, const void *val,
 		}
 		pclose(fp);
 
-		log_debug("IOT_DEBUG: GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
-		fp = popen(GET_BACKHAUL_STA,"r");
-		if (fp == NULL) {
-			log_err("Error get backhaul enable ");
-			gw_wifi_bh_apscan=0;
-		} else {
-			fscanf(fp, "%d", &gw_wifi_bh_apscan);
-		}
-		pclose(fp);
-
-		log_debug("iot_debug: apscan %d",gw_wifi_bh_apscan);
-		if(gw_wifi_bh_apscan==1){
-			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 180000);
-		}
-		}
 	}
 	else {
-                if(gw_wifi_bh_apscan==0 && (!strcmp(bss_state,"down"))){
-                        log_debug("IOT_DEBUG: BH already disabled");
-			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 1000);
-                }
-		else {
-		FILE *fp;
-		
 		log_debug("IOT_DEBUG: SET_BACKHAUL_STA_DISABLE %s",SET_BACKHAUL_STA_DISABLE);
 		fp = popen(SET_BACKHAUL_STA_DISABLE,"r");
                 if (fp == NULL) {
@@ -1626,24 +1652,7 @@ static int appd_backhaul_sta(struct prop *prop, const void *val,
                 }
                 pclose(fp);
                 
-		
-		log_debug("IOT_DEBUG: GET_BACKHAUL_STA %s",GET_BACKHAUL_STA);
-		fp = popen(GET_BACKHAUL_STA,"r");
-        	if (fp == NULL) {
-        	        log_err("Error: get backhaul disable ");
-			gw_wifi_bh_apscan=0;
-        	} else {
-                	fscanf(fp, "%d", &gw_wifi_bh_apscan);
-        	}
-		pclose(fp);
-	
-		log_debug("IOT_DEBUG: apscan %d",gw_wifi_bh_apscan);
-		if(gw_wifi_bh_apscan==0){
-			timer_set(app_get_timers(), &gw_wifi_bh_sta_timer, 180000);
-		
 		}
-		}
-	}
 	}
 	return 0;
 }
@@ -1713,7 +1722,10 @@ static enum err_t appd_gw_led_status_send(struct prop *prop, int req_id,
         //log_debug("Green_delay %d",green_delay);
 
         sprintf(status,"%s_%s,%s_%s,%s_%s",(red==255) ? "RED" : "0",(red_delay==1000) ? "HIGH" : (red_delay==250) ? "SHORT" : "0"  ,(orange==255) ? "ORANGE" : "0",(orange_delay==1000) ? "HIGH" : (orange_delay==250) ? "SHORT" : "0",(green==255)?"GREEN":"0",(green_delay==1000) ? "HIGH" : (green_delay==250) ? "SHORT" : "0" );
-
+	if(!strcmp(gw_led_status,status)){
+		log_debug("IOT_DEBUG: gw_led_status there is no change in status");
+		return 0;
+	}
         strcpy(gw_led_status , status);
         return prop_arg_send(prop, req_id, opts);
 
@@ -2515,7 +2527,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 
 /* Get whitelist mac */
 
-static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
+/*static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
 {
 
 	
@@ -2572,7 +2584,7 @@ static void appd_whitelist_get(struct timer *timer_gw_whitelist_timer)
          prop_send_by_name("gw_whitelist_mac_address");
         }
 
-}
+}*/
 
 /*
  *Connect with specified mac address.
@@ -2599,11 +2611,20 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 
       validate = strlen(whitelist_mac_addr);
 
-      log_debug("IOT_DEBUG: whitelist connect mac address value : %s and size of the value : %d",whitelist_mac_addr,validate);
 
+      if(validate == 17 && (!strcmp(whitelist_mac_addr,"00:00:00:00:00:00"))){
+	      log_debug("IOT_DEBUG: WHITELIST clear");
+		fp = popen(WHITELIST_CLEAR,"r");
+		if (fp == NULL) {
+			log_err("whitelist active failed");
+		}
+		pclose(fp);
+		strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
+		prop_send_by_name("gw_whitelist_bssid");
+      }
       if(validate == 17 && strcmp(whitelist_mac_addr,"00:00:00:00:00:00") != 0){
 
-
+	log_debug("IOT_DEBUG: whitelist connect mac address value : %s and size of the value : %d",whitelist_mac_addr,validate);
 	fp = popen(WHITELIST_ACTIVE,"r");
         if (fp == NULL) {
                 log_err("whitelist active failed");
@@ -2629,7 +2650,6 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
 
 	if((gw_whitelist_active==1) && (!strcmp(whitelist_bssid,whitelist_mac_addr))){
 		log_debug("IOT_DEBUG whitelist config already done, activating 10 sec timers to get the whitelist state");
-		timer_set(app_get_timers(), &gw_whitelist_timer, 10000);
 
 	}else
 	{
@@ -2646,21 +2666,19 @@ static int appd_whitelist_mac_address(struct prop *prop, const void *val,
          	}
          	pclose(fp);
 
-         	timer_set(app_get_timers(), &gw_whitelist_timer, 180000);
+  //       	timer_set(app_get_timers(), &gw_whitelist_timer, 180000);
 		}
 	}
 
       }
       else {
 	 log_debug("Invalid mac address try again");     
-         memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));	    
-         strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
+	 strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
       }
    }
    else {
       log_debug("whitelist command not allowed due to extender act as a controller"); 
-      memset(whitelist_mac_addr,'\0',sizeof(whitelist_mac_addr));
-      strcpy(whitelist_mac_addr,"00:00:00:00:00:00");
+      strcpy(gw_whitelist_bssid,"00:00:00:00:00:00");
 	   
    }
    return 0;
@@ -2682,7 +2700,10 @@ static int appd_properties_get(void)
 	FILE *fp6;
         FILE *fp7;
         FILE *fp8;
-	
+
+	int tmp;
+	char tmp_string[80];
+	tmp=channel_2ghz;	
 	// To get 2ghz channel value
 	fp = popen(GET_TWO_GHZ_CHANNEL_VALUE,"r");
 	if (fp == NULL) {
@@ -2694,6 +2715,11 @@ static int appd_properties_get(void)
 	}
 	pclose(fp);
 
+	if(tmp!=channel_2ghz){
+		prop_send_by_name("gw_wifi_channel_2G");		
+	}
+
+	tmp=channel_5ghz;
 	// To get 5ghz channel value
 	fp1 = popen(GET_FIVE_GHZ_CHANNEL_VALUE,"r");
 	if (fp1 == NULL) {
@@ -2705,6 +2731,11 @@ static int appd_properties_get(void)
 	}
 	pclose(fp1);
 
+	if(tmp!=channel_5ghz){
+                prop_send_by_name("gw_wifi_channel_5G");
+        }
+
+	strcpy(tmp_string,ssid_2ghz);
 	// To get 2ghz ssid 
 	fp2 = popen(TWO_GHZ_GET_SSID,"r");
 	if (fp2 == NULL) {
@@ -2717,6 +2748,11 @@ static int appd_properties_get(void)
 	}
 	pclose(fp2);
 
+	if(strcmp(tmp_string,ssid_2ghz)){
+		prop_send_by_name("gw_wifi_ssid_2G");
+	}
+
+	strcpy(tmp_string,ssid_5ghz);
 	// To get 5ghz ssid
 	fp3 = popen(FIVE_GHZ_GET_SSID,"r");
 	if (fp3 == NULL) {
@@ -2729,6 +2765,11 @@ static int appd_properties_get(void)
 	}
 	pclose(fp3);
 
+	if(strcmp(tmp_string,ssid_5ghz)){
+                prop_send_by_name("gw_wifi_ssid_5G");
+        }
+
+	tmp=bh_optimization;
 	// To get backhaul optimization value
 	fp4 = popen(GET_BH_OPTIMIZATION,"r");
 	if (fp4 == NULL) {
@@ -2740,6 +2781,11 @@ static int appd_properties_get(void)
 	}
 	pclose(fp4);
 
+	if(tmp!=bh_optimization){
+		prop_send_by_name("gw_wifi_bh_optimization");
+	}
+
+	tmp=multi_channel_scan;
         // To get multi channel value
         fp5 = popen(GET_MULTI_CHANNEL_SCAN,"r");
         if (fp5 == NULL) {
@@ -2750,6 +2796,12 @@ static int appd_properties_get(void)
                 log_debug("Get multi channel scan value : %d",multi_channel_scan);
         }
         pclose(fp5);
+
+	if(tmp!=multi_channel_scan){
+		prop_send_by_name("gw_wifi_multi_channel_scan");
+        }
+
+	tmp=single_channel_scan;
 
         // To get single channel value
         fp6 = popen(GET_SINGLE_CHANNEL_SCAN,"r");
@@ -2762,6 +2814,11 @@ static int appd_properties_get(void)
         }
         pclose(fp6);
 
+	if(tmp!=single_channel_scan){
+		prop_send_by_name("gw_wifi_single_channel_scan");
+        }
+
+	strcpy(tmp_string,ssid_key_2ghz);
         // To get 2ghz ssid key
         fp7 = popen(TWO_GHZ_GET_KEY,"r");
         if (fp7 == NULL) {
@@ -2774,6 +2831,11 @@ static int appd_properties_get(void)
         }
 	pclose(fp7);
 
+	if(strcmp(tmp_string,ssid_key_2ghz)){
+		prop_send_by_name("gw_wifi_ssid_key_2G");
+	}
+
+	strcpy(tmp_string,ssid_key_5ghz);
         // To get 5ghz ssid key
         fp8 = popen(FIVE_GHZ_GET_KEY,"r");
         if (fp8 == NULL) {
@@ -2786,15 +2848,10 @@ static int appd_properties_get(void)
         }
         pclose(fp8);
 
-	prop_send_by_name("gw_wifi_channel_2G");
-	prop_send_by_name("gw_wifi_channel_5G");
-	prop_send_by_name("gw_wifi_ssid_2G");
-	prop_send_by_name("gw_wifi_ssid_5G");
-	prop_send_by_name("gw_wifi_bh_optimization");
-	prop_send_by_name("gw_wifi_multi_channel_scan");
-	prop_send_by_name("gw_wifi_single_channel_scan");
-        prop_send_by_name("gw_wifi_ssid_key_2G");
-        prop_send_by_name("gw_wifi_ssid_key_5G");
+	if(strcmp(tmp_string,ssid_key_5ghz)){
+		prop_send_by_name("gw_wifi_ssid_key_5G");
+        }
+
     return 0;
 }
 
@@ -2812,6 +2869,7 @@ static int appd_get_wifi_sta_info_update(struct prop *prop, const void *val,
 		return -1;
         }
 
+	log_debug("IOT_DEBUG_SET_POLL: wifi_sta_info_update %d, WIFI_STA_MIN_UPDATE_PERIOD_MINS %d, wifi_sta_info_update %d, WIFI_STA_MAX_UPDATE_PERIOD_MINS %d",wifi_sta_info_update,WIFI_STA_MIN_UPDATE_PERIOD_MINS,wifi_sta_info_update,WIFI_STA_MAX_UPDATE_PERIOD_MINS);
 	if (wifi_sta_info_update < WIFI_STA_MIN_UPDATE_PERIOD_MINS) {
 		wifi_sta_info_update = WIFI_STA_MIN_UPDATE_PERIOD_MINS;
 		log_debug("wifi_sta_info_update value is out of range");
@@ -2958,15 +3016,23 @@ void appd_wifi_sta_poll()
         memset(data,'\0',sizeof(data));
         sprintf(command, GET_GW_WIFI_TXOP_5G);
         exec_systemcmd(command, data, DATA_SIZE);
-        appd_send_wifi_sta_data(GW_WIFI_TXOP_5G, data);
-
+        if (appd_check_wifi_sta_data_deviation(GW_WIFI_TXOP_5G, data)) {
+                appd_send_wifi_sta_data(GW_WIFI_TXOP_5G, data);
+        }
+	
 	memset(command,'\0',sizeof(command));
         memset(data,'\0',sizeof(data));
         sprintf(command, GET_GW_WIFI_TXOP_2G);
         exec_systemcmd(command, data, DATA_SIZE);
-        appd_send_wifi_sta_data(GW_WIFI_TXOP_2G, data);	
+	if (appd_check_wifi_sta_data_deviation(GW_WIFI_TXOP_2G, data)) {
+        	appd_send_wifi_sta_data(GW_WIFI_TXOP_2G, data);	
+	}
+        if(0 == appd_mesh_controller_status()){
+		appd_update_wifi_bh_sta();
+		appd_update_whitelist_get();
 
-		
+        }
+	
 }
 
 
@@ -2998,7 +3064,32 @@ static int appd_check_wifi_sta_data_deviation(char *name, char *value)
                 } else {
                         return 0;
                 }
-        }
+
+	} else if (!strcmp(name, GW_WIFI_TXOP_2G)) {
+
+                tmp = atoi(value);
+
+                deviation = abs(abs(tmp) - abs(gw_wifi_txop_2g));
+
+                if (deviation >= ATT_DATA_DEVIATION_DB) {
+                        return 1;
+                } else {
+                        return 0;
+                }
+ 
+        } else if (!strcmp(name, GW_WIFI_TXOP_5G)) {
+
+                tmp = atoi(value);
+
+                deviation = abs(abs(tmp) - abs(gw_wifi_txop_5g));
+
+                if (deviation >= ATT_DATA_DEVIATION_DB)  {
+                        return 1;
+                } else {
+                        return 0;
+                }
+	}
+        	
 
 	return 0;
 }
@@ -3158,7 +3249,6 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 gw_wifi_txop_2g = tmp;
 
                 prop_send_by_name(name);
-
         }
 
 
@@ -3270,7 +3360,8 @@ static enum err_t get_gw_wifi_bh_uptime(struct prop *prop, int req_id,
 	int day, hour, minutes, seconds;
 	unsigned long int nw_up_time = 0;
 	char *temp = NULL;
-
+	char tmp_network_up_time[40];
+	strcpy(tmp_network_up_time,network_up_time);
 	memset(network_up_time,0x00, sizeof(network_up_time));
 	if(1 == appd_mesh_controller_status())
 	{
@@ -3315,6 +3406,9 @@ static enum err_t get_gw_wifi_bh_uptime(struct prop *prop, int req_id,
 			}
 			log_debug("network up time: %s",network_up_time);
 		}
+	if(!strcmp(tmp_network_up_time,network_up_time)){
+		return 0;
+	}
     return prop_arg_send(prop, req_id, opts);
 }
 
@@ -3342,8 +3436,13 @@ static enum err_t appd_ble_fw(struct prop *prop, int req_id,
 		json_t*config_versions_radio1_obj_json;
 		config_versions_radio1_obj_json=json_object_get(config_versions_obj_json,"radio1");
 		radio_fw_versions=json_string_value(config_versions_radio1_obj_json);
+		if(!strcmp(radio1_fw_version,radio_fw_versions)){
+			log_debug("IOT_DEBUG: radio1_fw_version there is no change in version");
+			return 0;
+		} else {
 		strcpy(radio1_fw_version,radio_fw_versions);
 		log_debug("Radio1 FW version: %s",radio1_fw_version);
+		}
 	}
 	return prop_arg_send(prop, req_id, opts);
 }
@@ -3373,8 +3472,13 @@ static enum err_t appd_zigbee_fw(struct prop *prop, int req_id,
 		json_t*config_versions_radio2_obj_json;
 		config_versions_radio2_obj_json=json_object_get(config_versions_obj_json,"radio2");
 		radio_fw_versions=json_string_value(config_versions_radio2_obj_json);
+		if(!strcmp(radio2_fw_version,radio_fw_versions)){
+			log_debug("IOT_DEBUG: radio2_fw_version there is no change in version");
+                        return 0;
+                } else {
 		strcpy(radio2_fw_version,radio_fw_versions);
 		log_debug("Radio2 FW version: %s",radio2_fw_version);
+		}
 	}
 	return prop_arg_send(prop, req_id, opts);
 }
@@ -3404,8 +3508,13 @@ static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
 		json_t*config_versions_radio0_obj_json;
 		config_versions_radio0_obj_json=json_object_get(config_versions_obj_json,"radio0");
 		radio_fw_versions=json_string_value(config_versions_radio0_obj_json);
+		if(!strcmp(radio0_fw_version,radio_fw_versions)){
+			log_debug("IOT_DEBUG: radio0_fw_version there is no change in version");
+                        return 0;
+                } else {
 		strcpy(radio0_fw_version,radio_fw_versions);
 		log_debug("Radio0 FW version: %s",radio0_fw_version);
+		}
 	}
 	return prop_arg_send(prop, req_id, opts);
 }
@@ -3427,6 +3536,9 @@ static enum err_t appd_cpu_usage_send(struct prop *prop, int req_id,
 	fscanf(fp, "%d", &cpusage);
 	pclose(fp);
 	sprintf(buffer,"%d",cpusage);
+	if(!strcmp(cpu_usage,buffer)){
+		return 0;
+	}
 	strcpy(cpu_usage,buffer);
 	strcat(cpu_usage,"%");
 	log_debug(" cpu_usage is :%s\n", cpu_usage);
@@ -3444,6 +3556,7 @@ static enum err_t appd_ram_usage_send(struct prop *prop, int req_id,
 	FILE *fp;
 	static unsigned int ram_mb, ram_kb;
 	char buffer[10];
+	char tmp[100];
 	fp = popen(GET_RAM_FREE,"r");
 	if (fp == NULL) {
 		log_err("Ram usage get failed");
@@ -3492,7 +3605,9 @@ static enum err_t appd_ram_usage_send(struct prop *prop, int req_id,
 	strcat(ram_usage,buffer);
 	strcat(ram_usage,"MB");
     log_debug(" ram_usage is :%s\n", ram_usage);
-
+	if(!strcmp(tmp,ram_usage)){
+		return 0;
+	}
 	return prop_arg_send(prop, req_id, opts);
 }
 
@@ -3973,7 +4088,6 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_whitelist_active,
                 .len = sizeof(gw_whitelist_active),
-        //        .skip_init_update_from_cloud = 1,
         },
 	{
                 .name = "gw_whitelist_state",
@@ -3981,7 +4095,13 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_whitelist_state,
                 .len = sizeof(gw_whitelist_state),
-          //      .skip_init_update_from_cloud = 1,
+        },
+	{
+                .name = "gw_whitelist_bssid",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_whitelist_bssid,
+                .len = sizeof(gw_whitelist_bssid),
         },
 
 	/* backhaul sta enable/disable */
@@ -4252,12 +4372,6 @@ int appd_init(void)
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
-	if(0 == appd_mesh_controller_status()){
-		timer_init(&gw_whitelist_timer, appd_whitelist_get);
-		timer_init(&gw_wifi_bh_sta_timer, appd_wifi_bh_sta_get); 
-		timer_init(&gw_whitelist_init_timer, appd_init_whitelist_get);
-		timer_init(&gw_wifi_bh_sta_init_timer, appd_wifi_bh_sta_init_get);
-	}
 	appd_prop_init();
 
 	return 0;
