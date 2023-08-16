@@ -95,6 +95,15 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.rbi 2> /dev/null | wc -l) != "0" ]; then
    exit_success_upgrade
 fi
 
+if [ $(ls $AYLA_OTA_BUILD_DIR/*.sh 2> /dev/null | wc -l) != "0" ]; then
+   logger "copy *.sh files into /etc/ayla/sanity folder"
+   cp $AYLA_OTA_BUILD_DIR/*.sh /etc/ayla/sanity
+   chmod +x /etc/ayla/sanity/*.sh
+   rm -rf $AYLA_OTA_DIR
+   exit_success_upgrade
+fi
+
+
 if [ $(ls $AYLA_OTA_BUILD_DIR/*.ipk 2> /dev/null | wc -l) != "0" ]; then
 	if [ $(ls $AYLA_OTA_BUILD_DIR/ayla*.ipk 2> /dev/null | wc -l) == "1" ]; then
 		opkg install --nodeps  $AYLA_OTA_BUILD_DIR/ayla*.ipk  >> /data/ota_log

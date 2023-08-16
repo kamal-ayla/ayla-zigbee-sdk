@@ -55,12 +55,14 @@
 #include "pthread.h"
 #include <libgen.h>
 #include <stdlib.h>
+#include <dirent.h>
+
 /* Maximum # of datapoints allowed in a batch */
 #define APPD_MAX_BATCHED_DPS				64
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.3";
+const char *appd_template_version = "zigbee_gateway_demo_v4.4";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -309,6 +311,10 @@ static char network_up_time[40];
 
 /* Node property batch list */
 static struct gw_node_prop_batch_list *node_batched_dps;
+
+/* file location of the latest value of file_up */
+static char file_upload_path[512];
+
 
 /* data convert to the UPPER CASE */
 void uppercase_convert(char str[])
@@ -3709,6 +3715,134 @@ static enum err_t appd_num_nodes_send(struct prop *prop, int req_id,
 }
 
 /*
+ * File upload complete callback
+ */
+static int file_upload_confirm_cb(struct prop *prop, const void *val,
+	size_t len, const struct op_options *opts,
+	const struct confirm_info *confirm_info)
+{
+	if (confirm_info->status == CONF_STAT_SUCCESS) {
+		log_info("%s upload succeeded (requested at %llu)",
+		    prop->name, opts->dev_time_ms);
+	} else {
+		log_info("%s upload to %d failed with err %u "
+		    "(requested at %llu)", prop->name, DEST_ADS,
+		    confirm_info->err, opts->dev_time_ms);
+	}
+
+	remove(file_upload_path);
+	return 0;
+}
+
+/*
+ * Send up a FILE property
+ */
+static enum err_t project_sanity_script_file(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+	enum err_t ret;
+	struct op_options opt = {.confirm = 1};
+	struct prop_metadata *metadata;
+	DIR *d;
+	struct dirent *dir;
+
+	/* Include some datapoint metadata with the file */
+	metadata = prop_metadata_alloc();
+
+	log_info("project_sanity_script_file called");
+
+	d = opendir("/etc/ayla");
+	if (d)
+	{
+		while ((dir = readdir(d)) != NULL)
+		{
+			if(strstr(dir->d_name, "cmd") != NULL){
+				memset(file_upload_path,0x00, sizeof(file_upload_path));
+				sprintf(file_upload_path,"/etc/ayla/%s",dir->d_name);
+				log_info("file name is %s", file_upload_path);
+			}
+		}
+		closedir(d);
+	}
+	
+	d = opendir("/root/");
+        if (d)
+        {
+                while ((dir = readdir(d)) != NULL)
+                {
+                        if(strstr(dir->d_name, "tar") != NULL){
+                                memset(file_upload_path,0x00, sizeof(file_upload_path));
+                                sprintf(file_upload_path,"/root/%s",dir->d_name);
+                                log_info("file name is %s", file_upload_path);
+                        }
+                }
+                closedir(d);
+        }
+	
+	prop_metadata_add(metadata, "path", file_upload_path);
+	prop_metadata_add(metadata, "trigger", prop->name);
+
+	opt.metadata = metadata;
+	ret = prop_arg_send(prop, req_id, &opt);
+	prop_metadata_free(metadata);
+	//remove(file_upload_path);
+	return ret;
+}
+
+static enum err_t gw_sanity_script_file(struct prop *prop, int req_id,
+                                   const struct op_options *opts)
+{
+        enum err_t ret;
+        struct op_options opt = {.confirm = 1};
+        struct prop_metadata *metadata;
+        DIR *d;
+        struct dirent *dir;
+
+        /* Include some datapoint metadata with the file */
+        metadata = prop_metadata_alloc();
+
+        log_info("gw_sanity_script_file called");
+
+        d = opendir("/etc/ayla");
+        if (d)
+        {
+                while ((dir = readdir(d)) != NULL)
+                {
+                        if(strstr(dir->d_name, "cmd") != NULL){
+                                memset(file_upload_path,0x00, sizeof(file_upload_path));
+                                sprintf(file_upload_path,"/etc/ayla/%s",dir->d_name);
+                                log_info("file name is %s", file_upload_path);
+                        }
+                }
+                closedir(d);
+        }
+
+        d = opendir("/root/");
+        if (d)
+        {
+                while ((dir = readdir(d)) != NULL)
+                {
+                        if(strstr(dir->d_name, "tar") != NULL){
+                                memset(file_upload_path,0x00, sizeof(file_upload_path));
+                                sprintf(file_upload_path,"/root/%s",dir->d_name);
+                                log_info("file name is %s", file_upload_path);
+                        }
+                }
+
+                closedir(d);
+        }
+
+        prop_metadata_add(metadata, "path", file_upload_path);
+        prop_metadata_add(metadata, "trigger", prop->name);
+
+        opt.metadata = metadata;
+        ret = prop_arg_send(prop, req_id, &opt);
+        prop_metadata_free(metadata);
+        //remove(file_upload_path);
+        return ret;
+}
+
+/*
  * Sample gateway properties template.
  */
 static struct prop appd_gw_prop_table[] = {
@@ -4190,6 +4324,22 @@ static struct prop appd_gw_prop_table[] = {
                 .send = get_gw_wifi_bh_uptime,
                 .arg = &network_up_time,
                 .len = sizeof(network_up_time),
+        },
+	{
+                .name = "gw_sanity_script_file",
+                .type = PROP_FILE,
+                .send = gw_sanity_script_file,
+                .arg = file_upload_path,
+                .len = sizeof(file_upload_path),
+                .confirm_cb = file_upload_confirm_cb,
+        },
+	{
+                .name = "project_sanity_script_file",
+                .type = PROP_FILE,
+                .send = project_sanity_script_file,
+                .arg = file_upload_path,
+                .len = sizeof(file_upload_path),
+                .confirm_cb = file_upload_confirm_cb,
         }
 };
 

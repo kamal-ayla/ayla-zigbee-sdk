@@ -64,6 +64,11 @@ static DEF_NAME_TABLE(wifi_errors, WIFI_ERRORS);
 /* Timeout in seconds for reverse-REST command response to complete */
 #define SERV_REV_REST_RESP_TIMEOUT	10
 
+#define CMD_MAX					10
+#define COMMAND_MAX_BUFFER_SIZE			1024
+#define COMMAND_FILE_MAX_NAME_BUFFER_SIZE	128
+#define PROP_NAME_MAX_BUFFER			64
+
 /*
  * State to store amsg send info for a message that must be sent after a
  * delay.
@@ -81,6 +86,11 @@ struct serv_msg_send_delayed_state {
 	struct timer send_timer;
 };
 
+typedef struct command_struct {
+	char cmd_str[256];
+	bool cmd_avail_flag;
+}COMMAND;
+
 /*
  * State to track wifi_connect when delayed connection is needed.
  */
@@ -88,6 +98,8 @@ struct serv_wifi_connect_delayed_state {
 	struct server_req *req;
 	json_t *msg;
 };
+
+COMMAND cmd_st[CMD_MAX] = {0};
 
 static void serv_rev_put_end_done(enum http_client_err err,
 	const struct http_client_req_info *info,
@@ -1524,9 +1536,23 @@ static void serv_regtoken_json_get(struct server_req *req)
  */
 void serv_json_cmd(json_t *cmd, struct client_lan_reg *lan)
 {
-	struct serv_rev_req *rev_req;
-	const char *method;
-	const char *data_str;
+	struct serv_rev_req *rev_req = NULL;
+	struct serv_rev_req *rev_req1 = NULL;
+	const char *method = NULL;
+	const char *data_str = NULL;
+	const char *cmd_str = NULL;
+	char cmd_data[COMMAND_MAX_BUFFER_SIZE] = {0};
+	FILE *fp = NULL;
+	FILE *fp1 = NULL;
+	json_t *command = NULL;
+	json_t *data = NULL;
+	char cmd_file_name_str[COMMAND_FILE_MAX_NAME_BUFFER_SIZE] = {0};
+	time_t t;
+	struct tm clk;
+	struct stat buffer;
+	char prop[] = "&name=gw_sanity_script_file";
+	int num_data = 0;
+	bool is_normal_command = false;
 
 	rev_req = serv_rev_lan_req_alloc(lan);
 	if (!rev_req) {
@@ -1552,16 +1578,111 @@ void serv_json_cmd(json_t *cmd, struct client_lan_reg *lan)
 	}
 
 	method = json_get_string(cmd, "method");
-
 	data_str = json_get_string(cmd, "data");
-	if (data_str && (data_str[0] != '\0') && strcmp(data_str, "none")) {
-		rev_req->req->body_is_json = true;
-		queue_buf_put(&rev_req->req->request,
-		    data_str, strlen(data_str));
-		rev_req->req->body_json =
-		    queue_buf_parse_json(&rev_req->req->request, 0);
+	log_info("data str [%s]",data_str);
+	
+	if(0 == strcmp(rev_req->req->url,"cli.text"))
+	{
+		command = json_loads(data_str, 0, NULL);
+		if(NULL != command)
+		{
+			json_unpack(command, "{s:o}","command", &data);
+			if (data != NULL && json_is_array(data))
+			{
+				num_data = json_array_size(data);
+				log_info("array size is %d\n", num_data);
+				time(&t);
+                        	clk = *gmtime(&t);
+        sprintf(cmd_file_name_str,"/etc/ayla/cmd_%04d-%02d-%02dT%02d-%02d-%02dZ.txt",clk.tm_year+1900,clk.tm_mon+1,clk.tm_mday,clk.tm_hour,clk.tm_min,clk.tm_sec);
+                        	log_info("file name is %s", cmd_file_name_str);
+				for (int i=0; i<num_data; i++)
+				{
+					json_t *one_elem = json_array_get(data, i);
+   					log_info("command is [%s]\n", json_string_value(one_elem));
+					cmd_str = json_string_value(one_elem);
+					if (cmd_str && (cmd_str[0] != '\0') && strcmp(cmd_str, "none")) {
+						memset(cmd_data,0x00, sizeof(cmd_data));
+						sprintf(cmd_data,"%s 2>&1",cmd_str);
+						if(NULL != strstr(cmd_str,".sh"))
+						{
+							log_info("shell cmd [%s]",cmd_str);
+							for(int i=0;i<CMD_MAX;i++)
+							{
+								if(0 == cmd_st[i].cmd_avail_flag)
+								{
+									log_info("command filled with %d index",i);
+									memset(cmd_st[i].cmd_str,0x00,sizeof(cmd_st[i].cmd_str));
+									strcpy(cmd_st[i].cmd_str,cmd_str);
+									cmd_st[i].cmd_avail_flag = 1;
+									break;
+								}
+							}
+						}else{
+							fp = popen(cmd_data,"r");
+			  				if(NULL == fp) {
+			     					log_err("cmd failed");
+			     					json_decref(command);
+			     					goto invalid;
+			  				}else{
+								if(0 == stat(cmd_file_name_str, &buffer))
+									fp1 = fopen(cmd_file_name_str, "a+");
+								else
+									fp1 = fopen(cmd_file_name_str, "w+");
+								if(NULL != fp1)
+								{	
+									fprintf(fp1,"cmd name:\n*********\n%s\noutput buffer:\n**************\n", cmd_data);
+			  						memset(cmd_data,0x00, sizeof(cmd_data));
+			  						while (fgets(cmd_data, sizeof(cmd_data), fp) != NULL)
+			  						{
+			  							fprintf(fp1, "%s", cmd_data);
+			  							memset(cmd_data,0x00, sizeof(cmd_data));
+		    							}
+									fprintf(fp1,"\n%s","");
+		    							fclose(fp1);
+								}else{
+									log_err("file not opened");
+								}
+			  				}
+							pclose(fp);
+							is_normal_command=true;
+						}
+					}/*End of cmd_str Validation*/
+				}/*End of for loop*/
+
+				rev_req->req->body_is_json = true;
+				queue_buf_put(&rev_req->req->request,data_str, strlen(data_str));
+				rev_req->req->body_json = queue_buf_parse_json(&rev_req->req->request, 0);
+				server_handle_req(rev_req->req, method);
+			}else{
+				log_err("missing cmd obj");
+				json_decref(command);
+				goto invalid;
+			}
+			json_decref(command);
+			if(true == is_normal_command)
+			{
+				rev_req1 = serv_rev_lan_req_alloc(lan);
+        			if (!rev_req1) {
+                			log_err("req malloc err");
+        			}else{
+					rev_req1->req->args = prop;
+					log_info("fileupload trigger from devd to appd");
+					prop_json_get(rev_req1->req);
+				}
+			}
+		}else{
+			log_err("missing data obj");
+			goto invalid;
+		}
+	}else{
+		/*other than command like OTA*/
+		if (data_str && (data_str[0] != '\0') && strcmp(data_str, "none")) {
+			rev_req->req->body_is_json = true;
+			queue_buf_put(&rev_req->req->request,data_str, strlen(data_str));
+			rev_req->req->body_json = queue_buf_parse_json(&rev_req->req->request, 0);
+		}
+		server_handle_req(rev_req->req, method);
 	}
-	server_handle_req(rev_req->req, method);
 	return;
 invalid:
 	server_put_end(rev_req->req, HTTP_STATUS_BAD_REQUEST);
@@ -1666,5 +1787,46 @@ void serv_init(void)
 	if (server_init_local(&dev->file_events, serv_url_table,
 	    devd_sock_path, S_IRWXU | S_IRWXG | S_IRWXO)) {
 		exit(3);
+	}
+}
+
+/*Command Execution thread function*/
+void cmd_poll_thread_fun(void)
+{
+	while(1)
+	{
+		for(int i=0;i<CMD_MAX;i++)
+		{
+			if(1 == cmd_st[i].cmd_avail_flag)
+			{
+				char prop[PROP_NAME_MAX_BUFFER]={0};
+				struct serv_rev_req *rev_req = NULL;
+
+				if(NULL != strstr(cmd_st[i].cmd_str,"stand_alone"))
+				{
+					memset(prop,0x00,sizeof(prop));
+					strcpy(prop,"&name=gw_sanity_script_file");
+				}
+				else
+				{
+					memset(prop,0x00,sizeof(prop));
+                                        strcpy(prop,"&name=project_sanity_script_file");
+				}
+
+				log_info("script execution called");
+				system(cmd_st[i].cmd_str);
+				cmd_st[i].cmd_avail_flag = 0;
+				memset(cmd_st[i].cmd_str,0x00,sizeof(cmd_st[i].cmd_str));
+				rev_req = serv_rev_lan_req_alloc(NULL);
+        			if (!rev_req) {
+                			log_err("req malloc err cmd");
+        			}else{
+					rev_req->req->args = prop;
+					log_info("fileupload trigger from devd to appd");
+					prop_json_get(rev_req->req);
+				}
+			}
+		}
+		sleep(10);
 	}
 }

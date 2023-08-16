@@ -39,6 +39,7 @@
 #include "app_if.h"
 #include "msg_server.h"
 #include "gateway_client.h"
+#include "pthread.h"
 
 const char version[] = "devd " BUILD_VERSION_LABEL; //original version from ayla David
 #define DEVD_CONF_DIR "/config"
@@ -90,6 +91,9 @@ static const struct option options[] = {
 	{ .name = "test", .val = 't'},
 	{ .name = NULL }
 };
+
+/*command execution thread*/
+static pthread_t cmd_poll_thread = (pthread_t)NULL;
 
 static void usage(void)
 {
@@ -591,6 +595,12 @@ int main(int argc, char **argv)
 	}
 
 	app_init();
+
+	if (!cmd_poll_thread) {
+		if (pthread_create(&cmd_poll_thread, NULL, (void *)&cmd_poll_thread_fun, NULL)) {
+            		pthread_cancel(cmd_poll_thread);
+		}
+	}
 
 	if (!ds_wait) {
 		ds_net_up();

@@ -151,4 +151,9 @@ void ds_update_template_ver_to_cloud(const char *template_ver);
  */
 void ds_get_regtoken_from_cloud(void);
 
+/*
+ * command process thread function
+ * */
+void cmd_poll_thread_fun(void);
+
 #endif
