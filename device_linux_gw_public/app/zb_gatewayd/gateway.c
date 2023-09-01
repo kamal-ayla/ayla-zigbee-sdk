@@ -62,11 +62,12 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.6.1";
+const char *appd_template_version = "zigbee_gateway_demo_v4.7";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
 static struct timer ngrok_data_update_timer;
+static struct timer reboot_cause_update_timer;
 static unsigned int zb_join_enable;
 static unsigned int zb_change_channel;
 static u8 zb_join_status;
@@ -102,12 +103,12 @@ static char up_time[UPTIME_LEN];
 #define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
-//#define GET_FILE "ls /root/*.log"
 #define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
 #define GET_CORE_DUMP_FILE "ls /root/*.gz"
 #define GET_TAR_FILE "ls /root/core.tar"
 #define CREATE_TAR_FILE "tar -cvf /root/core.tar /root/*.gz %s"
 #define DELETE_CORE_TAR_FILE "rm -rf /root/core.tar"
+#define DELETE_CORE_FILES "rm -rf /root/*.gz %s"
 
 #define WIFI_STA_ADDR_LEN               50
 #define COMMAND_LENGTH	100
@@ -282,10 +283,6 @@ static char guest_2g_state_change[GUEST_COMMAND_LEN];
 #define WIRELESS_RELOAD "ubus call wireless reload"
 #define SMART_MESH_RELOAD "/etc/init.d/mesh-broker reload"
 
-#define GET_GUEST_SSID_5G_STATUS "wireless_get_overview.sh | grep wl0.2 | awk '{print $3}'"
-#define GET_GUEST_SSID_2G_STATUS "wireless_get_overview.sh | grep wl1.1 | awk '{print $3}'"
-#define GET_GUEST_SSID_5G_AGENT_STATUS "wireless_get_overview.sh | grep wl0.3 | awk '{print $3}'"
-
 unsigned int guest_2g_status;
 unsigned int guest_5g_status;
 
@@ -343,7 +340,7 @@ static char ngrok_set_authtoken[SET_AUTHTOKEN_LEN];
 #define GET_NGROK_START					"ngrok-cli -start"
 #define GET_NGROK_STOP					"ngrok-cli -stop"
 #define GET_NGROK_STATUS				"ngrok-cli -status"
-#define GET_NGROK_ERROR_STATUS                          "ngrok-cli -start 2>&1 | grep ERR_NGROK | awk '/ERROR/ {print $2}'"
+#define GET_NGROK_ERROR_STATUS                          "ngrok-cli -start 2>&1 | grep ERR_NGROK | awk '/ERROR/ {print $2}' & sleep 2s; kill $!"
 #define GET_NGROK_HOST_NAME				"ngrok-cli -host_name"
 #define GET_NGROK_PORT_NUM				"ngrok-cli -port_num"
 #define SET_NGROK_AUTHTOKEN				"ngrok-cli -set_authtoken %s"
@@ -391,9 +388,12 @@ static void gw_set_core_dump_timestamp(void);
 static void gw_get_core_dump_timestamp(void);
 /* To get timestamp buffer */
 static char core_timestamp[40];
-static char log_file_path[40];
+static char log_file_path[80];
 /* flag will be verifed in the fileupload callback function */
-static int file_push_confirm = 0;
+static int file_upload_confirm = 0;
+/* delete file update status in the conf file */
+static int delete_fileupload_files;
+static int delete_file;
 /* data convert to the UPPER CASE */
 
 /* serial number command  */
@@ -402,6 +402,29 @@ static int file_push_confirm = 0;
 #define STATUS_LEN 20
 /* serial number buffer */
 static char dev_serial_number[STATUS_LEN];
+
+
+#define CRED_LIST_CMD "cat /etc/config/mesh_broker |grep cred | awk '{print $3}' | sed 's/^.//' | sed 's/.$//' | tr '\n' ';' | sed 's/;/ /g'"
+
+#define LABEL_CMD "uci get mesh_broker.%s.Label"
+#define FREQ_BAND_CMD "uci get mesh_broker.%s.frequency_bands | cut -c1-1"
+#define IFACE_CMD "uci get mesh_broker.%s.iface"
+
+#define WL_LEN 10
+static char iface_val_2g[WL_LEN];
+static char iface_val_5g[WL_LEN];
+
+/* guest */
+static void  gw_guest_verification(void);
+
+/* reboot cause command  */
+#define GET_REBOOT_CAUSE "transformer-cli get Device. | grep RebootCause | awk '{print $4}' | head -1"
+
+#define CAUSE_LEN 15
+/* reboot cause buffer */
+static char dev_reboot_cause[CAUSE_LEN];
+
+
 
 void uppercase_convert(char str[])
 {
@@ -1256,6 +1279,202 @@ void appd_prop_init()
      // set the current timestamp in the conf file because timestamp not availble
       gw_set_core_dump_timestamp();
    }
+
+   timer_set(app_get_timers(), &reboot_cause_update_timer, 180000);
+}
+
+/*
+ *Reboot cause update timer
+ */
+
+static void appd_reboot_cause_update(struct timer *timer_reboot_cause_update)
+{
+        timer_cancel(app_get_timers(), timer_reboot_cause_update);
+	prop_send_by_name("gw_reboot_cause");
+        log_debug("reboot cause timer expired . Get reboot cause : %s",dev_reboot_cause);
+	if ( strcmp (dev_reboot_cause, "") == 0 ) {
+		timer_set(app_get_timers(), &reboot_cause_update_timer, 120000);
+	}
+}
+/*
+ *To get the Device reboot reason and send to the gw_reboot_cause property.
+ */
+static enum err_t gw_reboot_cause_send(struct prop *prop, int req_id,
+                   const struct op_options *opts)
+{
+   FILE *fp;
+   //device reboot cause command will be execute in the device and get the reboot reason
+   fp = popen(GET_REBOOT_CAUSE,"r");
+   if (fp == NULL ) {
+      log_err("Get device reboot cause command failed");
+      // if reboot cause failed to get from the device. send zero to the property
+      strcpy(dev_reboot_cause, "0");
+   } else {
+      fscanf(fp, "%[^\n]", dev_reboot_cause);
+      log_debug("Get device reboot cause : %s",dev_reboot_cause);
+   }
+   pclose(fp);
+   return prop_arg_send(prop, req_id, opts);
+}
+
+/*
+ * To Get the wireless interface of the guest ssid
+ */
+static void  gw_guest_verification(void) {
+
+   FILE *fp;
+   FILE *fp1;
+
+   char cred[200];
+   char label[40];
+   char label_val[30];
+   char freq_band[60];
+   char iface[60];
+   int frequency;
+   int i = 0;
+   char *array[20];
+
+   fp = popen(CRED_LIST_CMD,"r");
+   if (fp == NULL) {
+      log_debug("Get failed");
+   } else {
+      fscanf(fp, "%[^\n]", cred);
+      log_debug("Get list of credtionals value : %s",cred);
+   }
+   pclose(fp);
+
+   char *token = strtok( cred, " ");
+
+   /* Verify other tokens */
+   while( token != NULL ) {
+      array[i++] = token;
+      token = strtok(NULL, " ");
+   }
+
+   for ( int j=0; j < i; j++ ) {
+      memset(label, '\0', sizeof(label));
+      snprintf(label, sizeof(label), LABEL_CMD, array[j]);
+
+      snprintf(freq_band, sizeof(freq_band), FREQ_BAND_CMD, array[j]);
+
+      fp = popen(label,"r");
+      if (fp == NULL) {
+         log_debug("Get label failed");
+      } else {
+         fscanf(fp, "%[^\n]", label_val);
+      }
+      pclose(fp);
+
+      fp = popen(freq_band,"r");
+      if (fp == NULL) {
+         log_debug("Get frequency band failed");
+      } else {
+         fscanf(fp, "%d", &frequency);
+      }
+      pclose(fp);
+
+
+      if (  ( strcmp(label_val, "Guest2.4+5" ) == 0 ) && ( frequency == 2 ) ) {
+
+         snprintf(iface, sizeof(iface), IFACE_CMD, array[j]);
+         log_debug("iface command : %s",iface);
+
+         fp = popen(iface,"r");
+         if (fp == NULL) {
+            log_debug("Get iface failed");
+         } else {
+	    memset(iface_val_2g,'\0',sizeof(iface_val_2g));
+            fscanf(fp, "%[^\n]", iface_val_2g);
+            log_debug("Get iface 2g  value : %s",iface_val_2g);
+         }
+	 pclose(fp);
+
+      }
+      else if( ( strcmp(label_val, "Guest2.4+5" ) == 0 )&& ( frequency == 5 ) ) {
+
+         snprintf(iface, sizeof(iface), IFACE_CMD, array[j]);
+         log_debug("iface command : %s",iface);
+
+
+         fp1 = popen(iface,"r");
+         if (fp1 == NULL) {
+            log_debug("Get iface failed");
+         } else {
+            memset(iface_val_5g,'\0',sizeof(iface_val_5g));
+            fscanf(fp, "%[^\n]", iface_val_5g);
+            log_debug("Get iface 5g  value : %s",iface_val_5g);
+         }
+	 pclose(fp1);
+
+      }
+   }
+
+}
+/*
+ *enable/disable of the core dump file delete from cloud.
+ */
+
+static int gw_delete_uploaded_core_files(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+   const char *core_dump_timestamp_attr;
+   int status;
+   int core_dump_delete;
+   json_t*attributes_obj_json;
+   json_error_t error;
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+       log_err("prop_arg_set returned error");
+       return -1;
+   }
+
+   // Get the delete file parameter from the attributes conf file
+   gw_get_core_dump_timestamp();
+
+   if( delete_file  > 1) {
+       delete_file = 1;
+   }
+
+   if ( delete_file != delete_fileupload_files ) {
+
+      attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+
+      if(!attributes_obj_json) {
+      /*the error variable contains error information*/
+      }
+      else{
+         json_t*config_obj_json_attr;
+         config_obj_json_attr=json_object_get(attributes_obj_json,"attributes");
+         core_dump_timestamp_attr=json_dumps(config_obj_json_attr,JSON_COMPACT);
+         log_debug("attributes: %s",core_dump_timestamp_attr);
+
+         json_t*config_core_obj_json_attr;
+         config_core_obj_json_attr=json_object_get(config_obj_json_attr,"core_dump_upload_file");
+         core_dump_timestamp_attr=json_dumps(config_core_obj_json_attr,JSON_COMPACT);
+         log_debug("Core dump upload file: %s",core_dump_timestamp_attr);
+
+         json_t*config_delete_obj_json;
+         config_delete_obj_json=json_object_get(config_core_obj_json_attr,"delete_uploaded_file");
+         core_dump_delete=json_integer_value(config_delete_obj_json);
+         log_debug("delete upload file : %d",core_dump_delete);
+
+         status=json_object_set(config_core_obj_json_attr,"delete_uploaded_file",json_integer(delete_file));
+         status=json_object_set(config_obj_json_attr,"core_dump_upload_file",config_core_obj_json_attr);
+         status=json_object_set(attributes_obj_json,"attributes",config_obj_json_attr);
+
+         log_debug("Return after json set is %d",status);
+         core_dump_timestamp_attr=json_dumps(attributes_obj_json,JSON_COMPACT);
+         log_debug("file timestamp: %s",core_dump_timestamp_attr);
+
+         status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
+         log_debug("Return after json set in file is= %d",status);
+      }
+   }
+   else {
+      log_debug("failed to set delete_uploaded_file in attributes.conf due to same value is there");
+   }
+
+   return 0;
 }
 
 /*
@@ -1274,8 +1493,9 @@ static enum err_t gw_serial_number_send(struct prop *prop, int req_id,
    } else {
       fscanf(fp, "%[^\n]", dev_serial_number);
       log_debug("Get device serial number value : %s",dev_serial_number);
-      pclose(fp);
+     // pclose(fp);
    }
+   pclose(fp);
    return prop_arg_send(prop, req_id, opts);
 }
 
@@ -1400,8 +1620,8 @@ static void  core_dump_file_verfication(void)
    }
    fclose(fp1);
 
-   // enable file push flag and verify in the file upload callback function .
-   file_push_confirm = 1;
+   // enable file upload flag and verify in the file upload callback function .
+   file_upload_confirm = 1;
 }
 
 /*
@@ -1444,6 +1664,7 @@ static void gw_get_core_dump_timestamp(void)
 {
 
    const char *core_dump_timestamp;
+   int core_dump_delete;
    json_t*attributes_obj_json;
    json_error_t error;
    attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
@@ -1466,6 +1687,13 @@ static void gw_get_core_dump_timestamp(void)
 
       strcpy(core_timestamp,core_dump_timestamp);
       log_debug("Get timestamp from conf file : %s",core_timestamp);
+
+      json_t*config_delete_obj_json;
+      config_delete_obj_json=json_object_get(config_core_obj_json,"delete_uploaded_file");
+      core_dump_delete=json_integer_value(config_delete_obj_json);
+      log_debug("Get delete upload file : %d",core_dump_delete);
+
+      delete_fileupload_files = core_dump_delete;
    }
 }
 /*
@@ -1489,17 +1717,17 @@ static void gw_set_core_dump_timestamp(void)
       json_t*config_obj_json_1;
       config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
       core_dump_timestamp_1=json_dumps(config_obj_json_1,JSON_COMPACT);
-      log_debug("set attributes: %s",core_dump_timestamp_1);
+      log_debug("attributes: %s",core_dump_timestamp_1);
 
       json_t*config_core_obj_json_1;
       config_core_obj_json_1=json_object_get(config_obj_json_1,"core_dump_upload_file");
       core_dump_timestamp_1=json_dumps(config_core_obj_json_1,JSON_COMPACT);
-      log_debug("set Core dump upload file: %s",core_dump_timestamp_1);
+      log_debug("Core dump upload file: %s",core_dump_timestamp_1);
 
       json_t*config_timestamp_obj_json_1;
       config_timestamp_obj_json_1=json_object_get(config_core_obj_json_1,"last_checked_timestamp");
       core_dump_timestamp_1=json_string_value(config_timestamp_obj_json_1);
-      log_debug("set last_checked_timestamp: %s",core_dump_timestamp_1);
+      log_debug("last_checked_timestamp: %s",core_dump_timestamp_1);
 
       fp = popen(GET_TIMESTAMP,"r");
       if( fp == NULL) {
@@ -3277,9 +3505,9 @@ static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
    int mesh_enable;
    int traffic_enable;
    unsigned int traffic_flag = 0;
-   unsigned int tmp = 0;
+  // unsigned int tmp = 0;
    unsigned int control_status = 0;
-   char status[10];
+   //char status[10];
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
@@ -3425,28 +3653,6 @@ static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
          pclose(fp4);
 
       }
-
-      tmp = guest_2g_status;
-
-      fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
-      if (fp == NULL) {
-	  log_err("Get GUEST SSID 2G status failed");
-	  exit(1);
-      } else {
-	  fscanf(fp, "%[^\n]", status);
-	  pclose(fp);
-      }  
-
-      if ( strcmp (status, "1/1") == 0 ) {
-	   guest_2g_status = 1;
-      }
-      else {
-	   guest_2g_status = 0;
-      }  
-
-      if ( tmp != guest_2g_status ) {
-	   prop_send_by_name("gw_wifi_guest_2g_status");
-      }
    } else {
       log_debug("set guest ssid 2ghz  enable failed due to gateway configured as an agent !!!");
    }
@@ -3473,9 +3679,9 @@ static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
    int mesh_enable;
    int traffic_enable;
    unsigned int traffic_flag = 0;
-   unsigned int tmp = 0;
+//   unsigned int tmp = 0;
    unsigned int control_status = 0;
-   char status[10];
+//   char status[10];
 
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
@@ -3622,139 +3828,10 @@ static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
          pclose(fp4);
 
       }
-
-      tmp = guest_5g_status;
-
-      fp = popen(GET_GUEST_SSID_5G_STATUS,"r");
-      if (fp == NULL) {
-	   log_err("Get GUEST SSID 5G status failed");
-	   exit(1);
-      } else {
-	   fscanf(fp, "%[^\n]", status);
-	   pclose(fp);
-      }
-
-      if ( strcmp (status, "1/1") == 0 ) {
-	   guest_5g_status = 1;
-      }
-      else {
-	   guest_5g_status = 0;
-      }
-
-      if ( tmp != guest_5g_status ) {
-	   prop_send_by_name("gw_wifi_guest_5g_status");
-      }
    } else {
 	   log_debug("set guest ssid 5ghz  enable failed due to gateway configured as an agent !!!");
-
-           tmp = guest_5g_status;
-
-           fp = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
-           if (fp == NULL) {
-              log_err("Get GUEST SSID 5G AGENT status failed");
-              exit(1);
-           } else {
-              fscanf(fp, "%[^\n]", status);
-              pclose(fp);
-           }
-
-           if ( strcmp (status, "1/1") == 0 ) {
-              guest_5g_status = 1;
-           }
-           else {
-              guest_5g_status = 0;
-           }
-
-           if ( tmp != guest_5g_status ) {
-              prop_send_by_name("gw_wifi_guest_5g_status");
-           }
-	   
    }
   return 0;
-}
-
-/*
- *To get the guest ssid 2g Status.
- */
-static enum err_t appd_guest_ssid_2g_status_send(struct prop *prop, int req_id,
-                   const struct op_options *opts)
-{
-   char status[10];
-   FILE *fp;
-
-   // Run the command and get the status of the Guest 2g ssid enable/disable and update in the property
-   fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
-   if (fp == NULL) {
-      log_err("Get GUEST SSID 2G status failed");
-      exit(1);
-   } else {
-      fscanf(fp, "%[^\n]", status);
-      pclose(fp);
-   }
-
-   if ( strcmp(status,"1/1") == 0 ) {
-      guest_2g_status = 1;
-   }
-   else {
-      guest_2g_status = 0;
-   }
-   
-   return prop_arg_send(prop, req_id, opts);
-}
-
-/*
- *To get the guest ssid 5g Status.
- */
-static enum err_t appd_guest_ssid_5g_status_send(struct prop *prop, int req_id,
-                   const struct op_options *opts)
-{
-   char status[10];
-   unsigned int control_status = 0;
-   FILE *fp;
-
-   control_status = appd_mesh_controller_status();
-   
-   if ( control_status == 1 ) {
-
-      // if device is controller, Run the command and get the status of the Guest 5g ssid enable/disable and update  in the property	   
-
-      fp = popen(GET_GUEST_SSID_5G_STATUS,"r");
-      if (fp == NULL) {
-         log_err("Get GUEST SSID 5G status failed");
-         exit(1);
-      } else {
-         fscanf(fp, "%[^\n]", status);
-         pclose(fp);
-      }
-
-      if ( strcmp(status,"1/1") == 0 ) {
-         guest_5g_status = 1;
-      }
-      else {
-         guest_5g_status = 0;
-      }
-   } else {
-      
-      // if device is Agent, Run the command and get the status of the Guest 5g ssid enable/disable and update in the property
-      fp = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
-      if (fp == NULL) {
-         log_err("Get GUEST SSID 5G AGENT status failed");
-         exit(1);
-      } else {
-         fscanf(fp, "%[^\n]", status);
-         pclose(fp);
-      }
-
-      if ( strcmp(status,"1/1") == 0 ) {
-         guest_5g_status = 1;
-      }
-      else {
-         guest_5g_status = 0;
-      }
-	   
-   }
-
-   return prop_arg_send(prop, req_id, opts);
 }
 
 /*
@@ -4950,6 +5027,7 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
 	size_t len, const struct op_options *opts,
 	const struct confirm_info *confirm_info)
 {
+	char cmd[200];
 	if (confirm_info->status == CONF_STAT_SUCCESS) {
 		log_info("%s upload succeeded (requested at %llu)",
 		    prop->name, opts->dev_time_ms);
@@ -4959,9 +5037,35 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
 		    confirm_info->err, opts->dev_time_ms);
 	}
 
-       if( file_push_confirm == 1 ) {
-	       gw_set_core_dump_timestamp();
-	       file_push_confirm = 0;
+       // after upload the files need to set current time in the attributes.conf file
+       if( file_upload_confirm == 1 ) {
+	  // set the current timestamp in the conf file
+          gw_set_core_dump_timestamp();
+
+	  // To get the the value from delete_uploaded_file in attributes.conf file
+	  // 0 - don't delete, 1 - delete the files from the device.
+	  gw_get_core_dump_timestamp();
+
+
+          // if already set 1 to delete_uploaded_file in attributes.conf file then delete core files from device
+          if ( delete_fileupload_files == 1 ) {
+             FILE *fp;
+
+	     // Added log file path to the tar command
+             snprintf(cmd, sizeof(cmd), DELETE_CORE_FILES, log_file_path);
+             log_debug("Delete files command : %s", cmd);
+             // execute the tar command
+             fp = popen(cmd, "r");
+             if (fp == NULL) {
+                log_err("delete command failed");
+                exit(1);
+             }
+             pclose(fp);
+
+          }
+
+	  // file upload confirmation flag update
+          file_upload_confirm = 0;
        }
 
 	remove(file_upload_path);
@@ -5529,7 +5633,8 @@ static struct prop appd_gw_prop_table[] = {
         {
                 .name = "gw_wifi_guest_2g_status",
                 .type = PROP_INTEGER,
-                .send = appd_guest_ssid_2g_status_send,
+		.send = prop_arg_send,
+//                .send = appd_guest_ssid_2g_status_send,
                 .arg = &guest_2g_status,
                 .len = sizeof(guest_2g_status),
                 .skip_init_update_from_cloud = 1,
@@ -5537,11 +5642,12 @@ static struct prop appd_gw_prop_table[] = {
         {
                 .name = "gw_wifi_guest_5g_status",
                 .type = PROP_INTEGER,
-                .send = appd_guest_ssid_5g_status_send,
+		.send = prop_arg_send,
+//                .send = appd_guest_ssid_5g_status_send,
                 .arg = &guest_5g_status,
                 .len = sizeof(guest_5g_status),
                 .skip_init_update_from_cloud = 1,
-        },	
+        },
         {
                 .name = "gw_whitelist_mac_address",
                 .type = PROP_STRING,
@@ -5687,7 +5793,23 @@ static struct prop appd_gw_prop_table[] = {
 		.send = gw_serial_number_send,
 		.arg = &dev_serial_number,
 		.len = sizeof(dev_serial_number),
-	}
+	},
+        {
+                .name = "gw_del_uploaded_core_files",
+                .type = PROP_INTEGER,
+                .set = gw_delete_uploaded_core_files,
+                .send = prop_arg_send,
+                .arg = &delete_file,
+                .len = sizeof(delete_file),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_reboot_cause",
+                .type = PROP_STRING,
+                .send = gw_reboot_cause_send,
+                .arg = &dev_reboot_cause,
+                .len = sizeof(dev_reboot_cause),
+        }
 };
 
 
@@ -5872,6 +5994,7 @@ int appd_init(void)
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
+	timer_init(&reboot_cause_update_timer, appd_reboot_cause_update);
 
 	appd_prop_init();
 
@@ -5937,95 +6060,41 @@ static void vnode_poll_thread_fun(void)
 }
 
 
-/* 
- * GUEST ssid 5g & 2g enable/disable status will be updated in the corresponding properies 
- */ 
-
+/*
+ * GUEST ssid 5g & 2g enable/disable status will be updated in the corresponding properies
+ */
 static void appd_guest_status_update(void)
 {
-    int tmp;
-    char tmp_string[10];
-    unsigned int control_status = 0;
+    int tmp = 0;
 
-    FILE *fp;
-    FILE *fp1;
+    gw_guest_verification();
 
     tmp = guest_2g_status;
-    memset( tmp_string, ' ', sizeof(tmp_string));
 
-    // Run the command in the board and get the status of the Guest 2g ssid enable/disable
-    fp = popen(GET_GUEST_SSID_2G_STATUS,"r");
-    if (fp == NULL) {
-       log_err("Get GUEST SSID 2G status failed");
-       exit(1);
-    } else {
-       fscanf(fp, "%[^\n]", tmp_string);
-       pclose(fp);
+    if ( strcmp ( iface_val_2g, "") ) {
+       guest_2g_status = 1;
+    }
+    else {
+       guest_2g_status = 0;
     }
 
-   if ( strcmp (tmp_string, "1/1") == 0 ) {
-	   guest_2g_status = 1;
-   }
-   else {
-	   guest_2g_status = 0;
-   }
+    if ( tmp != guest_2g_status ) {
+       prop_send_by_name("gw_wifi_guest_2g_status");
+    }
 
-   if ( tmp != guest_2g_status ) {
-	   prop_send_by_name("gw_wifi_guest_2g_status");
-   }
+    tmp = guest_5g_status;
 
+    if ( strcmp ( iface_val_5g, "") ) {
+       guest_5g_status = 1;
+    }
+    else {
+       guest_5g_status = 0;
+    }
 
-   tmp = guest_5g_status;
-   memset( tmp_string, ' ', sizeof(tmp_string));
+    if ( tmp != guest_5g_status ) {
+       prop_send_by_name("gw_wifi_guest_5g_status");
+    }
 
-   control_status = appd_mesh_controller_status();
-   
-   if ( control_status == 1) {
-      
-      // If device is controller, Run the command in the board and get the status of the Guest 5g ssid enable/disable	   
-      fp1 = popen(GET_GUEST_SSID_5G_STATUS,"r");
-      if (fp1 == NULL) {
-         log_err("Get GUEST SSID 5G status failed");
-         exit(1);
-      } else {
-         fscanf(fp1, "%[^\n]", tmp_string);
-         pclose(fp1);
-      }
-
-      if ( strcmp (tmp_string, "1/1") == 0 ) {
-	   guest_5g_status = 1;
-      }
-      else {
-	   guest_5g_status = 0;
-      }
-
-      if ( tmp != guest_5g_status ) {
-	   prop_send_by_name("gw_wifi_guest_5g_status");
-      } 
-   }else {
-      
-      // If device is Agent, Run the command in the board and get the status of the Guest 5g ssid enable/disable	   
-      fp1 = popen(GET_GUEST_SSID_5G_AGENT_STATUS,"r");
-      if (fp1 == NULL) {
-         log_err("Get GUEST SSID 5G AGENT status failed");
-         exit(1);
-      } else {
-         fscanf(fp1, "%[^\n]", tmp_string);
-         pclose(fp1);
-      }
-
-      if ( strcmp (tmp_string, "1/1") == 0 ) {
-         guest_5g_status = 1;
-      }
-      else {
-         guest_5g_status = 0;
-      }
-
-      if ( tmp != guest_5g_status ) {
-          prop_send_by_name("gw_wifi_guest_5g_status");
-      
-      }
-   }
 
 }
 
