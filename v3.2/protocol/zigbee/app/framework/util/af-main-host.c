@@ -438,6 +438,9 @@ int emAfResetAndInitNCP(void)
   memoryAllocation = true;
 #ifdef EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
   EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
+  if(addresstable_flag!=0){
+          return -1;
+  }
 #endif
   emberAfNcpInitCallback(memoryAllocation);
 
@@ -448,6 +451,9 @@ int emAfResetAndInitNCP(void)
   memoryAllocation = false;
 #ifdef EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
   EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
+  if(addresstable_flag!=0){
+          return -1;
+  }
 #endif
   emberAfNcpInitCallback(memoryAllocation);
 
