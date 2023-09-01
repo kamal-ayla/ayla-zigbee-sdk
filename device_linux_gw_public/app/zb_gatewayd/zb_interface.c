@@ -864,7 +864,6 @@ static int zb_network_enable(void)
 	/* Initialize the network co-processor (NCP) */
 	if( emAfResetAndInitNCP() < 0 ){
 		log_debug("emAfResetAndInitNCP failed zb network reinit is in progress");
-		log_debug("IOT_DEBUG addresstable_flag %d",addresstable_flag);
 		return -1;
 	}
 	/* Main init callback */

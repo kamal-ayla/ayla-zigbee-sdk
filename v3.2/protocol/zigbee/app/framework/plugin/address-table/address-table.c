@@ -34,7 +34,6 @@ static uint8_t addressTableReferenceCounts[EMBER_AF_PLUGIN_ADDRESS_TABLE_SIZE];
 #ifdef EZSP_HOST
 static EmberEUI64 addressTable[EMBER_AF_PLUGIN_ADDRESS_TABLE_SIZE];
 static bool initPending = true;
-int addresstable_flag=0;
 #endif  // EZSP_HOST
 
 #ifdef EZSP_HOST
@@ -50,11 +49,8 @@ void emberAfPluginAddressTableNcpInitCallback(bool memoryAllocation)
 
   // If the host and the ncp disagree on the address table size, explode.
   ezspGetConfigurationValue(EZSP_CONFIG_ADDRESS_TABLE_SIZE, &addressTableSize);
-//  assert(EMBER_AF_PLUGIN_ADDRESS_TABLE_SIZE == addressTableSize);
-  if(EMBER_AF_PLUGIN_ADDRESS_TABLE_SIZE != addressTableSize){
-	  addresstable_flag=1;
-          return;
-  }
+  assert(EMBER_AF_PLUGIN_ADDRESS_TABLE_SIZE == addressTableSize);
+
   if (initPending) {
     // Initialize all the entries to all 0xFFs. All 0xFFs means that the entry
     // is unused.

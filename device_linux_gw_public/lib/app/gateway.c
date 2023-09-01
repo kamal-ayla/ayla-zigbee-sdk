@@ -693,9 +693,7 @@ static void gw_cmd_free(void *arg)
 		gw_cmd->free_arg_handler(gw_cmd->arg);
 	}
 	prop_metadata_free(gw_cmd->opts.metadata);
-	if(gw_cmd!=NULL){
 		free(gw_cmd);
-	}
 }
 
 /*
@@ -1452,9 +1450,7 @@ static void gw_node_prop_batch_list_free_helper(struct gw_node_prop_batch_list
 		gw_cmd_free(entry->gw_cmd);
 		free(entry);
 	}
-	if(list!=NULL){
 		free(list);
-	}
 }
 
 /*
@@ -1564,9 +1560,7 @@ static void gw_node_prop_batch_sent_list_free(void *arg)
 	struct gw_node_prop_batch_sent_list *batch_sent_list = arg;
 
 	gw_node_prop_batch_list_free_helper(batch_sent_list->batch_list);
-	if(batch_sent_list!=NULL){
 		free(batch_sent_list);
-	}
 }
 
 /*

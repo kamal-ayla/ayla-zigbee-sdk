@@ -44,7 +44,6 @@
   #include "app/util/ezsp/ezsp.h"
   #include "app/util/ezsp/ezsp-utils.h"
   #include "app/util/ezsp/serial-interface.h"
-  extern int addresstable_flag;
 #else
 // Includes needed for ember related functions for the SoC
   #include "stack/include/ember.h"
