@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 #include <jansson.h>
+#include <ayla/gateway_interface.h>
 
 struct gw_template_prop {
 	LIST_ENTRY(gw_template_prop) link;
