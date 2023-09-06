@@ -10,8 +10,18 @@
 #ifndef VIDEO_STREAM_H
 #define VIDEO_STREAM_H
 
+#include <pthread.h>
+#include <ayla/utypes.h>
 
-struct kvs_data {
+#define MASTER_STREAM_APP			"/home/pi/ayla/bin/kvsd_stream_master"
+#define HLS_STREAM_APP 				"/home/pi/ayla/bin/kvsd_stream_hls"
+#define WEBRTC_STREAM_APP			"/home/pi/ayla/bin/kvsd_stream_webrtc"
+#define SHELL_DEFAULT				"/usr/bin/bash"
+#define GST_PLUGIN_PATH_ENV			"GST_PLUGIN_PATH=/home/pi/ayla/lib/kvsd"
+#define ADDITIONAL_LIB_PATH_ENV		"LD_LIBRARY_PATH=/home/pi/ayla/lib/kvsd"
+
+
+struct hls_data {
 	char * kvs_channel_name;
 	char * arn;
 	char * region;
@@ -56,10 +66,10 @@ enum webrtc_data_str_index {
 	WEBRTC_STR_CNT
 };
 
-void kvs_data_init(struct kvs_data* kvs_data);
+void kvs_data_init(struct hls_data* kvs_data);
 void webrtc_data_init(struct webrtc_data* webrtc_data);
 
-void kvs_data_destroy(struct kvs_data *kvs_data);
+void kvs_data_destroy(struct hls_data *kvs_data);
 void webrtc_data_destroy(struct webrtc_data *webrtc_data);
 
 const char* get_kvs_data_str(enum kvs_data_str_index index);

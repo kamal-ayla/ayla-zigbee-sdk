@@ -24,7 +24,7 @@ SOURCES = \
 #
 # List of libraries to link
 #
-LIBS = ssl crypto curl jansson
+LIBS = ssl crypto curl jansson pthread
 
 #
 # List of dependencies on Ayla libraries 

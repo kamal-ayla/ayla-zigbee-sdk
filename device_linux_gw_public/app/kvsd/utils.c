@@ -11,95 +11,11 @@
 #include <string.h>
 
 #include <ayla/log.h>
+#include <signal.h>
+#include <unistd.h>
 
 #include "utils.h"
 
-
-bool ipstr_is_valid(const char* ipString)
-{
-    if (NULL == ipString) {
-        return false;
-    }
-
-    int count = 0;
-    int num = 0;
-
-    // Iterate through each character in the string
-    for (int i = 0; ipString[i] != '\0'; ++i) {
-        if (ipString[i] == ':') {       // @TODO: MAN: Changed the separator from '.' to ':' because server backend does not support '.' in string. To be changed back to '.' when backend is updated.
-            // Check if the number of characters between dots is valid
-            if (count < 1 || count > 3) {
-                return false;
-            }
-
-            // Reset the count for the next octet
-            count = 0;
-
-            // Check if the number is in the valid range
-            if (num < 0 || num > 255) {
-                return false;
-            }
-
-            // Reset the number for the next octet
-            num = 0;
-        }
-        else if (ipString[i] >= '0' && ipString[i] <= '9') {
-            // Accumulate the number
-            num = num * 10 + (ipString[i] - '0');
-
-            // Check if the accumulated number is too large
-            if (num > 255) {
-                return false;
-            }
-
-            // Increment the count of characters
-            ++count;
-        }
-        else {
-            // Invalid character found
-            return false;
-        }
-    }
-
-    // Check the last octet
-    if (count < 1 || count > 3 || num < 0 || num > 255) {
-        return false;
-    }
-
-    return true;
-}
-
-int ipstr_to_u32(const char* ipString, u32* ip)
-{
-    if (NULL == ip || (! ipstr_is_valid(ipString))) {
-        return -1;
-    }
-
-    int shift = 24;
-
-    char* token = strtok((char*)ipString, ":");     // @TODO: MAN: Changed the separator from '.' to ':' because server backend does not support '.' in string. To be changed back to '.' when backend is updated.
-    while (token != NULL && shift >= 0) {
-        unsigned int octet = strtol(token, NULL, 10);
-        *ip |= octet << shift;
-        shift -= 8;
-        token = strtok(NULL, ":");      // @TODO: MAN: Changed the separator from '.' to ':' because server backend does not support '.' in string. To be changed back to '.' when backend is updated.
-    }
-
-    return 0;
-}
-
-void u32_to_ipstr(unsigned int ip, char* ipString)
-{
-    if (NULL == ipString) {
-        return;
-    }
-
-    snprintf(ipString, 16, "%u:%u:%u:%u",       // @TODO: MAN: Changed the separator from '.' to ':' because server backend does not support '.' in string. To be changed back to '.' when backend is updated.
-            (ip >> 24) & 0xFF,
-            (ip >> 16) & 0xFF,
-            (ip >> 8) & 0xFF,
-            ip & 0xFF);
-}
 
 int check_url_userpass(const char* url)
 {
@@ -160,4 +76,70 @@ int get_url_userpass(const char* url, const char* username, const char* passwd, 
 	strcat(output, host_start + protocol_delimiter_len);
 
 	return 0;
+}
+
+int kill_proc(pid_t pid, uint32_t wait_ms)
+{
+	if (kill(pid, SIGTERM) != 0) {
+		log_err("Failed to terminate process: %d", pid);
+		return -1;
+	}
+
+	usleep(wait_ms * 1000);
+
+	if (kill(pid, SIGKILL) != 0) {
+		log_err("Failed to kill process: %d", pid);
+		return -1;
+	}
+
+	return 0;
+}
+
+int kill_all_proc(const char* proc_name, uint32_t wait_ms)
+{
+	FILE *fp;
+	char pid[32];
+	char cmd[512];
+
+	snprintf(cmd, sizeof(cmd), "pgrep -f %s", proc_name);
+
+	// Execute the pgrep command to get the PIDs of all processes named "process_name"
+	fp = popen(cmd, "r");
+	if (fp == NULL) {
+		log_err("Failed to run command");
+		return -1;
+	}
+
+	// Read the output, which contains the PIDs of processes named "process_name"
+	while (fgets(pid, sizeof(pid)-1, fp) != NULL) {
+		int pid_val = atoi(pid);
+		// Kill each process
+		if (kill(pid_val, SIGTERM) == -1) {
+			log_err("Failed to terminate process: %d", pid_val);
+		}
+	}
+
+	// Close the file pointer
+	pclose(fp);
+
+	usleep(wait_ms * 1000);
+
+	// Repeat and SIGKILL if process still exists
+	fp = popen(cmd, "r");
+	if (fp == NULL) {
+		log_err("Failed to run command");
+		return -1;
+	}
+
+	int err = 0;
+	while (fgets(pid, sizeof(pid)-1, fp) != NULL) {
+		int pid_val = atoi(pid);
+		// Kill each process
+		if (kill(pid_val, SIGKILL) == -1) {
+			log_err("Failed to kill process: %d", pid_val);
+			++err;
+		}
+	}
+
+	return err;
 }

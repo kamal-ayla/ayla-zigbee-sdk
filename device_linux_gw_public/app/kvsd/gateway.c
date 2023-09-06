@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <limits.h>
 
 #include <ayla/utypes.h>
@@ -49,19 +48,13 @@
 #include <app/props.h>
 #include <app/gateway.h>
 #include <signal.h>
-#include <sys/wait.h>
 
 #include "gateway.h"
 #include "node.h"
-//#include "node_sim.h"
 #include "node_camera.h"
-#include "../../daemon/devd/ds.h"					// @TODO: MAN: Fix relative paths.
 #include "video_stream.h"
-#include "../../lib/app/data_internal.h"			// @TODO: MAN: Fix relative paths.
-#include "ayla/json_interface.h"
+#include "utils.h"
 
-#define CHK_RET(x) if(0 != x) { return x; }
-#define CHK_PTR(x) if(NULL == x) { return -1; }
 
 /* Maximum # of datapoints allowed in a batch */
 #define APPD_MAX_BATCHED_DPS	64
@@ -90,6 +83,8 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
                             const struct op_args *args);
 static int webrtc_signaling_channels_json (struct prop *prop, const void *val, size_t len,
                                            const struct op_args *args);
+
+static void stream_proc_kill();
 
 /*
  * Send the appd software version.
@@ -634,13 +629,7 @@ static int appd_gw_add_nodes_set_helper(struct prop *prop,
 	const void *val, size_t len, const struct op_args *args,
 	enum camera_node_type type, u32 sample_secs)
 {
-	CHK_PTR(prop);
-	CHK_PTR(val);
-	CHK_PTR(args);
-
 	int *num_nodes = (int *)prop->arg;
-	CHK_PTR(num_nodes);
-
 	size_t curr_node_count = node_count();
 	if((*num_nodes) + curr_node_count >= CAM_NODES_MAX) {
 		log_err("Cannot add %d nodes, max node count is %d",
@@ -750,6 +739,24 @@ static struct prop appd_gw_prop_table[] = {
 	},
 };
 
+void handle_sigterm(int sig)
+{
+	stream_proc_kill();
+	exit(0);
+}
+
+void setup_sigterm()
+{
+	struct sigaction action;
+	action.sa_handler = handle_sigterm;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+	sigaction(SIGTERM, &action, NULL);
+	sigaction(SIGKILL, &action, NULL);
+	sigaction(SIGINT, &action, NULL);
+}
+
+
 /*
  * Hook for the app library to initialize the user-defined application.
  */
@@ -786,6 +793,11 @@ int appd_init(void)
 
 	/* Initialize the node simulator */
 	cam_init(app_get_timers());
+
+	setup_sigterm();
+
+	/* Kill other instances of video stream processes that might be still running (error) */
+	stream_proc_kill();
 
 	return 0;
 }
@@ -985,8 +997,8 @@ static void free_ptrstr(char** str)
 static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
                             const struct op_args *args)
 {
-	struct kvs_data kvsdata;
-	memset(&kvsdata, 0, sizeof(struct kvs_data));
+	struct hls_data kvsdata;
+	memset(&kvsdata, 0, sizeof(struct hls_data));
 
     json_t *dev_node_a, *dev_node, *credentials;
     void * itr;
@@ -1049,14 +1061,14 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
 	struct node* node = node_lookup(cam_node_name);
 	struct cam_node_state* node_state = (struct cam_node_state *)node_state_get(node, STATE_SLOT_NET);
 
-	free_ptrstr(&node_state->kvs_data.kvs_channel_name);
-	free_ptrstr(&node_state->kvs_data.arn);
-	free_ptrstr(&node_state->kvs_data.region);
-	free_ptrstr(&node_state->kvs_data.access_key_id);
-	free_ptrstr(&node_state->kvs_data.secret_access_key);
-	free_ptrstr(&node_state->kvs_data.session_token);
+	free_ptrstr(&node_state->hls_data.kvs_channel_name);
+	free_ptrstr(&node_state->hls_data.arn);
+	free_ptrstr(&node_state->hls_data.region);
+	free_ptrstr(&node_state->hls_data.access_key_id);
+	free_ptrstr(&node_state->hls_data.secret_access_key);
+	free_ptrstr(&node_state->hls_data.session_token);
 
-	memcpy(&node_state->kvs_data, &kvsdata, sizeof(kvsdata));
+	memcpy(&node_state->hls_data, &kvsdata, sizeof(kvsdata));
 
 	log_debug("kvs stream info for cam node addr: %s", cam_node_name);
 
@@ -1065,7 +1077,6 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
     return 0;
 }
 
-//struct webrtc_data webrtc_ds;
 static int webrtc_signaling_channels_json (struct prop *prop, const void *val, size_t len,
                                            const struct op_args *args)
 {
@@ -1074,7 +1085,7 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
 
 	json_t *dev_node_a, *dev_node, *credentials;
 	void * itr;
-	int retention_days , expiration_time;
+	int expiration_time;
 
 	json_t *info = (json_t *)val;
 
@@ -1144,5 +1155,12 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
 	conf_save();
 
 	return 0;
+}
+
+static void stream_proc_kill()
+{
+	kill_all_proc(HLS_STREAM_APP, 1000);
+	kill_all_proc(WEBRTC_STREAM_APP, 1000);
+	kill_all_proc(MASTER_STREAM_APP, 1000);
 }
 

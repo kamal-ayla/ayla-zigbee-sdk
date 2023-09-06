@@ -10,6 +10,11 @@
 #include "video_stream.h"
 #include <string.h>
 #include <ayla/json_parser.h>
+#include "check.h"
+#include "ayla/log.h"
+#include <unistd.h>
+#include <sys/socket.h>
+#include "node_camera.h"
 
 
 static const char* kvs_data_str[] = {
@@ -33,7 +38,7 @@ static const char* webrtc_data_str[] = {
 		"webrtc_expiration_time",
 };
 
-void kvs_data_destroy(struct kvs_data *kvs_data)
+void kvs_data_destroy(struct hls_data *kvs_data)
 {
 	if(kvs_data->kvs_channel_name) {
 		free(kvs_data->kvs_channel_name);
@@ -107,13 +112,12 @@ const char* get_webrtc_data_str(enum webrtc_data_str_index index)
 	return webrtc_data_str[index];
 }
 
-void kvs_data_init(struct kvs_data* kvs_data)
+void kvs_data_init(struct hls_data* kvs_data)
 {
-	memset(kvs_data, 0, sizeof(struct kvs_data));
+	memset(kvs_data, 0, sizeof(struct hls_data));
 }
 
 void webrtc_data_init(struct webrtc_data* webrtc_data)
 {
 	memset(webrtc_data, 0, sizeof(struct webrtc_data));
 }
-
