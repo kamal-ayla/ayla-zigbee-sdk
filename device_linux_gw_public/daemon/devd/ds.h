@@ -162,8 +162,6 @@ struct device_state {
 	unsigned update_oem_info:1;	/* update oem info is pending */
 	unsigned template_assoc:1;	/* template association done */
 	unsigned get_regtoken:1;	/* get regtoken when unregistered */
-//	unsigned get_webrtc_keys:1;	/* get WebRTC streaming security keys and session token */	// @TODO: MAN: clean up
-//	unsigned get_kvs_keys:1;	/* get KVS streaming security keys and session token */
 
 	u64 conn_mtime;			/* last connection mtime */
 	time_t conn_time;		/* last connection time (UTC) */

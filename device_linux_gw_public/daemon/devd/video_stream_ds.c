@@ -26,7 +26,6 @@ static void ds_get_kvs_streaming_channel_done(enum http_client_err err,
 											  const struct http_client_req_info *info,
 											  const struct ds_client_data *resp_data, void *arg)
 {
-	struct device_state *dev = &device;
 	json_t *dev_info;
 	int rc;
 
@@ -63,7 +62,6 @@ static void ds_get_webrtc_signalling_channel_done(enum http_client_err err,
 												  const struct http_client_req_info *info,
 												  const struct ds_client_data *resp_data, void *arg)
 {
-	struct device_state *dev = &device;
 	json_t *dev_info;
 	int rc;
 
@@ -99,6 +97,9 @@ int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr)
 	char buff[256];
 	snprintf(buff, sizeof(buff), "videoservice/dsns/$DSN/signaling_channels.json?camera_ids=%s", addr);
 
+	log_debug("get WebRTC stream for ADDR: '%s'", addr);
+	log_debug("API CALL: '%s'", buff);
+
 	struct ds_client_req_info info = {
 			.method = HTTP_GET,
 			.host = dev->ads_host,
@@ -125,6 +126,7 @@ int ds_get_kvs_streaming_channel(struct device_state *dev, const char* addr)
 	snprintf(buff, sizeof(buff), "videoservice/dsns/$DSN/streams.json?camera_ids=%s", addr);
 
 	log_debug("get KVS stream for ADDR: '%s'", addr);
+	log_debug("API CALL: '%s'", buff);
 
 	struct ds_client_req_info info = {
 			.method = HTTP_GET,

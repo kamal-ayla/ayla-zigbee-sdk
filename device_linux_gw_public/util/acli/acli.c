@@ -104,7 +104,7 @@ static int acli_make_url_with_args(int argc, char **argv, const char *url,
 	char *endp = buf + size;
 	ssize_t len;
 
-	len = strlen(url);
+	len = strnlen(url, size);
 	strncpy(buf, url, len);
 	buf += len;
 	if (argc < 1) {

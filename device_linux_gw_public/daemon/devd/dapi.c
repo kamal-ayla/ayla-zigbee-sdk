@@ -1072,6 +1072,7 @@ static void ds_put_oem_info_done(enum http_client_err err,
 	} else {
 		dev->template_assoc = 1;
 		dev->update_oem_info = 0;
+//		dev->get_webrtc_keys = 1;
 	}
 
 	ds_step();
@@ -1140,6 +1141,7 @@ void ds_update_template_ver_to_cloud(const char *template_ver)
 			    " local template %s, no need update",
 			    dev->template_version, template_ver);
 			dev->template_assoc = 1;
+//			dev->get_webrtc_keys = 1;
 			return;
 		}
 	}
