@@ -1,5 +1,10 @@
 #!/bin/bash
 
+help() {
+    echo "Usage: $0 <build_dir> <kvsd_src_dir> <cmake_defines>"
+    exit 1
+}
+
 install_hls_sdk() {
 	cd $working_dir
 	git clone --recursive https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git
@@ -42,29 +47,37 @@ install_kvsd_stream_master() {
 }
 
 install_kvsd_stream_hls() {
+    cmake_defines=$1
     cd $working_dir
     cp -avf $ayla_src_dir/kvsd_stream_hls $working_dir
     mkdir kvsd_stream_hls/build
     cd kvsd_stream_hls/build
-    cmake ..
+    cmake "$cmake_defines" ..
     if [ $? -ne 0 ]; then print_msg "Failed."; exit 1; fi
     make -j
     if [ $? -ne 0 ]; then print_msg "Failed."; exit 1; fi
 #     cp -fv kvsd_stream_hls $ayla_install_dir/bin
 }
 
-if [[ $# != 2 ]]; then
-    echo "Usage: $0 <build_dir> <kvsd_src_dir>"
+#####################  Main
+if [[ $# != 3 ]]; then
+    echo "Usage: $0 <build_dir> <kvsd_src_dir> <cmake_defines>"
     exit 1
 fi
 
 working_dir=$(realpath $1)
-ayla_src_dir=$(realpath $2)
+shift 1
+ayla_src_dir=$(realpath $1)
+shift
+cmake_defines=$@
 
-# Main
-install_hls_sdk
-install_kvsd_stream_master
-install_kvsd_stream_hls
-install_kvsd_stream_webrtc
+echo "=== Working dir:   $working_dir"
+echo "=== Ayla src dir:  $ayla_src_dir"
+echo "=== Cmake defines: $cmake_defines"
+
+#install_hls_sdk
+#install_kvsd_stream_master
+install_kvsd_stream_hls $cmake_defines
+#install_kvsd_stream_webrtc
 
 exit 0
