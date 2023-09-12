@@ -104,12 +104,12 @@ static char up_time[UPTIME_LEN];
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
 #define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
+#define GET_CORE_DUMP_LOG_FILE_TIMESTAMP "ls --full-time %s | awk '{print $6,$7}'"
 #define GET_CORE_DUMP_FILE "ls /root/*.gz"
 #define GET_TAR_FILE "ls /root/core.tar"
-#define CREATE_TAR_FILE "tar -cvf /root/core.tar /root/*.gz %s"
+#define CREATE_TAR_FILE "tar -cvf /root/core.tar /root/*.core.gz %s"
 #define DELETE_CORE_TAR_FILE "rm -rf /root/core.tar"
 #define DELETE_CORE_FILES "rm -rf /root/*.gz %s"
-
 #define WIFI_STA_ADDR_LEN               50
 #define COMMAND_LENGTH	100
 extern char command[COMMAND_LENGTH];
@@ -388,7 +388,11 @@ static void gw_set_core_dump_timestamp(void);
 static void gw_get_core_dump_timestamp(void);
 /* To get timestamp buffer */
 static char core_timestamp[40];
-static char log_file_path[80];
+//static char file_timestamp[40];
+static char log_file_path[256];
+static char log_time[128];
+static char metadata_log[256];
+//static char tar_cmd[350];
 /* flag will be verifed in the fileupload callback function */
 static int file_upload_confirm = 0;
 /* delete file update status in the conf file */
@@ -1512,7 +1516,9 @@ static void  core_dump_file_verfication(void)
    int log_file = 0;
    int conf_file = 0;
    char file_timestamp[20];
-   char tar_cmd[150];
+   char tar_cmd[350];
+   char tmp[80];
+   char buf[128];
    int i = 0;
    char *array[3];
    unsigned int core_dump_exist = 0;
@@ -1533,6 +1539,8 @@ static void  core_dump_file_verfication(void)
    }
    else {
 
+      memset(metadata_log,'\0',sizeof(metadata_log));
+      memset(buf,'\0',sizeof(buf));
       // Read date & time, file name line by line
       while(fgets(line, sizeof(line), fp1)) {
          memset(file_timestamp,'\0',sizeof(file_timestamp));
@@ -1548,7 +1556,8 @@ static void  core_dump_file_verfication(void)
 	 // check log file timestamp should be greate than last checked timestamp
          if ( log_file > conf_file ) {
             log_debug("file timestamp is greater than last check timestamp !!!");
-
+            strcat(buf,file_timestamp);
+            strcat(buf,",");
 
             char *token = strtok( line, " ");
 
@@ -1558,62 +1567,70 @@ static void  core_dump_file_verfication(void)
                token = strtok(NULL, " ");
             }
             // to get log file name alone from the file using token
-	    sprintf(log_file_path, " %s", array[2]);
-	    log_debug("Available log file : %s",log_file_path);
+            memset(tmp,'\0',sizeof(tmp));
+	    memcpy(tmp,array[2],strlen(*(array+2))-1);
+	    strcat(metadata_log, tmp+6);
+	    strcat(metadata_log,",");
 
-	    // To get the core dump file name
-            fp = popen(GET_CORE_DUMP_FILE,"r");
-            if (fp == NULL) {
-               log_debug("Get core dump file failed");
-               exit(1);
-            } else {
-               memset(file_path,'\0',sizeof(file_path));
-               fscanf(fp, "%s", file_path);
+	    memset(tmp,'\0',sizeof(tmp));
+	    memcpy(tmp, array[2],strlen(*(array+2))-1);
+	    strcat(log_file_path, tmp);
+	    strcat(log_file_path," ");
 
-               if(strcmp(file_path, "")) {
-                  log_debug("core dump file name : %s\n",file_path);
-                  core_dump_exist = 1;
-               }
+	 }
+      }
+      memset(log_time,'\0',sizeof(log_time));
+      memcpy(log_time,buf,sizeof(buf));
+      log_debug("multiple log files time: %s",log_time);
+      log_debug("metadata log : %s",metadata_log);
+      log_debug("multiple log files path: %s",log_file_path);
+
+      // To get the core dump file name
+      fp = popen(GET_CORE_DUMP_FILE,"r");
+      if (fp == NULL) {
+         log_debug("Get core dump file failed");
+         exit(1);
+      } else {
+         memset(file_path,'\0',sizeof(file_path));
+         fscanf(fp, "%s", file_path);
+
+         if(strcmp(file_path, "")) {
+            log_debug("core dump file name : %s\n",file_path);
+            core_dump_exist = 1;
+         }
+
+      }
+      pclose(fp);
+
+      if ( core_dump_exist == 1) {
+         // Added log file path to the tar command
+	 snprintf(tar_cmd, sizeof(tar_cmd), CREATE_TAR_FILE, log_file_path);
+	 log_debug("TAR create command : %s", tar_cmd);
+         // execute the tar command
+	 fp = popen(tar_cmd, "r");
+         if (fp == NULL) {
+            log_err("TAR command failed");
+            exit(1);
+         }
+         pclose(fp);
+	 // To check the tar file name
+         fp = popen(GET_TAR_FILE,"r");
+         if (fp == NULL) {
+            log_debug("Get TAR file failed");
+            exit(1);
+         } else {
+            memset(file_path,'\0',sizeof(file_path));
+            fscanf(fp, "%s", file_path);
+
+            if(strcmp(file_path, "")) {
+               log_debug("TAR file name: %s\n",file_path);
+	       // push core dump files in to the property
+                prop_send_by_name("gw_core_dump_file");
 
             }
-            pclose(fp);
-
-	    if ( core_dump_exist == 1) {
-               // Added log file path to the tar command
-	       snprintf(tar_cmd, sizeof(tar_cmd), CREATE_TAR_FILE, log_file_path);
-	       log_debug("TAR create command : %s", tar_cmd);
-               // execute the tar command
-	       fp = popen(tar_cmd, "r");
-               if (fp == NULL) {
-                  log_err("TAR command failed");
-                  exit(1);
-               }
-               pclose(fp);
-
-
-               // To check the tar file name
-               fp = popen(GET_TAR_FILE,"r");
-               if (fp == NULL) {
-                  log_debug("Get TAR file failed");
-                  exit(1);
-               } else {
-                  memset(file_path,'\0',sizeof(file_path));
-                  fscanf(fp, "%s", file_path);
-
-                  if(strcmp(file_path, "")) {
-                     log_debug("TAR file name: %s\n",file_path);
-		     // push core dump files in to the property
-                     prop_send_by_name("gw_core_dump_file");
-
-                  }
-
-               }
-               pclose(fp);
-
-            }
-
 
          }
+         pclose(fp);
 
       }
 
@@ -5027,7 +5044,7 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
 	size_t len, const struct op_options *opts,
 	const struct confirm_info *confirm_info)
 {
-	char cmd[200];
+	char cmd[516];
 	if (confirm_info->status == CONF_STAT_SUCCESS) {
 		log_info("%s upload succeeded (requested at %llu)",
 		    prop->name, opts->dev_time_ms);
@@ -5081,7 +5098,8 @@ static enum err_t gw_core_dump_file(struct prop *prop, int req_id,
    enum err_t ret;
    struct op_options opt = {.confirm = 1};
    struct prop_metadata *metadata;
-
+   char final_string[400];
+   char final_timestamp[128];
    /* Include some datapoint metadata with the file */
    metadata = prop_metadata_alloc();
 
@@ -5089,9 +5107,13 @@ static enum err_t gw_core_dump_file(struct prop *prop, int req_id,
    memcpy(file_upload_path, file_path, strlen(file_path));
    log_info("core dump sending file name is %s", file_upload_path);
 
-   /* file exist */
-   prop_metadata_add(metadata, "path", file_upload_path);
-   prop_metadata_add(metadata, "trigger", prop->name);
+   memset(final_string, '\0', sizeof(final_string));
+   memcpy(final_string, metadata_log, strlen(metadata_log)-1);
+   memset(final_timestamp,'\0',sizeof(final_timestamp));
+   memcpy(final_timestamp, log_time, strlen(log_time)-1);
+
+   prop_metadata_add(metadata, "filename", final_string);
+   prop_metadata_add(metadata, "timestamp", final_timestamp);
 
    opt.metadata = metadata;
    ret = prop_arg_send(prop, req_id, &opt);
