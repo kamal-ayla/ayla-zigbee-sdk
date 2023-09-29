@@ -62,7 +62,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.7";
+const char *appd_template_version = "zigbee_gateway_demo_v4.8";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -103,7 +103,7 @@ static char up_time[UPTIME_LEN];
 #define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
-#define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
+#define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.core_logread.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
 #define GET_CORE_DUMP_LOG_FILE_TIMESTAMP "ls --full-time %s | awk '{print $6,$7}'"
 #define GET_CORE_DUMP_FILE "ls /root/*.gz"
 #define GET_TAR_FILE "ls /root/core.tar"
@@ -386,6 +386,8 @@ static int timestamp_conversion(char buff1[]);
 static void gw_set_core_dump_timestamp(void);
 /* To get the timestamp from the conf file */
 static void gw_get_core_dump_timestamp(void);
+/* To set the ota type */
+static void gw_ota_upgrade_conf(void);
 /* To get timestamp buffer */
 static char core_timestamp[40];
 //static char file_timestamp[40];
@@ -407,6 +409,35 @@ static int delete_file;
 /* serial number buffer */
 static char dev_serial_number[STATUS_LEN];
 
+/* Device build info*/
+static char gw_board_type[50];
+static char gw_ota_type[50];
+#define GW_BOARD_TYPE					"otpctl get row 18 | awk '/OTP Data:/ {print $3}'"
+static char gw_sys_active_version[450];
+//static char gw_sys_active_build_version[200];
+//static char gw_sys_active_iteration[10];
+#define GW_SYS_ACTIVE_VERSION				"uci -c /overlay/bank_1/etc/config get version.@version[0].version"
+#define GW_SYS_ACTIVE_ITERATION				"uci -c /overlay/bank_1/etc/config get version.@version[0].custo_iteration"
+static char gw_sys_passive_version[450];
+//static char gw_sys_passive_build_version[200];
+//static char gw_sys_passive_iteration[10];
+#define GW_SYS_PASSIVE_VERSION                           "uci -c /overlay/bank_2/etc/config get version.@version[0].version"
+#define GW_SYS_PASSIVE_ITERATION                         "uci -c /overlay/bank_2/etc/config get version.@version[0].custo_iteration"
+
+static char booted_partition[10];
+static char not_booted_partition[10];
+static char mtd_info[200];
+static char active_custo_version[200];
+static char active_custo_iteration[200];
+static char passive_custo_version[200];
+static char passive_custo_iteration[200];
+static char gw_sys_upgrade_status[10];
+#define ACTIVE_CUSTO_ITERATION		"cat /tmp/active/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
+#define ACTIVE_CUSTO_VERSION 		"cat /tmp/active/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\""
+#define PASSIVE_CUSTO_ITERATION          "cat /tmp/passive/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
+#define PASSIVE_CUSTO_VERSION            "cat /tmp/passive/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\""
+#define BOOTED_PARTITION		"bootmgr partition booted"
+#define NOTBOOTED_PARTITION		"bootmgr partition notbooted"
 
 #define CRED_LIST_CMD "cat /etc/config/mesh_broker |grep cred | awk '{print $3}' | sed 's/^.//' | sed 's/.$//' | tr '\n' ';' | sed 's/;/ /g'"
 
@@ -1273,6 +1304,9 @@ void appd_prop_init()
    prop_send_by_name("radio2_fw_version");
    prop_send_by_name("radio0_fw_version");
    prop_send_by_name("gw_serial_number");
+   prop_send_by_name("gw_board_type");
+   prop_send_by_name("gw_sys_active_version");
+   prop_send_by_name("gw_sys_passive_version");
    appd_properties_get();
 
    // Get the last checked timestamp from the attributes conf file
@@ -1771,8 +1805,48 @@ static void gw_set_core_dump_timestamp(void)
    }
 }
 
+static void gw_ota_upgrade_conf(void)
+{
+   const char *new_ota_upgrade;
+   json_t*attributes_obj_json;
+   json_error_t error;
 
+   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
 
+   if(!attributes_obj_json) {
+   /*the error variable contains error information*/
+   }
+   else{
+       json_t*config_obj_json_1;
+      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
+      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
+      log_debug("get attributes: %s",new_ota_upgrade);
+
+      json_t*config_core_obj_json_1;
+      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
+      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
+      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
+
+      json_t*config_ota_type_obj_json;
+      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_ota_type");
+      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
+      log_debug("set gw_ota_type: %s",new_ota_upgrade);
+
+      int status=json_object_set(config_core_obj_json_1,"gw_ota_type",json_string(gw_ota_type));
+      status=json_object_set(config_core_obj_json_1,"active_bank",json_string(gw_sys_active_version));
+      status=json_object_set(config_core_obj_json_1,"passive_bank",json_string(gw_sys_passive_version));
+
+      status=json_object_set(config_obj_json_1,"ota_upgrade",config_core_obj_json_1);
+      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
+
+      log_debug("Return after json set is %d",status);
+      new_ota_upgrade=json_dumps(attributes_obj_json,JSON_COMPACT);
+      log_debug("new_ota_upgrade: %s",new_ota_upgrade);
+
+      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
+      log_debug("Return after json set in file is= %d",status);
+   }
+}
 
 static int appd_ngrok_update(void)
 {
@@ -1901,6 +1975,10 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
       prop_send_by_name("radio0_fw_version");
       prop_send_by_name("gw_wifi_bh_uptime");
       prop_send_by_name("gw_led_status");
+   prop_send_by_name("gw_sys_active_version");
+      prop_send_by_name("gw_sys_passive_version");
+      prop_send_by_name("gw_sys_upgrade_status");
+
       
       if(appd_is_ngrok_installed > 0) {
          appd_ngrok_update();
@@ -4683,6 +4761,19 @@ static int appd_gw_wps_button(struct prop *prop, const void *val,
         return 0;
 }
 
+static int appd_gw_ota_type(struct prop *prop, const void *val,
+		                        size_t len, const struct op_args *args)
+{
+
+	if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+	         log_err("prop_arg_set returned error");
+	         return -1;
+	}
+	log_debug("IOT_DEBUG: OTA type %s",gw_ota_type);
+	gw_ota_upgrade_conf();
+	return 0;
+}
+
 /*
  *  *To get Network up time.
  *   */
@@ -5175,6 +5266,189 @@ static enum err_t project_sanity_script_file(struct prop *prop, int req_id,
 	prop_metadata_free(metadata);
 	//remove(file_upload_path);
 	return ret;
+}
+
+/* gw board type */
+
+static enum err_t appd_gw_board_type(struct prop *prop, int req_id,
+		                                   const struct op_options *opts)
+{
+	FILE *fp;
+	fp = popen(GW_BOARD_TYPE,"r");
+	if (fp == NULL) {
+		log_err("IOT_DEBUG: appd gw board type read failed");
+
+	} else {
+		fscanf(fp, "%[^\n]", gw_board_type);
+		log_debug("IOT_DEBUG: gw_board_type %s",gw_board_type);
+	}
+	pclose(fp);
+
+	return prop_arg_send(prop, req_id, opts);
+
+}
+
+static enum err_t appd_gw_sys_upgrade_status(struct prop *prop, int req_id,
+		                                   const struct op_options *opts)
+{
+   const char *new_ota_upgrade;
+   json_t*attributes_obj_json;
+   json_error_t error;
+
+   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+
+   if(!attributes_obj_json) {
+   /*the error variable contains error information*/
+   }
+   else{
+       json_t*config_obj_json_1;
+      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
+      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
+      log_debug("get attributes: %s",new_ota_upgrade);
+
+      json_t*config_core_obj_json_1;
+      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
+      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
+      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
+
+      json_t*config_ota_type_obj_json;
+      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_sys_upgrade_status");
+      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
+      strcpy(gw_sys_upgrade_status,new_ota_upgrade);
+      log_debug("get gw_sys_upgrade_status: %s",gw_sys_upgrade_status);
+
+      }
+      return prop_arg_send(prop, req_id, opts);
+}
+
+static enum err_t appd_gw_sys_active_version(struct prop *prop, int req_id,
+		                                   const struct op_options *opts)
+{
+	FILE *fp;
+	char cmd[200];
+	char mtd_info_id[10];
+	fp = popen(BOOTED_PARTITION,"r");
+	if (fp == NULL) {
+		log_err("Error in booted partition");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", booted_partition);
+	}
+	log_debug("IOT_DEBUG: New OTA booted_partition %s",booted_partition);
+
+	sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(booted_partition));
+	log_debug(">>>>>>> mtd info %s",mtd_info);
+	fp = popen(mtd_info,"r");
+	if (fp == NULL) {
+              log_err("Error in non ition");
+              exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", mtd_info_id);
+																		}
+	log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+
+	system("mkdir /tmp/active");
+	sprintf(cmd,"mount /dev/mtdblock%d /tmp/active",atoi(mtd_info_id));
+	log_debug("IOT_DEBUG: OTA mount info %s",cmd);
+	system(cmd);
+
+	fp = popen(ACTIVE_CUSTO_ITERATION,"r");
+	log_debug(">>>>>>>>>> custo %s",ACTIVE_CUSTO_ITERATION);
+	if (fp == NULL) {
+		log_err("Error in custo iteration");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", active_custo_iteration);
+	}
+
+	log_debug("IOT_DEBUG: OTA custo iteration %s",active_custo_iteration);
+	fp = popen(ACTIVE_CUSTO_VERSION,"r");
+	log_debug(">>>>>>>>>> custo version %s",ACTIVE_CUSTO_VERSION);
+	if (fp == NULL) {
+		log_err("Error in custo version");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", active_custo_version);
+	}
+	log_debug("IOT_DEBUG: OTA custo version %s",active_custo_version);
+
+	log_debug("IOT_DEBUG: OTA BOOTED IMAGE %s_i%s",active_custo_version,active_custo_iteration);
+	sprintf(gw_sys_active_version,"%s_i%s",active_custo_version,active_custo_iteration);
+	//log_debug(">>>>> passive build %s",passive_info);
+	memset(cmd,0,sizeof(cmd));
+	sprintf(cmd,"umount /dev/mtdblock%d /tmp/active",atoi(mtd_info_id));
+	log_debug("IOT_DEBUG: OTA unmount %s",cmd);
+	system(cmd);
+	pclose(fp);
+
+	log_debug("IOT_DEBUG: gw_sys_active_version : %s",gw_sys_active_version);
+
+
+	return prop_arg_send(prop, req_id, opts);
+}
+
+static enum err_t appd_gw_sys_passive_version(struct prop *prop, int req_id,
+		                                   const struct op_options *opts)
+{
+	FILE *fp;
+	char cmd[200];
+	char mtd_info_id[10];
+	fp = popen(NOTBOOTED_PARTITION,"r");
+	if (fp == NULL) {
+		log_err("Error in non booted partition");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", not_booted_partition);
+	}
+	log_debug("IOT_DEBUG: New OTA not_booted_partition %s",not_booted_partition);
+
+	sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(not_booted_partition));
+	log_debug(">>>>>>> mtd info %s",mtd_info);
+	fp = popen(mtd_info,"r");
+	if (fp == NULL) {
+              log_err("Error in non ition");
+              exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", mtd_info_id);
+																		}
+	log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+
+	system("mkdir /tmp/passive");
+	sprintf(cmd,"mount /dev/mtdblock%d /tmp/passive",atoi(mtd_info_id));
+	log_debug("IOT_DEBUG: OTA mount info %s",cmd);
+	system(cmd);
+
+	fp = popen(PASSIVE_CUSTO_ITERATION,"r");
+	log_debug(">>>>>>>>>> custo %s",PASSIVE_CUSTO_ITERATION);
+	if (fp == NULL) {
+		log_err("Error in custo iteration");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", passive_custo_iteration);
+	}
+
+	log_debug("IOT_DEBUG: OTA custo iteration %s",passive_custo_iteration);
+	fp = popen(PASSIVE_CUSTO_VERSION,"r");
+	log_debug(">>>>>>>>>> custo version %s",PASSIVE_CUSTO_VERSION);
+	if (fp == NULL) {
+		log_err("Error in custo version");
+		exit(1);
+	} else {
+		fscanf(fp, "%[^\n]", passive_custo_version);
+	}
+	log_debug("IOT_DEBUG: OTA custo version %s",passive_custo_version);
+
+	log_debug("IOT_DEBUG: OTA NOTBOOTED IMAGE %s_i%s",passive_custo_version,passive_custo_iteration);
+	sprintf(gw_sys_passive_version,"%s_i%s",passive_custo_version,passive_custo_iteration);
+	//log_debug(">>>>> passive build %s",passive_info);
+	memset(cmd,0,sizeof(cmd));
+	sprintf(cmd,"umount /dev/mtdblock%d /tmp/passive",atoi(mtd_info_id));
+	log_debug("IOT_DEBUG: OTA unmount %s",cmd);
+	system(cmd);
+	pclose(fp);
+	log_debug("IOT_DEBUG: gw_sys_passive_version : %s",gw_sys_passive_version);
+
+	return prop_arg_send(prop, req_id, opts);
 }
 
 static enum err_t gw_sanity_script_file(struct prop *prop, int req_id,
@@ -5831,7 +6105,44 @@ static struct prop appd_gw_prop_table[] = {
                 .send = gw_reboot_cause_send,
                 .arg = &dev_reboot_cause,
                 .len = sizeof(dev_reboot_cause),
-        }
+        },
+	{
+		.name = "gw_board_type",
+		.type = PROP_STRING,
+		.send = appd_gw_board_type,
+		.arg = &gw_board_type,
+		.len = sizeof(gw_board_type),
+	},
+	{
+		.name = "gw_ota_type",
+		.type = PROP_STRING,
+		.set = appd_gw_ota_type,
+		.send = prop_arg_send,
+		.arg = &gw_ota_type,
+		.len = sizeof(gw_ota_type),
+		.skip_init_update_from_cloud = 1,
+	},
+	{
+		.name = "gw_sys_active_version",
+		.type = PROP_STRING,
+		.send = appd_gw_sys_active_version,
+		.arg = &gw_sys_active_version,
+		.len = sizeof(gw_sys_active_version),
+	},
+	{
+		.name = "gw_sys_passive_version",
+		.type = PROP_STRING,
+		.send = appd_gw_sys_passive_version,
+		.arg = &gw_sys_passive_version,
+		.len = sizeof(gw_sys_passive_version),
+	},
+	{
+		.name = "gw_sys_upgrade_status",
+		.type = PROP_STRING,
+		.send = appd_gw_sys_upgrade_status,
+		.arg = &gw_sys_upgrade_status,
+		.len = sizeof(gw_sys_upgrade_status),
+	}
 };
 
 

@@ -31,9 +31,18 @@ static bool ota_reboot;		/* reboot if operation successful */
 static bool ota_apply;
 static char *ota_status_socket;
 static char *cmdname;
-
+static char sysupgrade_status[5];
+//extern char gw_ota_type[50];
+#define NOTBOOTED_PARTITION		"bootmgr partition notbooted"
+#define CUSTO_ITERATION		"cat /tmp/r2/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
+#define CUSTO_VERSION 		"cat /tmp/r2/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\"" 
+static char not_booted_partition[10];
+static char mtd_info[200];
+static char custo_iteration[200];
+static char custo_version[200];
+static char passive_info[500];
 static struct ota_download_param ota;
-
+static char new_ota[50];
 static const struct option options[] = {
 	{ .val = 'd', .name = "debug"},
 	{ .val = 'f', .name = "foreground"},
@@ -50,6 +59,8 @@ static const struct option options[] = {
 	{ .val = 'k', .name = "key", .has_arg = 1},
 	{ .name = NULL }
 };
+static void conf_update(void);
+static void gw_ota_upgrade_conf(void);
 
 static void usage(void)
 {
@@ -237,57 +248,195 @@ static void ota_status(enum patch_state status)
 	}
 }
 
+static void gw_ota_upgrade_conf(void)
+{
+   const char *new_ota_upgrade;
+   json_t*attributes_obj_json;
+   json_error_t error;
+
+   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+
+   if(!attributes_obj_json) {
+   /*the error variable contains error information*/
+
+   }
+   else{
+       json_t*config_obj_json_1;
+      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
+      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
+      log_debug("get attributes: %s",new_ota_upgrade);
+
+      json_t*config_core_obj_json_1;
+      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
+      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
+      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
+
+      json_t*config_ota_type_obj_json;
+      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_ota_type");
+      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
+      log_debug("set gw_ota_type: %s",new_ota_upgrade);
+      strcpy(new_ota,new_ota_upgrade);
+
+      int status=json_object_set(config_core_obj_json_1,"gw_sys_upgrade_status",json_string(sysupgrade_status));
+      status=json_object_set(config_core_obj_json_1,"passive_bank",json_string(passive_info));
+      status=json_object_set(config_obj_json_1,"ota_upgrade",config_core_obj_json_1);
+      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
+
+      log_debug("Return after json set is %d",status);
+      new_ota_upgrade=json_dumps(attributes_obj_json,JSON_COMPACT);
+      log_debug("new_ota_upgrade: %s",new_ota_upgrade);
+
+      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
+      log_debug("Return after json set in file is= %d",status);
+
+
+   }
+}
+
+static void conf_update(void)
+{
+   FILE *fp;
+   char cmd[200];
+   char mtd_info_id[10];
+
+   fp = popen(NOTBOOTED_PARTITION,"r");
+   if (fp == NULL) {
+	log_err("Error in non booted partition");
+	exit(1);
+   }else {
+	fscanf(fp, "%[^\n]", not_booted_partition);
+   }
+   pclose(fp);
+
+   log_debug("IOT_DEBUG: New OTA not_booted_partition %s",not_booted_partition);
+
+   sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(not_booted_partition));
+   log_debug(">>>>>>> mtd info %s",mtd_info);
+
+   fp = popen(mtd_info,"r");
+   if (fp == NULL) {
+      log_err("Error in non ition");
+      exit(1);
+   } else {
+      fscanf(fp, "%[^\n]", mtd_info_id);
+   }
+   pclose(fp);
+
+   log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+
+   system("mkdir /tmp/r2");
+   sprintf(cmd,"mount /dev/mtdblock%d /tmp/r2",atoi(mtd_info_id));
+   log_debug("IOT_DEBUG: OTA mount info %s",cmd);
+   system(cmd);
+
+   fp = popen(CUSTO_ITERATION,"r");
+   log_debug(">>>>>>>>>> custo %s",CUSTO_ITERATION);
+   if (fp == NULL) {
+	log_err("Error in custo iteration");
+	exit(1);
+   } else {
+	fscanf(fp, "%[^\n]", custo_iteration);
+   }
+   pclose(fp);
+
+   log_debug("IOT_DEBUG: OTA custo iteration %s",custo_iteration);
+
+   fp = popen(CUSTO_VERSION,"r");
+   log_debug(">>>>>>>>>> custo version %s",CUSTO_VERSION);
+   if (fp == NULL) {
+	log_err("Error in custo version");
+	exit(1);
+   } else {
+	fscanf(fp, "%[^\n]", custo_version);
+   }
+   pclose(fp);
+
+   log_debug("IOT_DEBUG: OTA custo version %s",custo_version);
+
+   log_debug("IOT_DEBUG: OTA NOTBOOTED IMAGE %s_i%s",custo_version,custo_iteration);
+   sprintf(passive_info,"%s_i%s",custo_version,custo_iteration);
+   log_debug(">>>>> passive build %s",passive_info);
+   memset(cmd,0,sizeof(cmd));
+   sprintf(cmd,"umount /dev/mtdblock%d /tmp/r2",atoi(mtd_info_id));
+   log_debug("IOT_DEBUG: OTA unmount %s",cmd);
+   system(cmd);
+
+   // attributes.conf file update with paasive version informtion
+   gw_ota_upgrade_conf();
+}
+
+
+
+
 int main(int argc, char **argv)
 {
-	int rc;
+   int rc;
 
-	rc = dl_download_init();
+   rc = dl_download_init();
 
-	ota_opts(argc, argv);
+   ota_opts(argc, argv);
 
-	log_init(cmdname, LOG_OPT_FUNC_NAMES);
-	if (foreground) {
-		log_set_options(LOG_OPT_CONSOLE_OUT);
-	}
-	if (debug) {
-		log_set_options(LOG_OPT_DEBUG | LOG_OPT_TIMESTAMPS);
-	}
-	log_set_subsystem(LOG_SUB_OTA);
-
-	ota_daemon();
-	if (rc) {
-		log_err("download init failed");
-		ota_status(PB_ERR_BOOT);
-		exit(1);
-	}
-	rc = dl_download(&ota);
-	if (rc) {
-		log_err("download failed rc %d", rc);
-		ota_status(PB_ERR_GET);	/* XXX or connect err */
-		exit(1);
-	}
-	if (!ota.lan_connect)	{
-		rc = dl_verify(&ota);
-	} else {
-		rc = dl_lan_verify(&ota);
-	}
-	if (rc) {
-		log_err("verify failed rc %d", rc);
-		ota_status(PB_ERR_NEW_CRC);
-		exit(1);
-	}
-	if (ota_apply) {
-		rc = platform_ota_apply();
-		if (rc) {
-			log_err("apply failed rc %d", rc);
-			ota_status(PB_ERR_FATAL);
-			exit(1);
-		}
-	}
-	ota_status(PB_DONE);
-	if (ota_reboot) {
-		log_info("done");
-		//platform_reset();
-	}
-	return 0;
+   log_init(cmdname, LOG_OPT_FUNC_NAMES);
+   if (foreground) {
+      log_set_options(LOG_OPT_CONSOLE_OUT);
+   }
+   if (debug) {
+      log_set_options(LOG_OPT_DEBUG | LOG_OPT_TIMESTAMPS);
+   }
+   log_set_subsystem(LOG_SUB_OTA);
+   gw_ota_upgrade_conf();
+   ota_daemon();
+   if (rc) {
+      log_err("download init failed");
+      ota_status(PB_ERR_BOOT);
+      exit(1);
+   }
+   rc = dl_download(&ota);
+   if (rc) {
+      log_err("download failed rc %d", rc);
+      ota_status(PB_ERR_GET);	/* XXX or connect err */
+      exit(1);
+   }
+   if (!ota.lan_connect) {
+      rc = dl_verify(&ota);
+   } else {
+      rc = dl_lan_verify(&ota);
+   }
+   if (rc) {
+      log_err("verify failed rc %d", rc);
+      ota_status(PB_ERR_NEW_CRC);
+      exit(1);
+   }
+   if (ota_apply) {
+      if(!strcmp(new_ota,"1")){
+         log_debug("------------------------------------- call new ota -------------------------------------");
+         rc = platform_new_ota_apply();
+         log_debug("IOT_DEBUG: platform new ota apply ret %d",rc);
+         if (rc) {
+            strcpy(sysupgrade_status,"1");
+            gw_ota_upgrade_conf();
+            log_err("new ota apply failed rc %d", rc);
+            ota_status(PB_ERR_FATAL);
+            exit(1);
+         }
+         else{
+            strcpy(sysupgrade_status,"0");
+            gw_ota_upgrade_conf();
+         }
+	 conf_update();
+      }
+      else{
+         rc = platform_ota_apply();
+         if (rc) {
+            log_err("apply failed rc %d", rc);
+            ota_status(PB_ERR_FATAL);
+            exit(1);
+	 }
+      }
+   }
+   ota_status(PB_DONE);
+   if (ota_reboot) {
+      log_info("done");
+   }
+   return 0;
 }

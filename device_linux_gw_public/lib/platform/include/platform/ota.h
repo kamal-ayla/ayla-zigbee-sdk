@@ -43,5 +43,8 @@ ssize_t platform_ota_flash_read(void *buf, size_t len, size_t off);
  * Apply the OTA after it's been downloaded and verified.
  */
 int platform_ota_apply(void);
-
+/*
+ * Apply the NEW OTA after it's been downloaded and verified.
+ */
+int platform_new_ota_apply(void);
 #endif /* __AYLA_PLATFORM_OTA_H__ */
