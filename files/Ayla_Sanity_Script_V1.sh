@@ -150,6 +150,58 @@ check_os_date()
 	fi
 }
 
+check_uci_configuration()
+{
+	if [ "${ENABLE_CONSOLE_LOG}" = true ]
+	then
+		echo "UCI Confiuguration - uci show"
+		echo
+		uci show
+		echo
+	fi
+}
+
+check_mesh_broker_config()
+{
+	if [ "${ENABLE_CONSOLE_LOG}" = true ]
+	then
+		echo "mesh broker config"
+		echo
+		cat /etc/config/mesh_broker
+		echo
+	fi
+}
+
+check_wireless_config()
+{
+	if [ "${ENABLE_CONSOLE_LOG}" = true ]
+	then
+		echo "wireless config"
+		echo
+		cat /etc/config/wireless
+		echo
+	fi
+}
+
+check_os_nvram()
+{
+	if [ "${ENABLE_CONSOLE_LOG}" = true ]
+	then
+		echo "Nvram show Command output:"
+		nvram show
+		echo
+	else
+		os_nvram=$(nvram show)
+
+		if [ -z $os_nvram ];
+		then
+			echo "check_os_nvram, FAILED"
+		else
+			echo "check_os_nvram, PASSED"
+		fi
+	fi
+}
+
 check_os_mesh_broker_status()
 {
 	if [ "${ENABLE_CONSOLE_LOG}" = true ]
@@ -894,6 +946,10 @@ execute_sanity_test_result()
 	check_os_details
 	check_os_uptime
 	check_os_date
+	check_uci_configuration
+	check_mesh_broker_config
+	check_wireless_config
+	check_os_nvram
 	check_os_mesh_broker_status
 	check_os_slave_status
 	check_br_lan_status
