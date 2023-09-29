@@ -1626,7 +1626,7 @@ static void  core_dump_file_verfication(void)
       } else {
          memset(file_path,'\0',sizeof(file_path));
          fscanf(fp, "%[^\n]", file_path);
-
+         pclose(fp);
          if(strcmp(file_path, "")) {
             // core file date & time convert into integer format
 	    core_file = timestamp_conversion(file_path);
@@ -1657,7 +1657,7 @@ static void  core_dump_file_verfication(void)
          }
 
       }
-      pclose(fp);
+      //pclose(fp);
 
       if ( ( core_dump_exist == 1) || ( log_flag == 1) ) {
          if( strcmp( core_file_path, "" )) {
