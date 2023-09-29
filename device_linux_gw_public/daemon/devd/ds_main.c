@@ -587,6 +587,9 @@ int main(int argc, char **argv)
 		conf_reset = true;
 	}
 
+	/*To reload the config file*/
+	conf_save();
+
 	serv_init();
 
 	if (msg_server_create(dev, devd_msg_sock_path, S_IRWXU | S_IRWXG) < 0) {

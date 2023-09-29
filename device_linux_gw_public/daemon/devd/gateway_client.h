@@ -56,5 +56,10 @@ int gateway_convert_dsn_to_address(json_t *info_j);
 void gateway_node_prop_prepare_echo(struct device_state *dev, json_t *elem_j,
 	int source);
 
+/*
+ * DSN Validation Api
+ */
+int dsn_validation(const char *dsn);
+
 #endif /*  __AYLA_GATEWAY_CLIENT_H__ */
 

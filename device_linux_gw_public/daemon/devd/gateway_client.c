@@ -583,9 +583,7 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 	const char *addr;
 	const char *dsn;
 	json_t *device_j;
-
 	char oem_model[64] = {0};
-	bool dsn_valid_flag = true;
 	const char *oem;
 	json_t *root;
 	json_error_t error;
@@ -636,28 +634,9 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 		log_warn("missing addr or dsn");
 		return -1;
 	}
-	/*Validate DSN*/
-	for(int i = 0; i <strlen(dsn); i++){
-    		char ch = dsn[i];
-    		if(ch == '\0')
-		     break; //stop iterating at end of string
 
-     		if((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
-    		{
-			dsn_valid_flag = true;
-    		}
-    		else if(ch >= '0' && ch <= '9')
-    		{
-			dsn_valid_flag = true;
-    		}
-    		else
-    		{
-        		log_debug("'%c' is special character.", ch);
-			dsn_valid_flag = false;
-			break;
-    		}	
-	}
-	if(true == dsn_valid_flag)
+	/*Validate DSN*/
+	if(true == dsn_validation(dsn))
 	{
 		if (gateway_mapping_add(dsn, addr) < 0) {
 			log_err("add node failed: %s --> %s", dsn, addr);
@@ -677,6 +656,47 @@ static int gateway_node_add_success(struct ops_devd_cmd *op_cmd,
 	}
 	return 0;
 }
+
+/*Validate DSN*/
+int dsn_validation(const char *dsn)
+{
+	int dsn_valid_flag = -1;
+	char dsn_start[3] ={0};
+
+	log_info("dsn validation started");
+	strncpy(dsn_start, dsn, 2);
+	//log_info("dsn start with [%s]",dsn_start);
+
+	if(strlen(dsn) <= 15 && strlen(dsn) <= MAX_DSN_LEN && (0 == strcmp(dsn_start,"VR")))
+	{
+		log_info("dsn each char validation started");
+		for(int i = 0; i <strlen(dsn); i++){
+                        char ch = dsn[i];
+                        if(ch == '\0')
+				break; //stop iterating at end of string
+
+                        if((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
+                        {
+				dsn_valid_flag = true;
+                        }
+                        else if(ch >= '0' && ch <= '9')
+                        {
+				dsn_valid_flag = true;
+                        }
+                        else
+                        {
+                                log_debug("'%c' is special character, invalid dsn", ch);
+				dsn_valid_flag = -1;
+				break;
+                        }
+		}
+	}else{
+		log_info("invalid dsn received");
+	}
+
+	return dsn_valid_flag;
+}
+
 
 /*
  * Remove node succeeded.
@@ -1564,19 +1584,24 @@ static int gateway_conf_set(json_t *obj)
 	if (!json_is_array(mappings_arr)) {
 		return 0;
 	}
+
 	json_array_foreach(mappings_arr, i, map_obj) {
 		dsn = json_get_string(map_obj, "dsn");
 		addr = json_get_string(map_obj, "address");
+
 		if (!dsn || !addr) {
-			log_warn("bad gateway config");
+			log_info("bad gateway config");
 			continue;
 		}
-		if (gateway_mapping_add(dsn, addr) < 0) {
-			log_err("load node failed: %s --> %s", dsn, addr);
-		} else {
-			log_debug("load node: %s --> %s", dsn, addr);
+		if(true == dsn_validation(dsn))
+		{
+			if (gateway_mapping_add(dsn, addr) < 0) {
+				log_info("load node failed: %s --> %s", dsn, addr);
+			} else {
+				log_info("load node: %s --> %s", dsn, addr);
+			}
 		}
-	}
+        }
 	return 0;
 }
 
@@ -1600,14 +1625,18 @@ static json_t *gateway_conf_get(void)
 	    iter = hashmap_iter_next(&gw_dsn_to_addr, iter)) {
 		dsn = gateway_hashmap_iter_get_key(iter);
 		addr = gateway_hashmap_iter_get_data(iter);
-		if(0 == findNode(addr))
+
+		if(true == dsn_validation(dsn))
 		{
-			obj = json_object();
-			json_array_append_new(mappings_arr, obj);
-			json_object_set_new(obj, "dsn", json_string(dsn));
-			json_object_set_new(obj, "address", json_string(addr));
-		}else{
-			log_info("%d vt_node dsn info not added into file",__LINE__);
+			if(0 == findNode(addr))
+			{
+				obj = json_object();
+				json_array_append_new(mappings_arr, obj);
+				json_object_set_new(obj, "dsn", json_string(dsn));
+				json_object_set_new(obj, "address", json_string(addr));
+			}else{
+				log_info("%d vt_node dsn info not added into file",__LINE__);
+			}
 		}
 	}
 	return gateway_obj;
