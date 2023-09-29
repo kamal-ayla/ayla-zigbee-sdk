@@ -95,7 +95,7 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.rbi 2> /dev/null | wc -l) != "0" ]; then
    if [ $ota -eq 28 ]; then
         exit_failure "source build failed"
    fi
-   
+
 fi
 
 if [ $(ls $AYLA_OTA_BUILD_DIR/*.sh 2> /dev/null | wc -l) != "0" ]; then
@@ -111,8 +111,8 @@ if [ $(ls $AYLA_OTA_BUILD_DIR/*.ipk 2> /dev/null | wc -l) != "0" ]; then
 	if [ $(ls $AYLA_OTA_BUILD_DIR/ayla*.ipk 2> /dev/null | wc -l) == "1" ]; then
 		opkg install --nodeps  $AYLA_OTA_BUILD_DIR/ayla*.ipk  >> /data/ota_log
 		if [ $? -ne 0 ]; then
-        	log_failure "ayla ipk install failed"
-   		fi	
+                log_failure "ayla ipk install failed"
+                fi
 	sleep 10
 #   	exit_success_upgrade
 	fi
