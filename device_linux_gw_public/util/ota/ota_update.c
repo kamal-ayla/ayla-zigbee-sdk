@@ -32,14 +32,9 @@ static bool ota_apply;
 static char *ota_status_socket;
 static char *cmdname;
 static char sysupgrade_status[5];
-//extern char gw_ota_type[50];
-#define NOTBOOTED_PARTITION		"bootmgr partition notbooted"
-#define CUSTO_ITERATION		"cat /tmp/r2/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
-#define CUSTO_VERSION 		"cat /tmp/r2/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\"" 
-static char not_booted_partition[10];
-static char mtd_info[200];
-static char custo_iteration[200];
-static char custo_version[200];
+//#define ACTIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition booted) | cut -f 1 -d :"
+#define PASSIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition notbooted) | cut -f 1 -d :"
+#define CUSTO_VERSION "grep -ir CustoVersion /dev/%s | awk '{print $3}'"
 static char passive_info[500];
 static struct ota_download_param ota;
 static char new_ota[50];
@@ -298,69 +293,29 @@ static void conf_update(void)
    FILE *fp;
    char cmd[200];
    char mtd_info_id[10];
-
-   fp = popen(NOTBOOTED_PARTITION,"r");
-   if (fp == NULL) {
-	log_err("Error in non booted partition");
-	exit(1);
-   }else {
-	fscanf(fp, "%[^\n]", not_booted_partition);
-   }
-   pclose(fp);
-
-   log_debug("IOT_DEBUG: New OTA not_booted_partition %s",not_booted_partition);
-
-   sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(not_booted_partition));
-   log_debug(">>>>>>> mtd info %s",mtd_info);
-
-   fp = popen(mtd_info,"r");
+   fp = popen(PASSIVE_PARTITION_BLOCK,"r");
    if (fp == NULL) {
       log_err("Error in non ition");
       exit(1);
    } else {
-      fscanf(fp, "%[^\n]", mtd_info_id);
+   fscanf(fp, "%[^\n]", mtd_info_id);
+
    }
    pclose(fp);
-
    log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
-
-   system("mkdir /tmp/r2");
-   sprintf(cmd,"mount /dev/mtdblock%d /tmp/r2",atoi(mtd_info_id));
-   log_debug("IOT_DEBUG: OTA mount info %s",cmd);
-   system(cmd);
-
-   fp = popen(CUSTO_ITERATION,"r");
-   log_debug(">>>>>>>>>> custo %s",CUSTO_ITERATION);
+   sprintf(cmd,"grep -ir CustoVersion /dev/%s | awk '{print $3}",mtd_info_id);
+   snprintf(cmd, sizeof(cmd), CUSTO_VERSION, mtd_info_id);
+   memset(passive_info, '\0', sizeof(passive_info));
+   fp = popen(cmd,"r");
+   log_debug(">>>>>>>>>> custo %s",cmd);
    if (fp == NULL) {
-	log_err("Error in custo iteration");
-	exit(1);
+   log_err("Error in custo iteration");
+   exit(1);
    } else {
-	fscanf(fp, "%[^\n]", custo_iteration);
+      fscanf(fp, "%[^\n]", passive_info);
    }
    pclose(fp);
-
-   log_debug("IOT_DEBUG: OTA custo iteration %s",custo_iteration);
-
-   fp = popen(CUSTO_VERSION,"r");
-   log_debug(">>>>>>>>>> custo version %s",CUSTO_VERSION);
-   if (fp == NULL) {
-	log_err("Error in custo version");
-	exit(1);
-   } else {
-	fscanf(fp, "%[^\n]", custo_version);
-   }
-   pclose(fp);
-
-   log_debug("IOT_DEBUG: OTA custo version %s",custo_version);
-
-   log_debug("IOT_DEBUG: OTA NOTBOOTED IMAGE %s_i%s",custo_version,custo_iteration);
-   sprintf(passive_info,"%s_i%s",custo_version,custo_iteration);
    log_debug(">>>>> passive build %s",passive_info);
-   memset(cmd,0,sizeof(cmd));
-   sprintf(cmd,"umount /dev/mtdblock%d /tmp/r2",atoi(mtd_info_id));
-   log_debug("IOT_DEBUG: OTA unmount %s",cmd);
-   system(cmd);
-
    // attributes.conf file update with paasive version informtion
    gw_ota_upgrade_conf();
 }

@@ -97,9 +97,11 @@ static char up_time[UPTIME_LEN];
 #define GET_MESH_CONTROLLER_STATUS_GDNT "uci get mesh_broker.mesh_common.controller_enabled"
 #define BOARD_TYPE   "uci get version.@version[0].product"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
-#define GET_RAM_FREE "transformer-cli get sys.mem.RAMFree | grep -o '[0-9]*'"
-#define GET_RAM_USED "transformer-cli get sys.mem.RAMUsed | grep -o '[0-9]*'"
-#define GET_RAM_TOTAL "transformer-cli get sys.mem.RAMTotal | grep -o '[0-9]*'"
+
+#define GET_RAM_FREE "free | grep Mem | awk '{print $4}'"
+#define GET_RAM_USED "free | grep Mem | awk '{print $3}'"
+#define GET_RAM_TOTAL "free | grep Mem | awk '{print $2}'"
+
 #define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
@@ -423,21 +425,10 @@ static char gw_sys_passive_version[450];
 //static char gw_sys_passive_iteration[10];
 #define GW_SYS_PASSIVE_VERSION                           "uci -c /overlay/bank_2/etc/config get version.@version[0].version"
 #define GW_SYS_PASSIVE_ITERATION                         "uci -c /overlay/bank_2/etc/config get version.@version[0].custo_iteration"
-
-static char booted_partition[10];
-static char not_booted_partition[10];
-static char mtd_info[200];
-static char active_custo_version[200];
-static char active_custo_iteration[200];
-static char passive_custo_version[200];
-static char passive_custo_iteration[200];
 static char gw_sys_upgrade_status[10];
-#define ACTIVE_CUSTO_ITERATION		"cat /tmp/active/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
-#define ACTIVE_CUSTO_VERSION 		"cat /tmp/active/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\""
-#define PASSIVE_CUSTO_ITERATION          "cat /tmp/passive/etc/config/version | grep \"custo_iteration\" | awk '{print$3'} | tr -d \\'\\\""
-#define PASSIVE_CUSTO_VERSION            "cat /tmp/passive/etc/config/version | grep \"option version\" | awk '{print$3'} | tr -d \\'\\\""
-#define BOOTED_PARTITION		"bootmgr partition booted"
-#define NOTBOOTED_PARTITION		"bootmgr partition notbooted"
+#define ACTIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition booted) | cut -f 1 -d :"
+#define PASSIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition notbooted) | cut -f 1 -d :"
+#define CUSTO_VERSION "grep -ir CustoVersion /dev/%s | awk '{print $3}'"
 
 #define CRED_LIST_CMD "cat /etc/config/mesh_broker |grep cred | awk '{print $3}' | sed 's/^.//' | sed 's/.$//' | tr '\n' ';' | sed 's/;/ /g'"
 
@@ -5294,6 +5285,11 @@ static enum err_t appd_gw_sys_upgrade_status(struct prop *prop, int req_id,
    const char *new_ota_upgrade;
    json_t*attributes_obj_json;
    json_error_t error;
+   char tmp[10];
+
+   memset(tmp, '\0', sizeof(tmp));
+   strcpy(tmp, gw_sys_upgrade_status);
+
 
    attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
 
@@ -5318,137 +5314,103 @@ static enum err_t appd_gw_sys_upgrade_status(struct prop *prop, int req_id,
       log_debug("get gw_sys_upgrade_status: %s",gw_sys_upgrade_status);
 
       }
+   if(strcmp(tmp,gw_sys_upgrade_status)){
+      log_debug("gw_sys_upgrade_status changed");
       return prop_arg_send(prop, req_id, opts);
+   }
+   else {
+      log_debug("gw_sys_upgrade_status same as previous status");
+      return 0;
+   }
 }
 
 static enum err_t appd_gw_sys_active_version(struct prop *prop, int req_id,
 		                                   const struct op_options *opts)
 {
-	FILE *fp;
-	char cmd[200];
-	char mtd_info_id[10];
-	fp = popen(BOOTED_PARTITION,"r");
-	if (fp == NULL) {
-		log_err("Error in booted partition");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", booted_partition);
-	}
-	log_debug("IOT_DEBUG: New OTA booted_partition %s",booted_partition);
+   FILE *fp;
+   char cmd[200];
+   char mtd_info_id[10];
+   char tmp[450];
 
-	sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(booted_partition));
-	log_debug(">>>>>>> mtd info %s",mtd_info);
-	fp = popen(mtd_info,"r");
-	if (fp == NULL) {
-              log_err("Error in non ition");
-              exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", mtd_info_id);
-																		}
-	log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+   memset(tmp, '\0', sizeof(tmp));
+   strcpy(tmp, gw_sys_active_version);
 
-	system("mkdir /tmp/active");
-	sprintf(cmd,"mount /dev/mtdblock%d /tmp/active",atoi(mtd_info_id));
-	log_debug("IOT_DEBUG: OTA mount info %s",cmd);
-	system(cmd);
+   fp = popen(ACTIVE_PARTITION_BLOCK,"r");
+   if (fp == NULL) {
+      log_err("Error in non ition");
+      exit(1);
+   } else {
+      fscanf(fp, "%[^\n]", mtd_info_id);
 
-	fp = popen(ACTIVE_CUSTO_ITERATION,"r");
-	log_debug(">>>>>>>>>> custo %s",ACTIVE_CUSTO_ITERATION);
-	if (fp == NULL) {
-		log_err("Error in custo iteration");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", active_custo_iteration);
-	}
+   }
+   pclose(fp);
 
-	log_debug("IOT_DEBUG: OTA custo iteration %s",active_custo_iteration);
-	fp = popen(ACTIVE_CUSTO_VERSION,"r");
-	log_debug(">>>>>>>>>> custo version %s",ACTIVE_CUSTO_VERSION);
-	if (fp == NULL) {
-		log_err("Error in custo version");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", active_custo_version);
-	}
-	log_debug("IOT_DEBUG: OTA custo version %s",active_custo_version);
+   log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+   snprintf(cmd, sizeof(cmd), CUSTO_VERSION, mtd_info_id);
+   memset(gw_sys_active_version,'\0', sizeof(gw_sys_active_version));
 
-	log_debug("IOT_DEBUG: OTA BOOTED IMAGE %s_i%s",active_custo_version,active_custo_iteration);
-	sprintf(gw_sys_active_version,"%s_i%s",active_custo_version,active_custo_iteration);
-	//log_debug(">>>>> passive build %s",passive_info);
-	memset(cmd,0,sizeof(cmd));
-	sprintf(cmd,"umount /dev/mtdblock%d /tmp/active",atoi(mtd_info_id));
-	log_debug("IOT_DEBUG: OTA unmount %s",cmd);
-	system(cmd);
-	pclose(fp);
+   fp = popen(cmd,"r");
+   log_debug(">>>>>>>>>> custo %s",cmd);
+   if (fp == NULL) {
+      log_err("Error in custo iteration");
+    } else {
+      fscanf(fp, "%[^\n]", gw_sys_active_version);
+    }
+    pclose(fp);
+    log_debug("IOT_DEBUG: gw_sys_active_version : %s",gw_sys_active_version);
 
-	log_debug("IOT_DEBUG: gw_sys_active_version : %s",gw_sys_active_version);
-
-
-	return prop_arg_send(prop, req_id, opts);
+    if(strcmp(tmp,gw_sys_active_version)){
+       log_debug("gw_sys_active_version changed");
+       return prop_arg_send(prop, req_id, opts);
+    }
+    else {
+       log_debug("gw_sys_active_version same as previous version");
+       return 0;
+   }
 }
 
 static enum err_t appd_gw_sys_passive_version(struct prop *prop, int req_id,
 		                                   const struct op_options *opts)
 {
-	FILE *fp;
-	char cmd[200];
-	char mtd_info_id[10];
-	fp = popen(NOTBOOTED_PARTITION,"r");
-	if (fp == NULL) {
-		log_err("Error in non booted partition");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", not_booted_partition);
-	}
-	log_debug("IOT_DEBUG: New OTA not_booted_partition %s",not_booted_partition);
+   FILE *fp;
+   char cmd[200];
+   char mtd_info_id[10];
+   char tmp[450];
 
-	sprintf(mtd_info,"cat /proc/mtd |  grep \"rootfs%d\" | awk '{ sub(/.*mtd/, \"\"); sub(/:.*/, \"\"); print }'",atoi(not_booted_partition));
-	log_debug(">>>>>>> mtd info %s",mtd_info);
-	fp = popen(mtd_info,"r");
-	if (fp == NULL) {
-              log_err("Error in non ition");
-              exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", mtd_info_id);
-																		}
-	log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+   memset(tmp, '\0', sizeof(tmp));
+   strcpy(tmp, gw_sys_passive_version);
 
-	system("mkdir /tmp/passive");
-	sprintf(cmd,"mount /dev/mtdblock%d /tmp/passive",atoi(mtd_info_id));
-	log_debug("IOT_DEBUG: OTA mount info %s",cmd);
-	system(cmd);
+   fp = popen(PASSIVE_PARTITION_BLOCK,"r");
+   if (fp == NULL) {
+      log_err("Error in non ition");
+      exit(1);
+   } else {
+      fscanf(fp, "%[^\n]", mtd_info_id);
+   }
+   pclose(fp);
 
-	fp = popen(PASSIVE_CUSTO_ITERATION,"r");
-	log_debug(">>>>>>>>>> custo %s",PASSIVE_CUSTO_ITERATION);
-	if (fp == NULL) {
-		log_err("Error in custo iteration");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", passive_custo_iteration);
-	}
+   log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
+   snprintf(cmd, sizeof(cmd), CUSTO_VERSION, mtd_info_id);
 
-	log_debug("IOT_DEBUG: OTA custo iteration %s",passive_custo_iteration);
-	fp = popen(PASSIVE_CUSTO_VERSION,"r");
-	log_debug(">>>>>>>>>> custo version %s",PASSIVE_CUSTO_VERSION);
-	if (fp == NULL) {
-		log_err("Error in custo version");
-		exit(1);
-	} else {
-		fscanf(fp, "%[^\n]", passive_custo_version);
-	}
-	log_debug("IOT_DEBUG: OTA custo version %s",passive_custo_version);
+   fp = popen(cmd,"r");
+   log_debug(">>>>>>>>>> custo %s",cmd);
+   memset(gw_sys_passive_version,'\0', sizeof(gw_sys_passive_version));
+   if (fp == NULL) {
+      log_err("Error in custo iteration");
+   } else {
+      fscanf(fp, "%[^\n]", gw_sys_passive_version);
+   }
+   pclose(fp);
+   log_debug("IOT_DEBUG: gw_sys_passive_version : %s",gw_sys_passive_version);
 
-	log_debug("IOT_DEBUG: OTA NOTBOOTED IMAGE %s_i%s",passive_custo_version,passive_custo_iteration);
-	sprintf(gw_sys_passive_version,"%s_i%s",passive_custo_version,passive_custo_iteration);
-	//log_debug(">>>>> passive build %s",passive_info);
-	memset(cmd,0,sizeof(cmd));
-	sprintf(cmd,"umount /dev/mtdblock%d /tmp/passive",atoi(mtd_info_id));
-	log_debug("IOT_DEBUG: OTA unmount %s",cmd);
-	system(cmd);
-	pclose(fp);
-	log_debug("IOT_DEBUG: gw_sys_passive_version : %s",gw_sys_passive_version);
-
-	return prop_arg_send(prop, req_id, opts);
+   if(strcmp(tmp,gw_sys_passive_version)){
+      log_debug("gw_sys_passive_version changed");
+      return prop_arg_send(prop, req_id, opts);
+   }
+   else {
+      log_debug("gw_sys_passive_version same as previous version");
+      return 0;
+   }
 }
 
 static enum err_t gw_sanity_script_file(struct prop *prop, int req_id,
