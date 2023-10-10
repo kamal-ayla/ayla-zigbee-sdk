@@ -1083,10 +1083,13 @@ static struct cam_node_state *cam_node_start(struct node *node,
 	node_state_set(node, STATE_SLOT_NET, node_state,
 	    cam_node_state_cleanup);
 
-//	pthread_mutex_init(&node_state->gst_data.mutex, NULL);
-
-	struct node_prop * stream_time_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_STREAM_TIME);
-	stream_state_init(&node_state->hls_stream_state, node, kvs_streaming_timeout, *((int*)stream_time_prop->val), kvs_streaming_start_delay_timeout, cam_kvs_stream_update_timeout, &node_state->hls_data);
+//	struct node_prop * stream_time_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_STREAM_TIME);
+//	if(NULL == stream_time_prop)
+//	{
+//		log_err("Failed to find stream_time property");
+//		return NULL;
+//	}
+	stream_state_init(&node_state->hls_stream_state, node, kvs_streaming_timeout, /* *((int*)stream_time_prop->val*/ CAM_STREAM_TIME_DEFAULT, kvs_streaming_start_delay_timeout, cam_kvs_stream_update_timeout, &node_state->hls_data);
 	stream_state_init(&node_state->webrtc_stream_state, node, NULL, 0, webrtc_streaming_start_delay_timeout, cam_webrtc_stream_update_timeout, &node_state->webrtc_data);
 
 	timer_init(&node_state->sample_timer, cam_node_sample_timeout);
@@ -1989,6 +1992,7 @@ static void start_kvs_streaming(struct node* node)
 	i = 0;
 	env[i++]=GST_PLUGIN_PATH_ENV;
 	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
 	env[i++]=aws_key_id;
 	env[i++]=aws_secret;
 	env[i++]=aws_region;
@@ -2069,6 +2073,9 @@ static void start_webrtc_streaming(struct node* node)
 	env[i++]=aws_secret;
 	env[i++]=aws_region;
 	env[i++]=aws_session_token;
+	env[i++]=GST_PLUGIN_PATH_ENV;
+	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
 	env[i]=NULL;
 	{
 		int j = 0;
@@ -2153,6 +2160,9 @@ static void start_master_stream(struct node* node)
 	log_warn("now setting the env list");
 	i = 0;
 	env[i++]="GST_DEBUG=\"*:5\"";
+	env[i++]=GST_PLUGIN_PATH_ENV;
+	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
 	env[i]=NULL;
 	{
 		int j = 0;

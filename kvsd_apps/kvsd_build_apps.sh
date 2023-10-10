@@ -9,6 +9,7 @@ install_hls_sdk() {
     cmake_c_flags=$1
     cmake_toolchain_flags=$2
     cmake_includes=$3
+    cmake_library_path=$4
 	#git clone --recursive https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git
 	mkdir -p amazon-kinesis-video-streams-producer-sdk-cpp/build
 	cd amazon-kinesis-video-streams-producer-sdk-cpp/build
@@ -22,6 +23,7 @@ install_hls_sdk() {
 	    $cmake_toolchain_flags \
 	    -DCMAKE_C_FLAGS="$cmake_c_flags" \
 	    -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
+        -DCMAKE_LIBRARY_PATH=$cmake_library_path \
 	    -DGST_APP_INCLUDE_DIRS="$cmake_includes" \
 	    ..
 	if [ $? -ne 0 ]; then exit 1; fi
@@ -49,7 +51,7 @@ install_kvsd_stream_webrtc() {
 	        $cmake_toolchain_flags \
             -DCMAKE_C_FLAGS="$cmake_c_flags" \
             -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
-            -DCMAKE_LIBRARY_PATH="$cmake_library_path" \
+            -DCMAKE_LIBRARY_PATH=$cmake_library_path \
             -DGST_APP_INCLUDE_DIRS="$cmake_includes" \
             ..
 	if [ $? -ne 0 ]; then exit 1; fi
@@ -61,9 +63,16 @@ install_kvsd_stream_webrtc() {
 install_kvsd_stream_master() {
     cmake_c_flags=$1
     cmake_toolchain_flags=$2
+    cmake_includes=$3
+    cmake_library_path=$4
     mkdir kvsd_stream_master/build
     cd kvsd_stream_master/build
-    cmake $cmake_toolchain_flags -DCMAKE_C_FLAGS="$cmake_c_flags" ..
+    cmake \
+        $cmake_toolchain_flags \
+        -DCMAKE_C_FLAGS="$cmake_c_flags" \
+        -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
+        -DCMAKE_LIBRARY_PATH=$cmake_library_path \
+        ..
     if [ $? -ne 0 ]; then exit 1; fi
     make -j
     if [ $? -ne 0 ]; then exit 1; fi
@@ -73,9 +82,35 @@ install_kvsd_stream_master() {
 install_kvsd_stream_hls() {
     cmake_c_flags=$1
     cmake_toolchain_flags=$2
+    cmake_includes=$3
+    cmake_library_path=$4
     mkdir kvsd_stream_hls/build
     cd kvsd_stream_hls/build
-    cmake $cmake_toolchain_flags -DCMAKE_C_FLAGS="$cmake_c_flags" ..
+    cmake \
+        $cmake_toolchain_flags \
+        -DCMAKE_C_FLAGS="$cmake_c_flags" \
+        -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
+        -DCMAKE_LIBRARY_PATH=$cmake_library_path \
+        ..
+    if [ $? -ne 0 ]; then exit 1; fi
+    make -j
+    if [ $? -ne 0 ]; then exit 1; fi
+#     cp -fv kvsd_stream_hls $ayla_install_dir/bin
+}
+
+install_test() {
+    cmake_c_flags=$1
+    cmake_toolchain_flags=$2
+    cmake_includes=$3
+    cmake_library_path=$4
+    mkdir test_gst_arm/build
+    cd test_gst_arm/build
+    cmake \
+        $cmake_toolchain_flags \
+        -DCMAKE_C_FLAGS="$cmake_c_flags" \
+        -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
+        -DCMAKE_LIBRARY_PATH=$cmake_library_path \
+        ..
     if [ $? -ne 0 ]; then exit 1; fi
     make -j
     if [ $? -ne 0 ]; then exit 1; fi
@@ -99,17 +134,19 @@ echo "=== Cmake Toolchain flags: $cmake_toolchain_flags"
 
 DIR=$PWD
 
-#cd $DIR
-#install_hls_sdk "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes"        # works
-#install_hls_sdk "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path" # not tested
-
-# cd $DIR
-# install_kvsd_stream_master "$cmake_c_flags" "$cmake_toolchain_flags"
-
-# cd $DIR
-# install_kvsd_stream_hls "$cmake_c_flags" "$cmake_toolchain_flags"
-
+cd $DIR
+install_hls_sdk "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+ 
 cd $DIR
 install_kvsd_stream_webrtc "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+ 
+cd $DIR
+install_kvsd_stream_master "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+ 
+cd $DIR
+install_kvsd_stream_hls "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+
+#cd $DIR
+#install_test "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
 
 exit 0

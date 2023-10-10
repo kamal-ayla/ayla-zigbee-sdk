@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(libjsmn-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(project_libjsmn
+    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/jsmn.tar.gz
+    PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
+    CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}
+    BUILD_ALWAYS      TRUE
+    TEST_COMMAND      ""
+)

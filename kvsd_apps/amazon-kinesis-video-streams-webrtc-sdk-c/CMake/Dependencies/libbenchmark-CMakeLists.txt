@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(libbenchmark-download NONE)
+
+include(ExternalProject)
+
+ExternalProject_Add(
+  project_libbenchmark
+  URL			  ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/benchmark.tar.gz
+  PREFIX          ${CMAKE_CURRENT_BINARY_DIR}/build
+  CMAKE_ARGS
+    -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}
+    -DCMAKE_BUILD_TYPE=Release
+    -DBENCHMARK_ENABLE_GTEST_TESTS=OFF
+  BUILD_ALWAYS    TRUE
+  TEST_COMMAND    "")

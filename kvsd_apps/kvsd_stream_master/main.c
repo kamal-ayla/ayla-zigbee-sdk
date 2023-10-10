@@ -99,6 +99,7 @@ gboolean set_check_property(GstElement *object, const gchar *property_name, ...)
     }
 
     // Set the property using g_object_set_valist
+    printf("g_object_set_valist: %s\n", property_name);
     va_start(args, property_name);
     g_object_set_valist(G_OBJECT(object), property_name, args);
     va_end(args);
@@ -321,7 +322,7 @@ start_source()
     gst_bus_add_watch(GST_ELEMENT_BUS (pipeline), master_bus_msg, pipeline);
 
     source = gst_element_factory_make("rtspsrc", "rtspsrc");
-    set_check_property(source, "is-live", 1, NULL);
+//    set_check_property(source, "is-live", 1, NULL);
     set_check_property(source, "latency", 0, NULL);
     set_check_property(source, "drop-on-latency", TRUE, NULL);
     set_check_property(source, "buffer-mode", 0, NULL);
@@ -349,7 +350,7 @@ start_source()
     set_check_property(queue1, "leaky", 2, NULL);
     set_check_property(queue1, "max-size-buffers", 0, NULL);
     set_check_property(queue1, "max-size-bytes", 0, NULL);
-    set_check_property(queue1, "max-size-time", 0, NULL);
+    set_check_property(queue1, "max-size-time", (guint64)0, NULL);
     queue1_blockpad = gst_element_get_static_pad (queue1, "src");
 
     queue2 = gst_element_factory_make("queue", "queue2"); GST_CHK_ELEM(queue2);
@@ -357,7 +358,7 @@ start_source()
     set_check_property(queue2, "leaky", 2, NULL);
     set_check_property(queue2, "max-size-buffers", 0, NULL);
     set_check_property(queue2, "max-size-bytes", 0, NULL);
-    set_check_property(queue2, "max-size-time", 0, NULL);
+    set_check_property(queue2, "max-size-time", (guint64)0, NULL);
     queue2_blockpad = gst_element_get_static_pad (queue2, "src");
 
     fakesink1 = gst_element_factory_make("fakesink", "fakesink1"); GST_CHK_ELEM(fakesink1);

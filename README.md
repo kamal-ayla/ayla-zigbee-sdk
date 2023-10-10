@@ -44,7 +44,18 @@ $ make menuconfig
 * Enable ayla-zigbee-sdk as a package. Hit 'y' to do so
 * Exit, saving when prompted to do so.
 
-#### Step 3: Compile 
+#### Step 3: Prepare
+
+##### Bootstrap the Ayla package by running the bootstrap script from $TOP_DIR of SDK
+
+```
+cd $TOP_DIR
+./bootstrap.sh
+```
+
+This step is needed because OpenWrt SDK blocks during the build of the packages access to the network. Some of the dependencies are a CMake projects with multiple dependencies which are downloaded during the setup. There is no possibility to get them offline.
+
+#### Step 4: Compile 
 
 ##### Build the selected Ayla package by typing the below command from $TOP_DIR of SDK
 
@@ -59,7 +70,7 @@ Depending on how many processors your system has, you can speed this up with -j 
 $ make -j1
 ```
 
-#### Step 4 : IPK package
+#### Step 5 : IPK package
 
 After the compilation is finished, the generated .ipk files are placed in the bin/packages and bin/targets directories 
 inside the directory you extracted the SDK into.

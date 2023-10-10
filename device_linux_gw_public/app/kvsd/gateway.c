@@ -650,14 +650,14 @@ static int appd_gw_add_nodes_set_helper(struct prop *prop,
 		if (*num_nodes > 0) {
 			/* Tell the node simulator to simulate a node joining */
 			if (cam_node_add(type, sample_secs) < 0) {
-				log_err("Failed to create simulated node");
+				log_err("Failed to create node");
 				break;
 			}
 			--(*num_nodes);
 		} else {
 			/* Tell the node simulator to simulate a node leaving */
 			if (cam_node_remove(type) < 0) {
-				log_err("Failed to remove a simulated node");
+				log_err("Failed to remove a node");
 				*num_nodes = 0;
 				break;
 			}

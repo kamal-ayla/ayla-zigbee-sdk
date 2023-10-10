@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(libusrsctp-download NONE)
+
+include(ExternalProject)
+
+ExternalProject_Add(project_libusrsctp
+    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/usrsctp.tar.gz
+    PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
+    CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX} -DCMAKE_C_FLAGS=-fPIC -Dsctp_werror=0
+    BUILD_ALWAYS      TRUE
+    TEST_COMMAND      ""
+)

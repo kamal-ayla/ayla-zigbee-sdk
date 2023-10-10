@@ -26,8 +26,7 @@ if (WIN32)
 endif()
 
 ExternalProject_Add(project_libcurl
-    GIT_REPOSITORY    https://github.com/curl/curl.git
-    GIT_TAG           curl-7_68_0
+    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/curl.tar.gz
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CMAKE_ARGS        ${CMAKE_ARGS}
     BUILD_ALWAYS      TRUE
