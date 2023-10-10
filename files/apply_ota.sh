@@ -18,9 +18,11 @@ AYLA_OTA_DIR=$(mktemp -q -d /tmp/ayla_ota.XXXXXX)
 AYLA_OTA_BUILD_DIR="$AYLA_OTA_DIR/src"
 AYLA_OTA_INSTALL_DIR="$AYLA_OTA_DIR/install"
 
+
 echo $AYLA_OTA_DIR >> /data/ota_log
 echo $AYLA_OTA_BUILD_DIR >> /data/ota_log
 echo $AYLA_OTA_INSTALL_DIR >> /data/ota_log
+
 
 logger "==========================ota============================"
 
@@ -85,14 +87,8 @@ else
 fi
 
 if [ $(ls $AYLA_OTA_BUILD_DIR/*.rbi 2> /dev/null | wc -l) != "0" ]; then
-   logger "$cmdname: install  OTA source"
-   sysupgrade $AYLA_OTA_BUILD_DIR/*.rbi &
-
-   if [ $? -ne 0 ]; then
-        exit_failure "source build failed"
-   fi
-   sleep 20
-   exit_success_upgrade
+   # Verify and execute the either full ota or new ota
+   /bin/ota_sysupgrade.sh -sysupgrade $AYLA_OTA_BUILD_DIR $AYLA_OTA_DIR
 fi
 
 if [ $(ls $AYLA_OTA_BUILD_DIR/*.sh 2> /dev/null | wc -l) != "0" ]; then

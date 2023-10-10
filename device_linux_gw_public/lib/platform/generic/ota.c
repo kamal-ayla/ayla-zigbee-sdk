@@ -135,12 +135,3 @@ int platform_ota_apply(void)
       return 0;
 
 }
-
-/*
-* Apply the NEW OTA after it's been downloaded and verified.
-*/
-int platform_new_ota_apply(void)
-{
-   int ret = system("apply_new_ota.sh " PLATFORM_OTA_FILE_PATH);
-   return ret ;
-}

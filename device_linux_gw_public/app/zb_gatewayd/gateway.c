@@ -416,12 +416,12 @@ static char dev_serial_number[STATUS_LEN];
 static char gw_board_type[50];
 static char gw_ota_type[50];
 #define GW_BOARD_TYPE					"otpctl get row 18 | awk '/OTP Data:/ {print $3}'"
-static char gw_sys_active_version[450];
+static char gw_sys_active_version[250];
 //static char gw_sys_active_build_version[200];
 //static char gw_sys_active_iteration[10];
 #define GW_SYS_ACTIVE_VERSION				"uci -c /overlay/bank_1/etc/config get version.@version[0].version"
 #define GW_SYS_ACTIVE_ITERATION				"uci -c /overlay/bank_1/etc/config get version.@version[0].custo_iteration"
-static char gw_sys_passive_version[450];
+static char gw_sys_passive_version[250];
 //static char gw_sys_passive_build_version[200];
 //static char gw_sys_passive_iteration[10];
 #define GW_SYS_PASSIVE_VERSION                           "uci -c /overlay/bank_2/etc/config get version.@version[0].version"
@@ -451,7 +451,19 @@ static void  gw_guest_verification(void);
 /* reboot cause buffer */
 static char dev_reboot_cause[CAUSE_LEN];
 
+// core dump set commands:
+#define SET_LAST_CHECKED_TIMESTAMP "uci set dcm_props.core_dump_upload_file.last_checked_timestamp='%s'"
+#define SET_DELETE_UPLOAD_FILE "uci set dcm_props.core_dump_upload_file.delete_uploaded_file='%d'"
+// core dump get commands:
+#define GET_LAST_CHECKED_TIMESTAMP "uci get dcm_props.core_dump_upload_file.last_checked_timestamp"
+#define GET_DELETE_UPLOAD_FILE "uci get dcm_props.core_dump_upload_file.delete_uploaded_file"
 
+
+// OTA set commands
+#define SET_OTA_TYPE "uci set dcm_props.ota_upgrade.gw_ota_type='%s'"
+// OTA get commands:
+#define GET_OTA_TYPE "uci get dcm_props.ota_upgrade.gw_ota_type"
+#define GET_SYS_UPGRADE_STATUS "uci get dcm_props.ota_upgrade.gw_sys_upgrade_status"
 
 void uppercase_convert(char str[])
 {
@@ -1447,18 +1459,15 @@ static void  gw_guest_verification(void) {
 static int gw_delete_uploaded_core_files(struct prop *prop, const void *val,
                                 size_t len, const struct op_args *args)
 {
-   const char *core_dump_timestamp_attr;
-   int status;
-   int core_dump_delete;
-   json_t*attributes_obj_json;
-   json_error_t error;
+   FILE *fp;
+   char set_cmd[100];
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
        return -1;
    }
 
-   // Get the delete file parameter from the attributes conf file
+   // Get the delete file parameter from the dcm_props file
    gw_get_core_dump_timestamp();
 
    if( delete_file  > 1) {
@@ -1466,42 +1475,24 @@ static int gw_delete_uploaded_core_files(struct prop *prop, const void *val,
    }
 
    if ( delete_file != delete_fileupload_files ) {
-
-      attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
-
-      if(!attributes_obj_json) {
-      /*the error variable contains error information*/
+      snprintf(set_cmd, sizeof(set_cmd), SET_DELETE_UPLOAD_FILE, delete_file);
+      fp = popen(set_cmd,"r");
+      if( fp == NULL) {
+         log_debug("SET DELETE UPLOAD FILE COMMAND FAILED");
+         exit(1);
       }
-      else{
-         json_t*config_obj_json_attr;
-         config_obj_json_attr=json_object_get(attributes_obj_json,"attributes");
-         core_dump_timestamp_attr=json_dumps(config_obj_json_attr,JSON_COMPACT);
-         log_debug("attributes: %s",core_dump_timestamp_attr);
+      pclose(fp);
 
-         json_t*config_core_obj_json_attr;
-         config_core_obj_json_attr=json_object_get(config_obj_json_attr,"core_dump_upload_file");
-         core_dump_timestamp_attr=json_dumps(config_core_obj_json_attr,JSON_COMPACT);
-         log_debug("Core dump upload file: %s",core_dump_timestamp_attr);
+   fp = popen(UCI_COMMIT, "r");
+   if( fp == NULL) {
+      log_err("uci commit command failed");
+      exit(1);
+   }
+   pclose(fp);
 
-         json_t*config_delete_obj_json;
-         config_delete_obj_json=json_object_get(config_core_obj_json_attr,"delete_uploaded_file");
-         core_dump_delete=json_integer_value(config_delete_obj_json);
-         log_debug("delete upload file : %d",core_dump_delete);
-
-         status=json_object_set(config_core_obj_json_attr,"delete_uploaded_file",json_integer(delete_file));
-         status=json_object_set(config_obj_json_attr,"core_dump_upload_file",config_core_obj_json_attr);
-         status=json_object_set(attributes_obj_json,"attributes",config_obj_json_attr);
-
-         log_debug("Return after json set is %d",status);
-         core_dump_timestamp_attr=json_dumps(attributes_obj_json,JSON_COMPACT);
-         log_debug("file timestamp: %s",core_dump_timestamp_attr);
-
-         status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
-         log_debug("Return after json set in file is= %d",status);
-      }
    }
    else {
-      log_debug("failed to set delete_uploaded_file in attributes.conf due to same value is there");
+      log_debug("failed to set delete_uploaded_file in dcm_props file due to same value in the conf file");
    }
 
    return 0;
@@ -1736,143 +1727,89 @@ static int timestamp_conversion(char buff1[])
 
 
 /*
- *  *To get the last checked timestamp from attributes.conf file
+ *  *To get the last checked timestamp from dcm_props file
  *   */
 static void gw_get_core_dump_timestamp(void)
 {
-
-   const char *core_dump_timestamp;
-   int core_dump_delete;
-   json_t*attributes_obj_json;
-   json_error_t error;
-   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
-   if(!attributes_obj_json) {
-      log_debug("attributes.conf is not having a valid json");
-   }else{
-      json_t*config_obj_json;
-      config_obj_json=json_object_get(attributes_obj_json,"attributes");
-      core_dump_timestamp=json_dumps(config_obj_json,JSON_COMPACT);
-      log_debug("attributes: %s",core_dump_timestamp);
-
-      json_t*config_core_obj_json;
-      config_core_obj_json=json_object_get(config_obj_json,"core_dump_upload_file");
-      core_dump_timestamp=json_dumps(config_core_obj_json,JSON_COMPACT);
-      log_debug("Core dump timestamp: %s",core_dump_timestamp);
-
-      json_t*config_timestamp_obj_json;
-      config_timestamp_obj_json=json_object_get(config_core_obj_json,"last_checked_timestamp");
-      core_dump_timestamp=json_string_value(config_timestamp_obj_json);
-
-      strcpy(core_timestamp,core_dump_timestamp);
-      log_debug("Get timestamp from conf file : %s",core_timestamp);
-
-      json_t*config_delete_obj_json;
-      config_delete_obj_json=json_object_get(config_core_obj_json,"delete_uploaded_file");
-      core_dump_delete=json_integer_value(config_delete_obj_json);
-      log_debug("Get delete upload file : %d",core_dump_delete);
-
-      delete_fileupload_files = core_dump_delete;
+   FILE *fp;
+   fp = popen(GET_LAST_CHECKED_TIMESTAMP,"r");
+   if( fp == NULL) {
+      log_debug("GET TIMESTAMP FAILED");
+      exit(1);
    }
+   fscanf(fp, "%[^\n]", core_timestamp);
+   log_debug("Get timestamp from conf file : %s",core_timestamp);
+   pclose(fp);
+
+   fp = popen(GET_DELETE_UPLOAD_FILE,"r");
+   if( fp == NULL) {
+   log_debug("GET DELETE UPLOAD FILE FAILED");
+   exit(1);
+   }
+   fscanf(fp, "%d", &delete_fileupload_files);
+   log_debug("Get delete upload file from conf file : %d",delete_fileupload_files);
+   pclose(fp);
 }
 /*
- *  *To set the current timestamp in the attributes.conf.
+ *  *To set the current timestamp in the dcm_props.
  *   */
 static void gw_set_core_dump_timestamp(void)
 {
 
-   char current_timestamp[25];
-   const char *core_dump_timestamp_1;
-   json_t*attributes_obj_json;
-   json_error_t error;
    FILE *fp;
+   char current_timestamp[25];
+   char set_command[100];
 
-   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
-
-   if(!attributes_obj_json) {
-   /*the error variable contains error information*/
+   memset(current_timestamp,0,sizeof(current_timestamp));
+   fp = popen(GET_TIMESTAMP,"r");
+   if( fp == NULL) {
+      log_debug("GET TIMESTAMP FAILED\n");
+      exit(1);
    }
-   else{
-      json_t*config_obj_json_1;
-      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
-      core_dump_timestamp_1=json_dumps(config_obj_json_1,JSON_COMPACT);
-      log_debug("attributes: %s",core_dump_timestamp_1);
+   fscanf(fp, "%[^\n]", current_timestamp);
+   log_debug("Get timestamp from the device : %s",current_timestamp);
+   pclose(fp);
 
-      json_t*config_core_obj_json_1;
-      config_core_obj_json_1=json_object_get(config_obj_json_1,"core_dump_upload_file");
-      core_dump_timestamp_1=json_dumps(config_core_obj_json_1,JSON_COMPACT);
-      log_debug("Core dump upload file: %s",core_dump_timestamp_1);
+   memset(set_command, '\0', sizeof(set_command));
+   snprintf(set_command, sizeof(set_command), SET_LAST_CHECKED_TIMESTAMP, current_timestamp);
 
-      json_t*config_timestamp_obj_json_1;
-      config_timestamp_obj_json_1=json_object_get(config_core_obj_json_1,"last_checked_timestamp");
-      core_dump_timestamp_1=json_string_value(config_timestamp_obj_json_1);
-      log_debug("last_checked_timestamp: %s",core_dump_timestamp_1);
-
-      fp = popen(GET_TIMESTAMP,"r");
-      if( fp == NULL) {
-         log_debug("GET TIMESTAMP FAILED\n");
-         exit(1);
-      }
-      fscanf(fp, "%[^\n]", data);
-      log_debug("Get timestamp from conf file : %s\n",data);
-      pclose(fp);
-
-      memset(current_timestamp,0,sizeof(current_timestamp));
-      memcpy(current_timestamp, data, strlen(data));
-
-      int status=json_object_set(config_core_obj_json_1,"last_checked_timestamp",json_string(current_timestamp));
-      status=json_object_set(config_obj_json_1,"core_dump_upload_file",config_core_obj_json_1);
-      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
-
-      log_debug("Return after json set is %d",status);
-      core_dump_timestamp_1=json_dumps(attributes_obj_json,JSON_COMPACT);
-      log_debug("file timestamp: %s",core_dump_timestamp_1);
-
-      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
-      log_debug("Return after json set in file is= %d",status);
+   fp = popen(set_command,"r");
+   if( fp == NULL) {
+      log_debug("set timestamp in the dcm_props file FAILED");
+      exit(1);
    }
+   pclose(fp);
+
+   fp = popen(UCI_COMMIT, "r");
+   if( fp == NULL) {
+      log_err("uci commit command failed");
+      exit(1);
+   }
+   pclose(fp);
+
 }
 
 static void gw_ota_upgrade_conf(void)
 {
-   const char *new_ota_upgrade;
-   json_t*attributes_obj_json;
-   json_error_t error;
+   FILE *fp;
+   char set_cmd[350];
 
-   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
+   memset(set_cmd, '\0', sizeof(set_cmd));
+   snprintf(set_cmd, sizeof(set_cmd), SET_OTA_TYPE, gw_ota_type);
 
-   if(!attributes_obj_json) {
-   /*the error variable contains error information*/
+   fp = popen(set_cmd,"r");
+   if( fp == NULL) {
+      log_debug("set ota type in the dcm_props file FAILED");
+      exit(1);
    }
-   else{
-       json_t*config_obj_json_1;
-      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
-      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
-      log_debug("get attributes: %s",new_ota_upgrade);
+   pclose(fp);
 
-      json_t*config_core_obj_json_1;
-      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
-      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
-      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
-
-      json_t*config_ota_type_obj_json;
-      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_ota_type");
-      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
-      log_debug("set gw_ota_type: %s",new_ota_upgrade);
-
-      int status=json_object_set(config_core_obj_json_1,"gw_ota_type",json_string(gw_ota_type));
-      status=json_object_set(config_core_obj_json_1,"active_bank",json_string(gw_sys_active_version));
-      status=json_object_set(config_core_obj_json_1,"passive_bank",json_string(gw_sys_passive_version));
-
-      status=json_object_set(config_obj_json_1,"ota_upgrade",config_core_obj_json_1);
-      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
-
-      log_debug("Return after json set is %d",status);
-      new_ota_upgrade=json_dumps(attributes_obj_json,JSON_COMPACT);
-      log_debug("new_ota_upgrade: %s",new_ota_upgrade);
-
-      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
-      log_debug("Return after json set in file is= %d",status);
+   fp = popen(UCI_COMMIT, "r");
+   if( fp == NULL) {
+      log_err("uci commit command failed");
+      exit(1);
    }
+   pclose(fp);
 }
 
 static int appd_ngrok_update(void)
@@ -5172,17 +5109,17 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
 		    confirm_info->err, opts->dev_time_ms);
 	}
 
-       // after upload the files need to set current time in the attributes.conf file
+       // after upload the files need to set current time in the dcm_props file
        if( file_upload_confirm == 1 ) {
 	  // set the current timestamp in the conf file
           gw_set_core_dump_timestamp();
 
-	  // To get the the value from delete_uploaded_file in attributes.conf file
+	  // To get the the value from delete_uploaded_file in dcm_props file
 	  // 0 - don't delete, 1 - delete the files from the device.
 	  gw_get_core_dump_timestamp();
 
 
-          // if already set 1 to delete_uploaded_file in attributes.conf file then delete core files from device
+          // if already set 1 to delete_uploaded_file in dcm_props file then delete core files from device
           if ( delete_fileupload_files == 1 ) {
              FILE *fp;
 
@@ -5327,38 +5264,22 @@ static enum err_t appd_gw_board_type(struct prop *prop, int req_id,
 static enum err_t appd_gw_sys_upgrade_status(struct prop *prop, int req_id,
 		                                   const struct op_options *opts)
 {
-   const char *new_ota_upgrade;
-   json_t*attributes_obj_json;
-   json_error_t error;
+   FILE *fp;
    char tmp[10];
 
    memset(tmp, '\0', sizeof(tmp));
    strcpy(tmp, gw_sys_upgrade_status);
 
-
-   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
-
-   if(!attributes_obj_json) {
-   /*the error variable contains error information*/
+   fp = popen( GET_SYS_UPGRADE_STATUS, "r");
+   if ( fp == NULL ) {
+      log_err("Get sys upgrade status failed");
    }
-   else{
-       json_t*config_obj_json_1;
-      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
-      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
-      log_debug("get attributes: %s",new_ota_upgrade);
+   else {
+      fscanf(fp, "%s", gw_sys_upgrade_status);
+      log_debug(" Get sys upgrade status from dcm_props file : %s", gw_sys_upgrade_status);
+   }
+   pclose(fp);
 
-      json_t*config_core_obj_json_1;
-      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
-      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
-      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
-
-      json_t*config_ota_type_obj_json;
-      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_sys_upgrade_status");
-      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
-      strcpy(gw_sys_upgrade_status,new_ota_upgrade);
-      log_debug("get gw_sys_upgrade_status: %s",gw_sys_upgrade_status);
-
-      }
    if(strcmp(tmp,gw_sys_upgrade_status)){
       log_debug("gw_sys_upgrade_status changed");
       return prop_arg_send(prop, req_id, opts);
@@ -5398,12 +5319,12 @@ static enum err_t appd_gw_sys_active_version(struct prop *prop, int req_id,
    log_debug(">>>>>>>>>> custo %s",cmd);
    if (fp == NULL) {
       log_err("Error in custo iteration");
+      strcpy(gw_sys_active_version, "N/A");
     } else {
       fscanf(fp, "%[^\n]", gw_sys_active_version);
     }
     pclose(fp);
     log_debug("IOT_DEBUG: gw_sys_active_version : %s",gw_sys_active_version);
-
     if(strcmp(tmp,gw_sys_active_version)){
        log_debug("gw_sys_active_version changed");
        return prop_arg_send(prop, req_id, opts);
@@ -5442,6 +5363,7 @@ static enum err_t appd_gw_sys_passive_version(struct prop *prop, int req_id,
    memset(gw_sys_passive_version,'\0', sizeof(gw_sys_passive_version));
    if (fp == NULL) {
       log_err("Error in custo iteration");
+      strcpy(gw_sys_passive_version, "N/A");
    } else {
       fscanf(fp, "%[^\n]", gw_sys_passive_version);
    }

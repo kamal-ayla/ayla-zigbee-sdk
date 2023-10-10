@@ -31,13 +31,7 @@ static bool ota_reboot;		/* reboot if operation successful */
 static bool ota_apply;
 static char *ota_status_socket;
 static char *cmdname;
-static char sysupgrade_status[5];
-//#define ACTIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition booted) | cut -f 1 -d :"
-#define PASSIVE_PARTITION_BLOCK "cat /proc/mtd | grep bootfs$(bootmgr partition notbooted) | cut -f 1 -d :"
-#define CUSTO_VERSION "grep -ir CustoVersion /dev/%s | awk '{print $3}'"
-static char passive_info[500];
 static struct ota_download_param ota;
-static char new_ota[50];
 static const struct option options[] = {
 	{ .val = 'd', .name = "debug"},
 	{ .val = 'f', .name = "foreground"},
@@ -54,8 +48,6 @@ static const struct option options[] = {
 	{ .val = 'k', .name = "key", .has_arg = 1},
 	{ .name = NULL }
 };
-static void conf_update(void);
-static void gw_ota_upgrade_conf(void);
 
 static void usage(void)
 {
@@ -243,86 +235,6 @@ static void ota_status(enum patch_state status)
 	}
 }
 
-static void gw_ota_upgrade_conf(void)
-{
-   const char *new_ota_upgrade;
-   json_t*attributes_obj_json;
-   json_error_t error;
-
-   attributes_obj_json = json_load_file("/etc/config/attributes.conf", 0, &error);
-
-   if(!attributes_obj_json) {
-   /*the error variable contains error information*/
-
-   }
-   else{
-       json_t*config_obj_json_1;
-      config_obj_json_1=json_object_get(attributes_obj_json,"attributes");
-      new_ota_upgrade=json_dumps(config_obj_json_1,JSON_COMPACT);
-      log_debug("get attributes: %s",new_ota_upgrade);
-
-      json_t*config_core_obj_json_1;
-      config_core_obj_json_1=json_object_get(config_obj_json_1,"ota_upgrade");
-      new_ota_upgrade=json_dumps(config_core_obj_json_1,JSON_COMPACT);
-      log_debug("get ota_upgrade status: %s",new_ota_upgrade);
-
-      json_t*config_ota_type_obj_json;
-      config_ota_type_obj_json=json_object_get(config_core_obj_json_1,"gw_ota_type");
-      new_ota_upgrade=json_string_value(config_ota_type_obj_json);
-      log_debug("set gw_ota_type: %s",new_ota_upgrade);
-      strcpy(new_ota,new_ota_upgrade);
-
-      int status=json_object_set(config_core_obj_json_1,"gw_sys_upgrade_status",json_string(sysupgrade_status));
-      status=json_object_set(config_core_obj_json_1,"passive_bank",json_string(passive_info));
-      status=json_object_set(config_obj_json_1,"ota_upgrade",config_core_obj_json_1);
-      status=json_object_set(attributes_obj_json,"attributes",config_obj_json_1);
-
-      log_debug("Return after json set is %d",status);
-      new_ota_upgrade=json_dumps(attributes_obj_json,JSON_COMPACT);
-      log_debug("new_ota_upgrade: %s",new_ota_upgrade);
-
-      status=json_dump_file(attributes_obj_json, "/etc/config/attributes.conf", 0);
-      log_debug("Return after json set in file is= %d",status);
-
-
-   }
-}
-
-static void conf_update(void)
-{
-   FILE *fp;
-   char cmd[200];
-   char mtd_info_id[10];
-   fp = popen(PASSIVE_PARTITION_BLOCK,"r");
-   if (fp == NULL) {
-      log_err("Error in non ition");
-      exit(1);
-   } else {
-   fscanf(fp, "%[^\n]", mtd_info_id);
-
-   }
-   pclose(fp);
-   log_debug("IOT_DEBUG: New OTA mtd info %s",mtd_info_id);
-   sprintf(cmd,"grep -ir CustoVersion /dev/%s | awk '{print $3}",mtd_info_id);
-   snprintf(cmd, sizeof(cmd), CUSTO_VERSION, mtd_info_id);
-   memset(passive_info, '\0', sizeof(passive_info));
-   fp = popen(cmd,"r");
-   log_debug(">>>>>>>>>> custo %s",cmd);
-   if (fp == NULL) {
-   log_err("Error in custo iteration");
-   exit(1);
-   } else {
-      fscanf(fp, "%[^\n]", passive_info);
-   }
-   pclose(fp);
-   log_debug(">>>>> passive build %s",passive_info);
-   // attributes.conf file update with paasive version informtion
-   gw_ota_upgrade_conf();
-}
-
-
-
-
 int main(int argc, char **argv)
 {
    int rc;
@@ -339,7 +251,6 @@ int main(int argc, char **argv)
       log_set_options(LOG_OPT_DEBUG | LOG_OPT_TIMESTAMPS);
    }
    log_set_subsystem(LOG_SUB_OTA);
-   gw_ota_upgrade_conf();
    ota_daemon();
    if (rc) {
       log_err("download init failed");
@@ -363,30 +274,11 @@ int main(int argc, char **argv)
       exit(1);
    }
    if (ota_apply) {
-      if(!strcmp(new_ota,"1")){
-         log_debug("------------------------------------- call new ota -------------------------------------");
-         rc = platform_new_ota_apply();
-         log_debug("IOT_DEBUG: platform new ota apply ret %d",rc);
-         if (rc) {
-            strcpy(sysupgrade_status,"1");
-            gw_ota_upgrade_conf();
-            log_err("new ota apply failed rc %d", rc);
-            ota_status(PB_ERR_FATAL);
+      rc = platform_ota_apply();
+      if (rc) {
+         log_err("apply failed rc %d", rc);
+         ota_status(PB_ERR_FATAL);
             exit(1);
-         }
-         else{
-            strcpy(sysupgrade_status,"0");
-            gw_ota_upgrade_conf();
-         }
-	 conf_update();
-      }
-      else{
-         rc = platform_ota_apply();
-         if (rc) {
-            log_err("apply failed rc %d", rc);
-            ota_status(PB_ERR_FATAL);
-            exit(1);
-	 }
       }
    }
    ota_status(PB_DONE);
