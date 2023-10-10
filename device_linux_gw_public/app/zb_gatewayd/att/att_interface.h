@@ -20,6 +20,7 @@
 #define ATT_POC_SSID		       "SSID"
 #define ATT_POC_CHANNEL		       "Channel"
 #define ATT_POC_PARENT_NODE	       "ParentNode"
+#define ATT_POC_BANDWIDTH              "Bandwidth"
 
 
 #define ATT_POC_GET_ACTIVESTATUS       "get_stainfo.sh -status %s"
@@ -30,6 +31,7 @@
 #define ATT_POC_GET_SSID	       "get_stainfo.sh -ssid %s"
 #define ATT_POC_GET_CHANNEL	       "get_stainfo.sh -channel %s"
 #define ATT_POC_GET_PARENT_NODE        "get_stainfo.sh -parent"
+#define ATT_POC_GET_BANDWIDTH	       "get_stainfo.sh -bandwidth %s"
 
 
 #define ATT_POC_ADDR_LEN         32
