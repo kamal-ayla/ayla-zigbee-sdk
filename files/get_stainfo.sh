@@ -130,7 +130,7 @@ get_sta_channel()
 	if [[ $sta_bssid == "00:00:00:00:00:00" || $sta_interface == "0" ]]; then
 		echo "0"
 	else
-		wl -i $sta_interface channel | grep "current mac channel" | awk '{print $4}'
+		wl -i $sta_interface chanspec |  awk -F'[^0-9]+' '{ print $1 }'
 	fi
 
 }
@@ -313,10 +313,24 @@ get_channel()
         if [ $ap_interface == "0" ]; then          
                echo "0" 
         else
-		wl -i $ap_interface channel | grep "current mac channel" | awk '{print $4}'
+		wl -i $ap_interface chanspec |  awk -F'[^0-9]+' '{ print $1 }'
 	fi
 }
 
+get_bandwidth()
+{
+       if [ -z $1 ]; then
+                echo "0"
+                return
+        fi
+
+       ap_interface=`get_sta_associated_ap $1`
+        if [ $ap_interface == "0" ]; then
+               echo "0"
+        else
+               wl -i $ap_interface chanspec |  awk -F'[^0-9]+' '{ print $2 }'
+       fi
+}
 
 
 get_active()
@@ -461,6 +475,9 @@ case "$1" in
 	-channel)
 		get_channel $Macaddr
 		;;
+        -bandwidth)
+                get_bandwidth $Macaddr
+                ;;
 	-mac)
 		get_assoclist
 		;;
@@ -532,7 +549,7 @@ case "$1" in
 		get_txop_2g
 		;;
 	*)
-		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap \
+		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap|-bandwidth \
 |-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time|-sta_txop_5g|-sta_txop_2g]"
 		exit 1
 		;;

@@ -40,7 +40,7 @@
 
 /* Template with mandatory virtual device info for all nodes */
 #define ATT_POC_TEMPLATE_NAME		"vt_node"
-#define ATT_POC_TEMPLATE_VERSION	"1.0"
+#define ATT_POC_TEMPLATE_VERSION	"2.0"
 
 
 #define ATT_POC_ASSOCLIST		"/tmp/assoclist.txt"
@@ -77,6 +77,7 @@ static const struct node_prop_def att_poc_props[] = {
         { ATT_POC_RSSI,      		PROP_INTEGER,   PROP_FROM_DEVICE },
         { ATT_POC_NOISE,     		PROP_INTEGER,   PROP_FROM_DEVICE },
 	{ ATT_POC_CHANNEL, 	        PROP_INTEGER,   PROP_FROM_DEVICE },
+	{ ATT_POC_BANDWIDTH,            PROP_INTEGER,   PROP_FROM_DEVICE },
 	{ ATT_POC_STATION_TYPE,         PROP_STRING,    PROP_FROM_DEVICE },
 	{ ATT_POC_SSID,    		PROP_STRING,    PROP_FROM_DEVICE },
 	{ ATT_POC_PARENT_NODE,          PROP_STRING,    PROP_FROM_DEVICE },
@@ -108,6 +109,7 @@ struct att_poc_node_data {
 	char StationType[ATT_POC_ADDR_LEN];
 	char SSID[ATT_POC_ADDR_LEN];
 	int Channel;
+	int Bandwidth;
 	char ParentNode[ATT_POC_ADDR_LEN];
 
 	uint16_t update_Active:1;
@@ -117,6 +119,7 @@ struct att_poc_node_data {
 	uint16_t update_StationType:1;
 	uint16_t update_SSID:1;
 	uint16_t update_Channel:1;
+	uint16_t update_Bandwidth:1;
 	uint16_t update_ParentNode:1;
 };
 
@@ -376,6 +379,10 @@ void att_poll(void)
                 exec_systemcmd(command, data, DATA_SIZE);
                 att_set_node_data(att_macaddr, ATT_POC_CHANNEL, data);
 
+		snprintf(command, sizeof(command), ATT_POC_GET_BANDWIDTH, att_macaddr);
+		exec_systemcmd(command, data, DATA_SIZE);
+		att_set_node_data(att_macaddr, ATT_POC_BANDWIDTH, data);
+
                 sprintf(command, ATT_POC_GET_PARENT_NODE);
                 exec_systemcmd(command, data, DATA_SIZE);
                 att_set_node_data(att_macaddr, ATT_POC_PARENT_NODE, data);
@@ -500,7 +507,7 @@ static void att_debug_print_node_info(const struct att_node_info *info)
 
 	log_debug("RSSI=%d, Noise=%d, StationType=%s", data->RSSI, data->Noise, data->StationType);
 
-	log_debug("SSID=%s, Channel=%d, ParentNode=%s", data->SSID, data->Channel, data->ParentNode);
+	log_debug("SSID=%s, Channel=%d, Bandwidth=%d, ParentNode=%s", data->SSID, data->Channel, data->Bandwidth, data->ParentNode);
 }
 
 /*
@@ -721,6 +728,11 @@ static int att_send_node_props(struct node *vt_node, bool update)
                 att_send_node_prop(vt_node, ATT_POC_CHANNEL, &data->Channel);
                 data->update_Channel = 0;
         }
+
+	if ((update && data->update_Bandwidth) || !update) {
+		att_send_node_prop(vt_node, ATT_POC_BANDWIDTH, &data->Bandwidth);
+		data->update_Bandwidth = 0;
+	}
 
 	if ((update && data->update_StationType) || !update) {
                 att_send_node_prop(vt_node, ATT_POC_STATION_TYPE, data->StationType);
@@ -1010,6 +1022,17 @@ int att_set_node_data(char *macaddr, char *name, char *value)
 
                 data->Channel = tmp;
                 data->update_Channel = 1;
+
+	} else if (!strcmp(name, ATT_POC_BANDWIDTH)) {
+
+		tmp = atoi(value);
+
+		if (tmp == data->Bandwidth) {
+			return 0;
+		}
+
+		data->Bandwidth = tmp;
+		data->update_Bandwidth = 1;
 
         } else if (!strcmp(name, ATT_POC_SSID)) {
                 if (!strcmp(value, data->SSID)) {
