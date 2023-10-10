@@ -4907,6 +4907,78 @@ static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
 }
 
 /*
+ * To run the commands and get the information for update the buffers
+ */
+static void appd_update_from_device_prop_value(void)
+{
+   FILE *fp;
+   static unsigned int ram_mb, ram_kb;
+   static unsigned int cpusage;
+   char buffer[10];
+   fp = popen(GET_RAM_FREE,"r");
+   if (fp == NULL) {
+      log_err("Ram usage get failed");
+      exit(1);
+   }
+   fscanf(fp, "%d", &ram_kb);
+   pclose(fp);
+   ram_mb = ram_kb / 1024;
+
+   // Displaying output
+   log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+   strcpy(ram_usage,"Free=");
+   sprintf(buffer,"%d",ram_mb);
+   strcat(ram_usage,buffer);
+   strcat(ram_usage,"MB");
+
+   fp = popen(GET_RAM_USED,"r");
+   if (fp == NULL) {
+      log_err("Ram usage get failed");
+      exit(1);
+   }
+   fscanf(fp, "%d", &ram_kb);
+   pclose(fp);
+   ram_mb = ram_kb / 1024;
+
+   // Displaying output
+   log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+   strcat(ram_usage," Used=");
+   sprintf(buffer,"%d",ram_mb);
+   strcat(ram_usage,buffer);
+   strcat(ram_usage,"MB");
+
+   fp = popen(GET_RAM_TOTAL,"r");
+   if (fp == NULL) {
+      log_err("Ram usage get failed");
+      exit(1);
+   }
+   fscanf(fp, "%d", &ram_kb);
+   pclose(fp);
+   ram_mb = ram_kb / 1024;
+
+   // Displaying output
+    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
+    strcat(ram_usage," Total=");
+    sprintf(buffer,"%d",ram_mb);
+    strcat(ram_usage,buffer);
+    strcat(ram_usage,"MB");
+    log_debug(" ram_usage is :%s\n", ram_usage);
+
+    memset(buffer,'\0',sizeof(buffer));
+    fp = popen(GET_CURRENT_CPU_USAGE,"r");
+    if (fp == NULL) {
+       log_err("cpu usage get failed");
+       exit(1);
+    }
+    fscanf(fp, "%d", &cpusage);
+    pclose(fp);
+    sprintf(buffer,"%d",cpusage);
+    strcpy(cpu_usage,buffer);
+    strcat(cpu_usage,"%");
+    log_debug(" cpu_usage is :%s\n", cpu_usage);
+}
+
+/*
  *To get the device cpu_usage.
  */
 static enum err_t appd_cpu_usage_send(struct prop *prop, int req_id,
@@ -6430,6 +6502,8 @@ void appd_connectivity_event(enum app_conn_type type, bool up)
 	/* Some tasks should be performed when first connecting to the cloud */
 	if (type == APP_CONN_CLOUD && up) {
 		if (first_connection) {
+                        // update properties buffer before sending to the cloud
+			appd_update_from_device_prop_value();
 			/*
 			 * Send all from-device properties to update the
 			 * service on first connection.  This is helpful to
