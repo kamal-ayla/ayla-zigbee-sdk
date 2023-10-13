@@ -1991,8 +1991,9 @@ static void start_kvs_streaming(struct node* node)
 	log_warn("now setting the env list");
 	i = 0;
 	env[i++]=GST_PLUGIN_PATH_ENV;
-	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	//env[i++]=ADDITIONAL_LIB_PATH_ENV;
 	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
+	env[i++]=AWS_CERT_PATH_ENV;
 	env[i++]=aws_key_id;
 	env[i++]=aws_secret;
 	env[i++]=aws_region;
@@ -2074,8 +2075,9 @@ static void start_webrtc_streaming(struct node* node)
 	env[i++]=aws_region;
 	env[i++]=aws_session_token;
 	env[i++]=GST_PLUGIN_PATH_ENV;
-	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	//env[i++]=ADDITIONAL_LIB_PATH_ENV;
 	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
+	env[i++]=AWS_CERT_PATH_ENV;
 	env[i]=NULL;
 	{
 		int j = 0;
@@ -2161,8 +2163,9 @@ static void start_master_stream(struct node* node)
 	i = 0;
 	env[i++]="GST_DEBUG=\"*:5\"";
 	env[i++]=GST_PLUGIN_PATH_ENV;
-	env[i++]=ADDITIONAL_LIB_PATH_ENV;
+	//env[i++]=ADDITIONAL_LIB_PATH_ENV;
 	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
+	env[i++]=AWS_CERT_PATH_ENV;
 	env[i]=NULL;
 	{
 		int j = 0;

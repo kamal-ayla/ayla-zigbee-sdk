@@ -20,6 +20,7 @@
 #define GST_PLUGIN_PATH_ENV			"GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0"
 #define GST_PLUGIN_SCANNER_PATH_ENV "GST_PLUGIN_SCANNER=/usr/lib/gstreamer-1.0/gst-plugin-scanner"
 #define ADDITIONAL_LIB_PATH_ENV		"LD_LIBRARY_PATH=/usr/lib"
+#define AWS_CERT_PATH_ENV			"AWS_KVS_CACERT_PATH=/etc/certs/cert.pem"
 
 
 struct hls_data {

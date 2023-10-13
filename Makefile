@@ -22,10 +22,11 @@ include $(INCLUDE_DIR)/package.mk
 define Package/ayla-zigbee-sdk
 	SECTION:=utils
 	CATEGORY:=Utilities
-	DEPENDS:= +libcurl +jansson +nginx +fcgi +spawn-fcgi +transformer-tch +glib2 +gstreamer1 +gst1-plugins-base +log4cplus
+	DEPENDS:= +libcurl +jansson +nginx +fcgi +spawn-fcgi +transformer-tch
 	TITLE:=AYLA
 endef
 
+# 	DEPENDS:= +libcurl +jansson +nginx +fcgi +spawn-fcgi +transformer-tch +glib2 +gstreamer1 +gst1-plugins-base +log4cplus
 
 define Package/ayla-zigbee-sdk/description
 	Ayla Module
@@ -148,7 +149,7 @@ define Package/ayla-zigbee-sdk/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/ota/ota_update $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/util/gw_setup_agent/gw_setup_agent $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/host_util/config_gen/config_gen $(1)/usr/bin
-	$(INSTALL_BIN) ./files/kvs_streaming_rtsp.sh $(1)/usr/bin/kvs_streaming_rtsp.sh
+	#$(INSTALL_BIN) ./files/kvs_streaming_rtsp.sh $(1)/usr/bin/kvs_streaming_rtsp.sh
 	$(INSTALL_DIR) $(1)/lib/app
 	$(CP) $(PKG_INSTALL_DIR)/lib/app/libapp.a $(1)/lib/app
 	$(INSTALL_DIR) $(1)/lib/ayla
