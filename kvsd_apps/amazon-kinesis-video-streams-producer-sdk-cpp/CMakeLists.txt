@@ -205,6 +205,7 @@ if(BUILD_GSTREAMER_PLUGIN)
 
   add_library(gstkvssink MODULE ${GST_PLUGIN_SOURCE_FILES})
   target_link_libraries(gstkvssink PRIVATE ${GST_APP_LIBRARIES} KinesisVideoProducer)
+  target_link_options(gstkvssink PUBLIC -lglib-2.0 -lgstreamer-1.0 -lgstapp-1.0 -lgobject-2.0 -lgmodule-2.0 -lgstbase-1.0 -lffi)
 
   add_executable(kvs_gstreamer_sample samples/kvs_gstreamer_sample.cpp)
   target_link_libraries(kvs_gstreamer_sample ${GST_APP_LIBRARIES} KinesisVideoProducer)
