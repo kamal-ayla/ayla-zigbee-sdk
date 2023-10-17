@@ -62,7 +62,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "zigbee_gateway_demo_v4.8";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.0";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -380,9 +380,15 @@ static char file_upload_path[512];
 //#define GET_TIMESTAMP "date | awk '{print $2,$3,$4}' | cut -d: -f -2"
 #define GET_TIMESTAMP "date +'%Y-%m-%d %H:%M:%S'"
 #define CORE_DUMP_LOG_FILES_LIST "/tmp/files_list.txt"
-
+#define CHAR_TIMESTAMP 19
+#define BUFFER_LEN 100
+#define METADATA_SIZE 300
+#define CHAR_MINI_SIZE 32
+#define CHAR_SIZE 128
+#define CHAR_MEDIUM_SIZE 256
+#define CHAR_LARGE_SIZE 516
 /* core dump log files verifing one by one */
-static void core_dump_file_verfication(void);
+static int core_dump_file_verfication(void);
 /* timestamp conversion */
 static int timestamp_conversion(char buff1[]);
 /* To set the current timestamp */
@@ -394,15 +400,15 @@ static void gw_ota_upgrade_conf(void);
 /* To get timestamp buffer */
 static char core_timestamp[40];
 //static char file_timestamp[40];
-static char log_file_path[256];
-static char log_time[128];
-static char metadata_log[300];
-//static char tar_cmd[350];
+static char log_file_path[CHAR_MEDIUM_SIZE];
+static char log_time[CHAR_SIZE];
+static char metadata_log[METADATA_SIZE];
 /* flag will be verifed in the fileupload callback function */
 static int file_upload_confirm = 0;
 /* delete file update status in the conf file */
 static int delete_fileupload_files;
 static int delete_file;
+static int gw_crash_count;
 /* data convert to the UPPER CASE */
 
 /* serial number command  */
@@ -457,7 +463,8 @@ static char dev_reboot_cause[CAUSE_LEN];
 // core dump get commands:
 #define GET_LAST_CHECKED_TIMESTAMP "uci get dcm_props.core_dump_upload_file.last_checked_timestamp"
 #define GET_DELETE_UPLOAD_FILE "uci get dcm_props.core_dump_upload_file.delete_uploaded_file"
-
+#define SET_CRASH_COUNT "uci set dcm_props.core_dump_upload_file.crash_count='%d'"
+#define GET_CRASH_COUNT "uci get dcm_props.core_dump_upload_file.crash_count"
 
 // OTA set commands
 #define SET_OTA_TYPE "uci set dcm_props.ota_upgrade.gw_ota_type='%s'"
@@ -1324,7 +1331,6 @@ void appd_prop_init()
 
    timer_set(app_get_timers(), &reboot_cause_update_timer, 180000);
 }
-
 /*
  *Reboot cause update timer
  */
@@ -1524,47 +1530,61 @@ static enum err_t gw_serial_number_send(struct prop *prop, int req_id,
 /*
  * check the log files in the device and get the timestamp and file name
  */
-static void  core_dump_file_verfication(void)
+static int  core_dump_file_verfication(void)
 {
-   FILE *fp;
-   FILE *fp1;
-   FILE *fp2;
-   char line[100];
+   FILE *cmd_fp;
+   FILE *cmd_resp;
+   FILE *core_dump;
+   char line[BUFFER_LEN];
    int log_file = 0;
    int conf_file = 0;
    int core_file = 0;
-   char file_timestamp[20];
-   char tar_cmd[516];
+   char file_timestamp[CHAR_MINI_SIZE];
+   char tar_cmd[CHAR_LARGE_SIZE];
    char core_file_path[350];
-   char tmp[80];
-   char buf[128];
+   char tmp[CHAR_MAX];
+   char buf[CHAR_MAX];
    int i = 0;
    int log_flag = 0;
    char *array[3];
+   int crash_count = 0;
+   char crash_cmd[CHAR_SIZE];
    unsigned int core_dump_exist = 0;
 
    // To list of core dump log file names and timestamp  routing to the log list file
-   fp = popen(GET_CORE_DUMP_LOG_FILE,"r");
-   if (fp == NULL) {
+   cmd_fp = popen(GET_CORE_DUMP_LOG_FILE,"r");
+   if (cmd_fp == NULL) {
       log_debug("Get log file failed");
-      exit(1);
+      pclose(cmd_fp);
+      return 1;
    }
-   pclose(fp);
+   pclose(cmd_fp);
 
   // To verify the log list file availble or not
-   fp1 =  fopen ( CORE_DUMP_LOG_FILES_LIST, "r" );
-   if (fp1 == NULL ) {
+   cmd_resp =  fopen ( CORE_DUMP_LOG_FILES_LIST, "r" );
+   if ( cmd_resp == NULL ) {
 	 log_debug ("log list file failed !!!");
-	exit(1);
+	 fclose(cmd_resp);
+	 return 1;
    }
    else {
+      // To get the crash count from dcm_props file
+      cmd_fp = popen(GET_CRASH_COUNT,"r");
+      if( cmd_fp == NULL) {
+         log_debug("GET CRASH COUNT FILE FAILED");
+	 pclose(cmd_fp);
+         return 1;
+      }
+      fscanf(cmd_fp, "%d", &crash_count);
+      log_debug("Get crash count from dcm_props file : %d",crash_count);
+      pclose(cmd_fp);
 
       memset(metadata_log,'\0',sizeof(metadata_log));
       memset(buf,'\0',sizeof(buf));
       // Read date & time, file name line by line
-      while(fgets(line, sizeof(line), fp1)) {
+      while(fgets(line, sizeof(line), cmd_resp)) {
          memset(file_timestamp,'\0',sizeof(file_timestamp));
-	 memcpy(file_timestamp,line, 19);
+	 memcpy(file_timestamp,line, CHAR_TIMESTAMP);
          log_debug("file timestamp : %s",file_timestamp);
 
 	 // log file date & time convert into integer format
@@ -1576,6 +1596,7 @@ static void  core_dump_file_verfication(void)
 	 // check log file timestamp should be greate than last checked timestamp
          if ( log_file > conf_file ) {
             log_debug("file timestamp is greater than last check timestamp !!!");
+	    crash_count++;
 	    log_flag = 1;
             strcat(buf,file_timestamp);
             strcat(buf,",");
@@ -1610,14 +1631,15 @@ static void  core_dump_file_verfication(void)
 
       memset(core_file_path,'\0',sizeof(core_file_path));
       // To get the core dump file name
-      fp = popen(GET_CORE_DUMP_FILE,"r");
-      if (fp == NULL) {
+      cmd_fp = popen(GET_CORE_DUMP_FILE,"r");
+      if (cmd_fp == NULL) {
          log_debug("Get core dump file failed");
-         exit(1);
+	 pclose(cmd_fp);
+         return 1;
       } else {
          memset(file_path,'\0',sizeof(file_path));
-         fscanf(fp, "%[^\n]", file_path);
-         pclose(fp);
+         fscanf(cmd_fp, "%[^\n]", file_path);
+         pclose(cmd_fp);
          if(strcmp(file_path, "")) {
             // core file date & time convert into integer format
 	    core_file = timestamp_conversion(file_path);
@@ -1626,16 +1648,18 @@ static void  core_dump_file_verfication(void)
 
 	    log_debug("core timestamp : %s, conf timestamp : %s",file_path, core_timestamp);
 	    if ( core_file > conf_file ) {
-               fp2 = popen(GET_CORE_DUMP_FILE_NAME,"r");
-               if (fp2 == NULL) {
+               core_dump = popen(GET_CORE_DUMP_FILE_NAME,"r");
+               if (core_dump == NULL) {
                   log_debug("Get TAR file failed");
-                  exit(1);
+		  pclose(core_dump);
+                  return 1;
                } else {
-                  fscanf(fp2, "%s", core_file_path);
+                  fscanf(core_dump, "%s", core_file_path);
                   log_debug("core dump file name : %s",core_file_path);
 	       }
                if ( log_flag == 0) {
-                  strcpy(metadata_log, core_file_path+6);
+		  crash_count++;
+		  strcpy(metadata_log, core_file_path+6);
 		  strcat(metadata_log," ");
 		  log_debug(" metadata core dump file : %s",metadata_log);
                   strcpy(log_time, file_path);
@@ -1643,12 +1667,32 @@ static void  core_dump_file_verfication(void)
 		  log_debug("metadata core dump file timestamp: %s",log_time);
 	       }
 	       core_dump_exist = 1;
-	       pclose(fp2);
+	       pclose(core_dump);
+
+               //crash_count++;
+               snprintf(crash_cmd, sizeof(crash_cmd), SET_CRASH_COUNT, crash_count);
+	       log_debug("set crash count : %d in the dcm_props file",crash_count);
+	       // To set crash count in the dcm_props file
+               core_dump = popen(crash_cmd,"r");
+               if( core_dump == NULL) {
+                  log_debug("SET CRASH COUNT FILE FAILED");
+		  pclose(core_dump);
+                  return 1;
+                }
+                pclose(core_dump);
+
+               core_dump = popen(UCI_COMMIT, "r");
+               if( core_dump == NULL) {
+                  log_debug("uci commit command failed");
+		  pclose(core_dump);
+                  return 1;
+               }
+               pclose(core_dump);
+
 	    }
          }
 
       }
-      //pclose(fp);
 
       if ( ( core_dump_exist == 1) || ( log_flag == 1) ) {
          if( strcmp( core_file_path, "" )) {
@@ -1659,20 +1703,22 @@ static void  core_dump_file_verfication(void)
 	 snprintf(tar_cmd, sizeof(tar_cmd), CREATE_TAR_FILE, core_file_path);
 	 log_debug("TAR create command : %s", tar_cmd);
          // execute the tar command
-	 fp = popen(tar_cmd, "r");
-         if (fp == NULL) {
+	 cmd_fp = popen(tar_cmd, "r");
+         if (cmd_fp == NULL) {
             log_err("TAR command failed");
-            exit(1);
+	    pclose(cmd_fp);
+            return 1;
          }
-         pclose(fp);
+         pclose(cmd_fp);
 	 // To check the tar file name
-         fp = popen(GET_TAR_FILE,"r");
-         if (fp == NULL) {
+         cmd_fp = popen(GET_TAR_FILE,"r");
+         if (cmd_fp == NULL) {
             log_debug("Get TAR file failed");
-            exit(1);
+	    pclose(cmd_fp);
+            return 1;
          } else {
             memset(file_path,'\0',sizeof(file_path));
-            fscanf(fp, "%s", file_path);
+            fscanf(cmd_fp, "%s", file_path);
 
             if(strcmp(file_path, "")) {
                log_debug("TAR file name: %s\n",file_path);
@@ -1682,15 +1728,34 @@ static void  core_dump_file_verfication(void)
             }
 
          }
-         pclose(fp);
+         pclose(cmd_fp);
 
       }
 
    }
-   fclose(fp1);
+   fclose(cmd_resp);
 
+   cmd_fp = popen(GET_CRASH_COUNT,"r");
+   if( cmd_fp == NULL) {
+      log_debug("GET CRASH COUNT FILE FAILED");
+      pclose(cmd_fp);
+      return 1;
+   }
+   fscanf(cmd_fp, "%d", &crash_count);
+   log_debug("Get crash count from dcm_props file : %d",crash_count);
+   pclose(cmd_fp);
+
+   if ( gw_crash_count != crash_count ) {
+      gw_crash_count = crash_count;
+      prop_send_by_name("gw_crash_count");
+   }
+   else {
+     log_debug("same crash count should not be send to the cloud");
+   }
    // enable file upload flag and verify in the file upload callback function .
    file_upload_confirm = 1;
+
+   return 0;
 }
 
 /*
@@ -4909,12 +4974,13 @@ static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
 /*
  * To run the commands and get the information for update the buffers
  */
-static void appd_update_from_device_prop_value(void)
+static int appd_update_from_device_prop_value(void)
 {
    FILE *fp;
+   FILE *get_val;
    static unsigned int ram_mb, ram_kb;
    static unsigned int cpusage;
-   char buffer[10];
+   char buffer[CHAR_MINI_SIZE];
    fp = popen(GET_RAM_FREE,"r");
    if (fp == NULL) {
       log_err("Ram usage get failed");
@@ -4976,6 +5042,19 @@ static void appd_update_from_device_prop_value(void)
     strcpy(cpu_usage,buffer);
     strcat(cpu_usage,"%");
     log_debug(" cpu_usage is :%s\n", cpu_usage);
+
+    // To get the crash count from dcm_props file
+    get_val = popen(GET_CRASH_COUNT,"r");
+    if( get_val == NULL) {
+       log_debug("GET CRASH COUNT COMMAND FAILED");
+       pclose(get_val);
+       return 1;
+    }
+    fscanf(get_val, "%d", &gw_crash_count);
+    log_debug("Get crash count from dcm_props file after networkup : %d",gw_crash_count);
+    pclose(get_val);
+
+    return 0;
 }
 
 /*
@@ -6143,7 +6222,15 @@ static struct prop appd_gw_prop_table[] = {
 		.send = appd_gw_sys_upgrade_status,
 		.arg = &gw_sys_upgrade_status,
 		.len = sizeof(gw_sys_upgrade_status),
-	}
+	},
+        {
+                .name = "gw_crash_count",
+                .type = PROP_INTEGER,
+                .send = prop_arg_send,
+                .arg = &gw_crash_count,
+                .len = sizeof(gw_crash_count),
+        }
+
 };
 
 
@@ -6495,6 +6582,7 @@ void appd_factory_reset(void)
 void appd_connectivity_event(enum app_conn_type type, bool up)
 {
 	static bool first_connection = true;
+	int status = 0;
 
 	log_info("%s connection %s", app_conn_type_strings[type],
 	    up ? "UP" : "DOWN");
@@ -6503,7 +6591,10 @@ void appd_connectivity_event(enum app_conn_type type, bool up)
 	if (type == APP_CONN_CLOUD && up) {
 		if (first_connection) {
                         // update properties buffer before sending to the cloud
-			appd_update_from_device_prop_value();
+			status = appd_update_from_device_prop_value();
+			if ( status == 1 ) {
+				log_debug("appd_update_from_device_prop_value failed to execute");
+			}
 			/*
 			 * Send all from-device properties to update the
 			 * service on first connection.  This is helpful to
@@ -6517,7 +6608,10 @@ void appd_connectivity_event(enum app_conn_type type, bool up)
 
 			first_connection = false;
 
-			core_dump_file_verfication();
+			status = core_dump_file_verfication();
+			if ( status == 1 ) {
+				log_debug(" core dump verifcation functinality failed !!!");
+			}
 
 		}
 		/*
