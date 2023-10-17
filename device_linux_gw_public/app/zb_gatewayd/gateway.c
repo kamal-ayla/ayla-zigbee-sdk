@@ -472,6 +472,27 @@ static char dev_reboot_cause[CAUSE_LEN];
 #define GET_OTA_TYPE "uci get dcm_props.ota_upgrade.gw_ota_type"
 #define GET_SYS_UPGRADE_STATUS "uci get dcm_props.ota_upgrade.gw_sys_upgrade_status"
 
+/*Wi-Fi Status*/
+unsigned int wifi_2g_status;
+unsigned int wifi_5g_status;
+#define WIFI_FREQ_BAND_CMD "uci get mesh_broker.%s.frequency_bands"
+#define GET_WIFI_STATUS    "wireless_get_overview.sh | grep %s, | awk '{print $3}'"
+#define MAX_CMD_BUF_LEN             64
+#define MAX_STATUS_VAL_BUF_LEN      8
+#define MAX_CRED_BUF_LEN            200
+#define MAX_LABEL_BUF_LEN           40
+#define MAX_LABEL_VAL_BUF_LEN       32
+#define MAX_FREQ_BAND_BUF_LEN       64
+#define MAX_IFACE_BUF_LEN           64
+#define MAX_FREQ_BUF_LEN            32
+#define MAX_LABEL_ARR_LEN           24
+
+
+
+
+static void appd_wifi_status_update(void);
+static void  gw_wifi_verification(void);
+
 void uppercase_convert(char str[])
 {
     int i;
@@ -4471,7 +4492,9 @@ void appd_wifi_sta_poll()
         
 	// guest ssid 2g & 5g enable/disable properties update only when the change status
 	appd_guest_status_update();
-	
+
+        // gateway ssid 2g & 5g enable/disable properties update only when the change status
+        appd_wifi_status_update();
 }
 
 
@@ -6007,7 +6030,7 @@ static struct prop appd_gw_prop_table[] = {
                 .skip_init_update_from_cloud = 1,
         },
         {
-                .name = "gw_wifi_guest_2g_status",
+                .name = "gw_wifi_guest_2G_status",
                 .type = PROP_INTEGER,
 		.send = prop_arg_send,
 //                .send = appd_guest_ssid_2g_status_send,
@@ -6016,7 +6039,7 @@ static struct prop appd_gw_prop_table[] = {
                 .skip_init_update_from_cloud = 1,
         },
         {
-                .name = "gw_wifi_guest_5g_status",
+                .name = "gw_wifi_guest_5G_status",
                 .type = PROP_INTEGER,
 		.send = prop_arg_send,
 //                .send = appd_guest_ssid_5g_status_send,
@@ -6229,6 +6252,22 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_crash_count,
                 .len = sizeof(gw_crash_count),
+        },
+		{
+                .name = "gw_wifi_2G_status",
+                .type = PROP_INTEGER,
+		.send = prop_arg_send,
+                .arg = &wifi_2g_status,
+                .len = sizeof(wifi_2g_status),
+                .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_5G_status",
+                .type = PROP_INTEGER,
+		.send = prop_arg_send,
+                .arg = &wifi_5g_status,
+                .len = sizeof(wifi_5g_status),
+                .skip_init_update_from_cloud = 1,
         }
 
 };
@@ -6500,7 +6539,7 @@ static void appd_guest_status_update(void)
     }
 
     if ( tmp != guest_2g_status ) {
-       prop_send_by_name("gw_wifi_guest_2g_status");
+       prop_send_by_name("gw_wifi_guest_2G_status");
     }
 
     tmp = guest_5g_status;
@@ -6513,7 +6552,7 @@ static void appd_guest_status_update(void)
     }
 
     if ( tmp != guest_5g_status ) {
-       prop_send_by_name("gw_wifi_guest_5g_status");
+       prop_send_by_name("gw_wifi_guest_5G_status");
     }
 
 
@@ -6640,4 +6679,186 @@ void appd_registration_event(bool registered)
 		 */
 		prop_send_from_dev(true);
 	}
+}
+
+/*
+ * Wi-Fi ssid 5g & 2g enable/disable status will be updated in the corresponding properies
+ */
+static void appd_wifi_status_update(void)
+{
+        int temp_2g_status = 0;
+        int temp_5g_status = 0;
+        FILE *cmd_fp = NULL;
+        char command[MAX_CMD_BUF_LEN]={0};
+        char status_value[MAX_STATUS_VAL_BUF_LEN]={0};
+
+        gw_wifi_verification();
+
+        if ( 0 == strcmp ( iface_val_5g, "") )
+        {
+                temp_5g_status = 0;
+                log_debug("[%d]5G Wi-Fi status disabled ",__LINE__);
+                if(temp_5g_status != wifi_5g_status)
+                {
+                        wifi_5g_status = temp_5g_status;
+                        prop_send_by_name("gw_wifi_5G_status");
+                }
+        }else{
+                memset(command,0x00,sizeof(command));
+                sprintf(command,GET_WIFI_STATUS,iface_val_5g);
+                cmd_fp = popen(command,"r");
+                if(NULL != cmd_fp)
+                {
+                        fscanf(cmd_fp, "%[^\n]", status_value);
+                        pclose(cmd_fp);
+                        if(0 == strcmp(status_value,"1/1"))
+                        {
+                                temp_5g_status = 1;
+                                log_debug("[%d]5G Wi-Fi status enabled",__LINE__);
+                                if(temp_5g_status != wifi_5g_status)
+                                {
+                                        wifi_5g_status = temp_5g_status;
+                                        prop_send_by_name("gw_wifi_5G_status");
+                                }
+                        }else{
+                                temp_5g_status = 0;
+                                if(temp_5g_status != wifi_5g_status)
+                                {
+                                        wifi_5g_status = temp_5g_status;
+                                        prop_send_by_name("gw_wifi_5G_status");
+                                }
+                                log_debug("[%d]5G Wi-Fi status disabled",__LINE__);
+                        }
+
+                }else{
+                        log_debug("[%d]WiFi Status Get failed",__LINE__);
+                }
+        }
+
+        if ( 0 == strcmp (iface_val_2g, "") )
+        {
+                temp_2g_status = 0;
+                log_debug("[%d]2G Wi-Fi status disabled",__LINE__);
+                if(temp_2g_status != wifi_2g_status)
+                {
+                        wifi_2g_status = temp_2g_status;
+                        prop_send_by_name("gw_wifi_2G_status");
+                }
+        }else{
+                memset(command,0x00,sizeof(command));
+                memset(status_value,0x00,sizeof(status_value));
+                sprintf(command,GET_WIFI_STATUS,iface_val_2g);
+                cmd_fp = popen(command,"r");
+                if(NULL != cmd_fp)
+                {
+                        fscanf(cmd_fp, "%[^\n]", status_value);
+                        pclose(cmd_fp);
+                        if(0 == strcmp(status_value,"1/1"))
+                        {
+                                temp_2g_status = 1;
+                                log_debug("[%d]2G Wi-Fi status enabled",__LINE__);
+                                if(temp_2g_status != wifi_2g_status)
+                                {
+                                        wifi_2g_status = temp_2g_status;
+                                        prop_send_by_name("gw_wifi_2G_status");
+                                }
+                        }else{
+                                temp_2g_status = 0;
+                                if(temp_2g_status != wifi_2g_status)
+                                {
+                                        wifi_2g_status = temp_2g_status;
+                                        prop_send_by_name("gw_wifi_2G_status");
+                                }
+                                log_debug("[%d]2G Wi-Fi status disabled",__LINE__);
+                        }
+                }
+
+        }
+}
+
+/*
+ * To Get the wireless interface of the wifi ssid
+ */
+static void  gw_wifi_verification(void) {
+
+        FILE *cmd_fp=NULL;
+        char cred[MAX_CRED_BUF_LEN];
+        char label[MAX_LABEL_BUF_LEN];
+        char label_val[MAX_LABEL_VAL_BUF_LEN];
+        char freq_band[MAX_FREQ_BAND_BUF_LEN];
+        char iface[MAX_IFACE_BUF_LEN];
+        char frequency[MAX_FREQ_BUF_LEN]={0};
+        int i = 0;
+        char *array[MAX_LABEL_ARR_LEN];
+
+        cmd_fp = popen(CRED_LIST_CMD,"r");
+        if(NULL != cmd_fp)
+        {
+                fscanf(cmd_fp, "%[^\n]", cred);
+                log_debug("Get list of credtionals value : %s",cred);
+                pclose(cmd_fp);
+        }else{
+                log_debug("Get failed");
+        }
+
+        char *token = strtok( cred, " ");
+
+        /* Verify other tokens */
+        while( token != NULL ) {
+                array[i++] = token;
+                token = strtok(NULL, " ");
+        }
+
+        for ( int j=0; j < i; j++ ) {
+                memset(label, '\0', sizeof(label));
+                snprintf(label, sizeof(label), LABEL_CMD, array[j]);
+                memset(label_val,0x00,sizeof(label_val));
+                cmd_fp = popen(label,"r");
+                if (NULL != cmd_fp) {
+                        fscanf(cmd_fp, "%[^\n]", label_val);
+                        pclose(cmd_fp);
+                } else {
+                        log_debug("Get label failed");
+                }
+                memset(freq_band,0x00,sizeof(freq_band));
+                snprintf(freq_band, sizeof(freq_band), WIFI_FREQ_BAND_CMD, array[j]);
+                memset(frequency,0x00,sizeof(frequency));
+                cmd_fp = popen(freq_band,"r");
+                if (NULL != cmd_fp) {
+                        fscanf(cmd_fp, "%[^\n]", frequency);
+                        pclose(cmd_fp);
+                } else {
+                        log_debug("Get frequency band failed");
+                }
+
+                if (  ( strcmp(label_val, "Main" ) == 0 ) && ( 0 == strcmp(frequency,"2") ) )
+                {
+                        snprintf(iface, sizeof(iface), IFACE_CMD, array[j]);
+
+                        cmd_fp = popen(iface,"r");
+                        if (NULL != cmd_fp) {
+                                memset(iface_val_2g,'\0',sizeof(iface_val_2g));
+                                fscanf(cmd_fp, "%[^\n]", iface_val_2g);
+                                log_debug("Get iface 2g  value : %s",iface_val_2g);
+                                pclose(cmd_fp);
+                        } else {
+                                log_debug("Get iface failed");
+                        }
+
+                }
+                else if( ( strcmp(label_val, "Main" ) == 0 )&& ( 0 == strcmp(frequency,"5L,5H") ) )
+                {
+                        snprintf(iface, sizeof(iface), IFACE_CMD, array[j]);
+
+                        cmd_fp = popen(iface,"r");
+                        if (cmd_fp != NULL) {
+                                memset(iface_val_5g,'\0',sizeof(iface_val_5g));
+                                fscanf(cmd_fp, "%[^\n]", iface_val_5g);
+                                log_debug("Get iface 5g  value : %s",iface_val_5g);
+                                pclose(cmd_fp);
+                        } else {
+                                log_debug("Get iface failed");
+                        }
+                }
+        }
 }
