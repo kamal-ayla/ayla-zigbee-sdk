@@ -63,7 +63,7 @@
 
 
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "vantiva_zigbee_gateway_v1.0";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.1";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -128,6 +128,7 @@ int appd_mesh_controller_status();
 /* Station properties  */
 static int wifi_sta_info_update;
 static int wifi_sta_channel;
+static int wifi_sta_bandwidth;
 static int wifi_sta_noise;
 static int wifi_sta_RSSI;
 static int gw_wifi_txop_5g;
@@ -146,6 +147,7 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define WIFI_STA_RSSI			"wifi_sta_RSSI"
 #define WIFI_STA_NOISE			"wifi_sta_noise"
 #define WIFI_STA_CHANNEL		"wifi_sta_channel"
+#define WIFI_STA_BANDWIDTH              "wifi_sta_bandwidth"
 #define WIFI_STA_ASSOCIATED_SSID	"wifi_sta_associated_SSID"
 #define WIFI_STA_ASSOCIATED_BSSID	"wifi_sta_associated_BSSID"
 #define GW_WIFI_BSSID_FRONTHAUL_5G      "gw_wifi_BSSID_fronthaul_5G"
@@ -162,6 +164,7 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
 #define WIFI_GET_STA_CHANNEL            "get_stainfo.sh -sta_channel"
+#define WIFI_GET_STA_BANDWIDTH            "get_stainfo.sh -sta_bandwidth"
 #define WIFI_GET_STA_ASSOCIATED_SSID    "get_stainfo.sh -sta_ssid"
 #define WIFI_GET_STA_ASSOCIATED_BSSID   "get_stainfo.sh -sta_bssid"
 #define GW_WIFI_GET_BSSID_FRONTHAUL_5G  "get_stainfo.sh -sta_bssid_fronthaul_5G"
@@ -4412,6 +4415,12 @@ void appd_wifi_sta_poll()
 	exec_systemcmd(command, data, DATA_SIZE);
 	appd_send_wifi_sta_data(WIFI_STA_CHANNEL, data);
 
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        snprintf(command, sizeof(command), "%s", WIFI_GET_STA_BANDWIDTH);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(WIFI_STA_BANDWIDTH, data);
+
 	memset(command,'\0',sizeof(command));
 	memset(data,'\0',sizeof(data));
 	sprintf(command, WIFI_GET_STA_ASSOCIATED_SSID);
@@ -4586,6 +4595,18 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 		}
 
 		wifi_sta_channel = tmp;
+
+		prop_send_by_name(name);
+
+        } else if (!strcmp(name, WIFI_STA_BANDWIDTH)) {
+
+               tmp = atoi(value);
+
+               if (tmp == wifi_sta_bandwidth) {
+                       return 0;
+               }
+
+               wifi_sta_bandwidth = tmp;
 
 		prop_send_by_name(name);
 
@@ -5860,6 +5881,13 @@ static struct prop appd_gw_prop_table[] = {
 		.send = prop_arg_send,
 		.arg = &wifi_sta_channel,
 		.len = sizeof(wifi_sta_channel),
+	},
+	{
+		.name = "wifi_sta_bandwidth",
+		.type = PROP_INTEGER,
+		.send = prop_arg_send,
+		.arg = &wifi_sta_bandwidth,
+		.len = sizeof(wifi_sta_bandwidth),
 	},
 	{
 		.name = "wifi_sta_noise",
