@@ -307,6 +307,7 @@ static void setPacketBufferCount(void)
   // This is more portable to different NCP hardware (i.e. 357 vs. 260).
   ezspStatus = ezspGetConfigurationValue(EZSP_CONFIG_PACKET_BUFFER_COUNT,
                                          &value);
+  log_debug("IOT DEBUG: setPacketBufferCount ezspStatus %d",ezspStatus);
 
   if (maxOutBufferStatus == EZSP_SUCCESS) {
     emberAfAppPrintln("NCP supports maxing out packet buffers");
@@ -340,6 +341,7 @@ int emAfResetAndInitNCP(void)
   // ezspInit resets the NCP by calling halNcpHardReset on a SPI host or
   // ashResetNcp on a UART host
   ezspStatus = ezspInit();
+  log_debug("IOT_DEBUG: emAfResetAndInitNCP ezspStatus %d",ezspStatus);
 
   if (ezspStatus != EZSP_SUCCESS) {
     emberAfCorePrintln("ERROR: ezspForceReset 0x%x", ezspStatus);
@@ -440,12 +442,19 @@ int emAfResetAndInitNCP(void)
   EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
 #endif
   emberAfNcpInitCallback(memoryAllocation);
+    if(addresstable_flag!=0){
+          return -1;
+  }
 
   setPacketBufferCount();
 
   // Call the plugin and user-specific NCP inits again.  This is where non-
   // sizing configuration should occur.
   memoryAllocation = false;
+  if(addresstable_flag!=0){
+          return -1;
+  }
+
 #ifdef EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
   EMBER_AF_GENERATED_PLUGIN_NCP_INIT_FUNCTION_CALLS
 #endif
@@ -640,6 +649,7 @@ EzspStatus emberAfSetEzspConfigValue(EzspConfigId configId,
                                      const char * configIdName)
 {
   EzspStatus ezspStatus = ezspSetConfigurationValue(configId, value);
+  log_debug("IOT DEBUG: emberAfSetEzspConfigValue ezsp %d",ezspStatus);
   emberAfAppFlush();
   emberAfAppPrint("Ezsp Config: set %p to 0x%2x:", configIdName, value);
 
@@ -667,6 +677,7 @@ EzspStatus emberAfSetEzspPolicy(EzspPolicyId policyId,
 {
   EzspStatus ezspStatus = ezspSetPolicy(policyId,
                                         decisionId);
+  log_debug("IOT DEBUG : emberAfSetEzspPolicy %d",ezspStatus);
   emberAfAppPrint("Ezsp Policy: set %p to \"%p\":",
                   policyName,
                   decisionName);
@@ -688,6 +699,7 @@ EzspStatus emberAfSetEzspValue(EzspValueId valueId,
 
 {
   EzspStatus ezspStatus = ezspSetValue(valueId, valueLength, value);
+  log_debug("IOT DEBUG : emberAfSetEzspValue %d",ezspStatus);
 
   emberAfAppPrint("Ezsp Value : set %p to ", valueName);
 

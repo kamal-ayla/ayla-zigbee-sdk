@@ -549,16 +549,19 @@ static void data_recv(void *arg, int sock)
 		if (!buf) {
 			/* drop the packet */
 			len = recv(sock, tmp, sizeof(tmp), 0);
+			log_debug("APPD_DEBUG : drop the packet recv %s",tmp);
 			if (len <= 0) {
 				goto disconn;
 			}
 			log_err("mem err");
 			jint_send_error(JINT_ERR_MEM, data_req_id);
+			log_debug("APPD_DEBUG : drop the packet data_req_id %d",data_req_id);
 			jint_incr_id(&data_req_id);
 			return;
 		}
 		memset(buf,0,buf_size);
 		len = recv(sock, buf, buf_size, MSG_PEEK);
+		log_debug("APPD_DEBUG : recv buf %s buf_size %d",buf,buf_size);
 		if (len <= 0) {
 			if (buf) {
 				free(buf);
@@ -576,7 +579,9 @@ disconn:
 		if (buf_size > MAX_RECV_BUFSIZE) {
 			/* drop pkt and send err */
 			recv(sock, tmp, sizeof(tmp), 0);
+			log_debug("APPD_DEBUG : drop pkt and send err tmp %s",tmp);
 			jint_send_error(JINT_ERR_PKTSIZE, data_req_id);
+			log_debug("APPD_DEBUG : data_req_id %d",data_req_id);
 			jint_incr_id(&data_req_id);
 			return;
 		}
@@ -590,7 +595,9 @@ disconn:
 	memset(tmp,0,sizeof(tmp));
 	/* drop the socket pkt, already in buffer due to PEEKs */
 	recv(sock, tmp, sizeof(tmp), 0);
+	log_debug("APDD_DEBUG : data recv before buf : %s, len : %d,",buf,len);
 	root = json_loadb(buf, len, 0, &jerr);
+	log_debug("APDD_DEBUG : data recv after buf : %s, len : %d,",buf,len);
 	if (!root) {
 		log_warn("err %s", jerr.text);
 inval_json:
@@ -605,7 +612,7 @@ inval_json:
 	}
 
 	str_dbg = json_dumps(root, JSON_COMPACT);
-	log_debug("%s", str_dbg);
+	log_debug("APPD DEBUG: str_bdg : %s", str_dbg);
 	free(str_dbg);
 
 	cmd = json_object_get(root, "cmd");

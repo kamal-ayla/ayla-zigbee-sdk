@@ -1443,11 +1443,18 @@ static void gw_node_prop_batch_list_free_helper(struct gw_node_prop_batch_list
 	struct gw_node_prop_batch_entry *entry;
 
 	if (!list) {
+		log_debug("APPD DEBUG : list is empty");
 		return;
 	}
 	while ((entry = STAILQ_FIRST(&list->batchq)) != NULL) {
 		STAILQ_REMOVE_HEAD(&list->batchq, link);
-		gw_cmd_free(entry->gw_cmd);
+		if(entry->gw_cmd==NULL){
+			log_debug("APPD DEBUG entry->gw_cmd is NULL");
+		}
+		if(entry->gw_cmd!=NULL){
+			log_debug("APPD DEBUG entry->gw_cmd not NULL");
+			gw_cmd_free(entry->gw_cmd);
+		}
 		free(entry);
 	}
 		free(list);
@@ -1538,10 +1545,12 @@ void gw_node_prop_batch_list_free(struct gw_node_prop_batch_list **list_ptr)
 	struct gw_node_prop_batch_list *list;
 
 	if (!list_ptr) {
+		log_debug("APPD DEBUG :list ptr empty");
 		return;
 	}
 	list = *list_ptr;
 	if (!list) {
+		log_debug("APPD DEBUG :list empty");
 		return;
 	}
 	if (list->sent) {
@@ -1560,7 +1569,9 @@ static void gw_node_prop_batch_sent_list_free(void *arg)
 	struct gw_node_prop_batch_sent_list *batch_sent_list = arg;
 
 	gw_node_prop_batch_list_free_helper(batch_sent_list->batch_list);
+	if(batch_sent_list!=NULL){
 		free(batch_sent_list);
+	}
 }
 
 /*
