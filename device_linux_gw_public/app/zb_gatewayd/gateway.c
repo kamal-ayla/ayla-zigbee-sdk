@@ -290,6 +290,8 @@ unsigned int guest_2g_status;
 unsigned int guest_5g_status;
 
 static void appd_guest_status_update(void);
+static int appd_tx_power_update(void);
+static int gw_tx_power_init(void);
 
 /* whitelist property */
 #define WHITELIST_LEN 100
@@ -1344,6 +1346,8 @@ void appd_prop_init()
    // Get the last checked timestamp from the attributes conf file
    gw_get_core_dump_timestamp();
 
+   //tx power update
+   gw_tx_power_init();
    // verifing the timestamp available or not in the conf file
    if ( strcmp ( core_timestamp, "" ) == 0 ) {
      // set the current timestamp in the conf file because timestamp not availble
@@ -4495,6 +4499,9 @@ void appd_wifi_sta_poll()
 
         // gateway ssid 2g & 5g enable/disable properties update only when the change status
         appd_wifi_status_update();
+
+	//tx power config update
+	appd_tx_power_update();
 }
 
 
@@ -4824,6 +4831,129 @@ static int appd_gw_ota_type(struct prop *prop, const void *val,
 	log_debug("IOT_DEBUG: OTA type %s",gw_ota_type);
 	gw_ota_upgrade_conf();
 	return 0;
+}
+
+static int appd_gw_tx_power_2G(struct prop *prop, const void *val,
+                                        size_t len, const struct op_args *args)
+{
+
+	FILE *tx_power_2G;
+	char cmd[255];
+        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                 log_err("prop_arg_set returned error");
+                 return -1;
+        }
+	tx_power_2G = popen(GET_TX_POWER_2G,"r");
+	if(tx_power_2G == NULL) {
+		log_err("Get TX POWER 2G failed");
+		pclose(tx_power_2G);
+		return -1;
+	} else {
+		fscanf(tx_power_2G, "%d", &gw_get_tx_power_2G);
+		log_debug("GW TX POWER get : %d",gw_get_tx_power_2G);
+	}
+	pclose(tx_power_2G);
+        log_debug("IOT_DEBUG: Tx power 2G %d",gw_tx_power_2G);
+
+	if((gw_get_tx_power_2G!=gw_tx_power_2G) && (gw_tx_power_2G<=0 && gw_tx_power_2G>=-20)){
+		snprintf(cmd, sizeof(cmd), SET_RADIO1_POWER_2G, gw_tx_power_2G);
+		tx_power_2G = popen(cmd,"r");
+		if( tx_power_2G == NULL) {
+			log_debug("SET TX POWER 2G FAILED");
+			pclose(tx_power_2G);
+			return -1;
+		}
+		pclose(tx_power_2G);
+
+		tx_power_2G = popen(UCI_COMMIT, "r");
+                if( tx_power_2G == NULL) {
+                        log_err("uci commit command failed");
+                        pclose(tx_power_2G);
+			return -1;
+                }
+                pclose(tx_power_2G);
+		tx_power_2G = popen(WLAN_RSTART, "r");
+		if( tx_power_2G == NULL) {
+			log_err("wlan restart failed");
+			pclose(tx_power_2G);
+			return -1;
+		}
+		pclose(tx_power_2G);
+	}
+	tx_power_2G = popen(GET_TX_POWER_2G,"r");
+        if(tx_power_2G == NULL) {
+		log_err("Get wireless guest ssid value failed");
+                        pclose(tx_power_2G);
+			return -1;
+                } else {
+                        fscanf(tx_power_2G, "%d", &gw_tx_power_2G);
+                        log_debug("GW TX POWER 2G : %d",gw_tx_power_2G);
+                }
+	pclose(tx_power_2G);
+	prop_send_by_name("gw_tx_power_2G");
+
+        return 0;
+}
+
+static int appd_gw_tx_power_5G(struct prop *prop, const void *val,
+                                        size_t len, const struct op_args *args)
+{
+
+        FILE *tx_power_5G;
+        char cmd[255];
+        if (prop_arg_set(prop, val, len, args) != ERR_OK) {
+                 log_err("prop_arg_set returned error");
+                 return -1;
+        }
+	tx_power_5G = popen(GET_TX_POWER_5G,"r");
+        if(tx_power_5G == NULL) {
+                log_err("Get TX POWER 5G failed");
+		pclose(tx_power_5G);
+                return -1;
+        } else {
+                fscanf(tx_power_5G, "%d", &gw_get_tx_power_5G);
+                log_debug("GW TX POWER 5G get : %d",gw_get_tx_power_5G);
+        }
+	pclose(tx_power_5G);
+        log_debug("IOT_DEBUG: Tx power 5G %d",gw_tx_power_5G);
+
+	if((gw_get_tx_power_5G!=gw_tx_power_5G) && (gw_tx_power_5G<=0 && gw_tx_power_5G>=-20)){
+		snprintf(cmd, sizeof(cmd), SET_RADIO1_POWER_5G, gw_tx_power_5G);
+		tx_power_5G = popen(cmd,"r");
+		if( tx_power_5G == NULL) {
+			log_debug("set TX POWER 5G FAILED");
+			pclose(tx_power_5G);
+			return -1;
+		}
+		pclose(tx_power_5G);
+
+		tx_power_5G = popen(UCI_COMMIT, "r");
+                if( tx_power_5G == NULL) {
+                        log_err("uci commit command failed");
+                        pclose(tx_power_5G);
+			return -1;
+                }
+                pclose(tx_power_5G);
+		tx_power_5G = popen(WLAN_RSTART, "r");
+		if( tx_power_5G == NULL) {
+			log_err("wlan restart failed");
+			pclose(tx_power_5G);
+			return -1;
+		}
+		pclose(tx_power_5G);
+	}
+	tx_power_5G = popen(GET_TX_POWER_5G,"r");
+	if(tx_power_5G == NULL) {
+		log_err("Get tx power 5G failed");
+		pclose(tx_power_5G);
+		return 1;
+	} else {
+		fscanf(tx_power_5G, "%d", &gw_tx_power_5G);
+		log_debug("GW TX POWER 5G get : %d",gw_tx_power_5G);
+	}
+	pclose(tx_power_5G);
+	prop_send_by_name("gw_tx_power_5G");
+        return 0;
 }
 
 /*
@@ -6268,6 +6398,24 @@ static struct prop appd_gw_prop_table[] = {
                 .arg = &wifi_5g_status,
                 .len = sizeof(wifi_5g_status),
                 .skip_init_update_from_cloud = 1,
+        },
+	{
+                .name = "gw_tx_power_2G",
+                .type = PROP_INTEGER,
+                .set = appd_gw_tx_power_2G,
+                .send = prop_arg_send,
+                .arg = &gw_tx_power_2G,
+                .len = sizeof(gw_tx_power_2G),
+                .skip_init_update_from_cloud = 1,
+        },
+	{
+                .name = "gw_tx_power_5G",
+                .type = PROP_INTEGER,
+                .set = appd_gw_tx_power_5G,
+                .send = prop_arg_send,
+                .arg = &gw_tx_power_5G,
+                .len = sizeof(gw_tx_power_5G),
+                .skip_init_update_from_cloud = 1,
         }
 
 };
@@ -6483,6 +6631,7 @@ zb_reinit:
 		log_err("zb_start returned error zb_reinit in progress");
 		if(3==zb_reinit_count){
 			log_debug("zb reinit count reached 3, appd exit");
+			assert(0);
 		}
 		goto zb_reinit;
 	}
@@ -6556,6 +6705,78 @@ static void appd_guest_status_update(void)
     }
 
 
+}
+
+/*
+ * tx power update in init
+ *
+ */
+
+static int gw_tx_power_init(){
+	FILE *tx_power_update;
+        tx_power_update = popen(GET_TX_POWER_2G,"r");
+        if(tx_power_update == NULL) {
+                log_err("Get tx power 2G failed");
+                pclose(tx_power_update);
+                return -1;
+        } else {
+                fscanf(tx_power_update, "%d", &gw_tx_power_2G);
+                log_debug("GW TX POWER 2G get : %d",gw_tx_power_2G);
+        }
+	prop_send_by_name("gw_tx_power_2G");
+        pclose(tx_power_update);
+
+
+        tx_power_update = popen(GET_TX_POWER_5G,"r");
+        if(tx_power_update == NULL) {
+                log_err("Get tx power 5G failed");
+                pclose(tx_power_update);
+                return -1;
+        } else {
+                fscanf(tx_power_update, "%d", &gw_tx_power_5G);
+                log_debug("GW TX POWER 5G get : %d",gw_tx_power_5G);
+        }
+        pclose(tx_power_update);
+	prop_send_by_name("gw_tx_power_5G");
+return 0;
+}
+
+/* tx powe update in the poll
+ *
+ */
+
+static int appd_tx_power_update(){
+	FILE *tx_power_update;
+	tx_power_update = popen(GET_TX_POWER_5G,"r");
+        if(tx_power_update == NULL) {
+                log_err("Get tx power 5G failed");
+                pclose(tx_power_update);
+		return -1;
+        } else {
+                fscanf(tx_power_update, "%d", &gw_get_tx_power_5G);
+                log_debug("GW TX POWER 5G get : %d",gw_get_tx_power_5G);
+        }
+        pclose(tx_power_update);
+        if(gw_get_tx_power_5G!=gw_tx_power_5G){
+        gw_tx_power_5G=gw_get_tx_power_5G;
+        prop_send_by_name("gw_tx_power_5G");
+        }
+
+        tx_power_update = popen(GET_TX_POWER_2G,"r");
+        if(tx_power_update == NULL) {
+                log_err("Get tx power 2G failed");
+		pclose(tx_power_update);
+                return -1;
+        } else {
+                fscanf(tx_power_update, "%d", &gw_get_tx_power_2G);
+                log_debug("GW TX POWER 2G get : %d",gw_get_tx_power_2G);
+        }
+        pclose(tx_power_update);
+        if(gw_get_tx_power_2G!=gw_tx_power_2G){
+        gw_tx_power_2G=gw_get_tx_power_2G;
+        prop_send_by_name("gw_tx_power_2G");
+        }
+	return 0;
 }
 
 /*
