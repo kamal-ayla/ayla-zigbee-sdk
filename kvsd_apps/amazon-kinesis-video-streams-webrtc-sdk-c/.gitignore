@@ -1,0 +1,12 @@
+*.iml
+.DS_Store
+.github/github_deploy_key.enc
+.idea
+build
+cmake-build-debug/
+cmake-build-release/
+doc/
+open-source/
+outputs
+tags
+CMakeLists.txt.user
