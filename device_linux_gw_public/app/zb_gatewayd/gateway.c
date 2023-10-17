@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <ayla/log.h>
 #include <ayla/assert.h>
+#include <assert.h>
 #include <ayla/build.h>
 #include <ayla/utypes.h>
 #include <ayla/http.h>
@@ -489,8 +490,16 @@ unsigned int wifi_5g_status;
 #define MAX_FREQ_BUF_LEN            32
 #define MAX_LABEL_ARR_LEN           24
 
-
-
+//Power set
+static int gw_tx_power_2G;
+static int gw_tx_power_5G;
+static int gw_get_tx_power_2G;
+static int gw_get_tx_power_5G;
+#define SET_RADIO1_POWER_2G "uci set wireless.radio1.tx_power_adjust='%d'"
+#define SET_RADIO1_POWER_5G "uci set wireless.radio0.tx_power_adjust='%d'"
+#define WLAN_RSTART "/etc/init.d/wlan_mgr restart"
+#define GET_TX_POWER_2G "uci get wireless.radio1.tx_power_adjust"
+#define GET_TX_POWER_5G "uci get wireless.radio0.tx_power_adjust"
 
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);

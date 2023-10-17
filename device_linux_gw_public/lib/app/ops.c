@@ -77,7 +77,7 @@ static void ops_free_op_cmd(struct ops_cmd *op_cmd)
 	if (op_cmd && op_cmd->free_arg_cb) {
 		op_cmd->free_arg_cb(op_cmd->arg);
 	}
-	if(op_cmd!=NULL)
+	if(op_cmd!=NULL){
 		free(op_cmd);
 	}
 }
