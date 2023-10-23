@@ -10,6 +10,7 @@ install_hls_sdk() {
     cmake_toolchain_flags=$2
     cmake_includes=$3
     cmake_library_path=$4
+    ayla_install_dir=$5
 	#git clone --recursive https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git
 	mkdir -p amazon-kinesis-video-streams-producer-sdk-cpp/build
 	cd amazon-kinesis-video-streams-producer-sdk-cpp/build
@@ -29,9 +30,12 @@ install_hls_sdk() {
 	if [ $? -ne 0 ]; then exit 1; fi
 	make -j
 	if [ $? -ne 0 ]; then exit 1; fi
-# 	mkdir -p $ayla_install_dir/lib/kvsd
-# 	cp -av ../open-source/local/lib/* $ayla_install_dir/lib/kvsd
-# 	cp -av *.so $ayla_install_dir/lib/kvsd
+
+    # Install
+    cd ..
+	cp -av build/libKinesisVideoProducer.so $ayla_install_dir/usr/lib
+	cp -av build/libgstkvssink.so $ayla_install_dir/usr/lib/gstreamer-1.0
+    cp -av open-source/local/lib/liblog4cplus*.so* $ayla_install_dir/usr/lib
 }
 
 install_kvsd_stream_webrtc() {
@@ -39,6 +43,7 @@ install_kvsd_stream_webrtc() {
     cmake_toolchain_flags=$2
     cmake_includes=$3
     cmake_library_path=$4
+    ayla_install_dir=$5
 	#git clone --recursive https://github.com/awslabs/amazon-kinesis-video-streams-webrtc-sdk-c.git
 	mkdir -p amazon-kinesis-video-streams-webrtc-sdk-c/build
 	cd amazon-kinesis-video-streams-webrtc-sdk-c/build
@@ -57,7 +62,14 @@ install_kvsd_stream_webrtc() {
 	if [ $? -ne 0 ]; then exit 1; fi
 	make -j
 	if [ $? -ne 0 ]; then exit 1; fi
-# 	cp -fv samples/kvsWebrtcClientMasterGstSample $ayla_install_dir/bin/kvsd_stream_webrtc
+
+    # Install
+    cd ..
+	cp -av build/*.so $ayla_install_dir/usr/lib
+    cp -av build/samples/kvsWebrtcClientMasterGstSample $ayla_install_dir/usr/bin/kvsd_stream_webrtc
+    cp -av open-source/lib/libcrypto*.so* $ayla_install_dir/usr/lib
+    cp -av open-source/lib/libssl*.so* $ayla_install_dir/usr/lib
+    cp -av open-source/lib/engines* $ayla_install_dir/usr/lib
 }
 
 install_kvsd_stream_master() {
@@ -65,6 +77,7 @@ install_kvsd_stream_master() {
     cmake_toolchain_flags=$2
     cmake_includes=$3
     cmake_library_path=$4
+    ayla_install_dir=$5
     mkdir kvsd_stream_master/build
     cd kvsd_stream_master/build
     cmake \
@@ -76,7 +89,9 @@ install_kvsd_stream_master() {
     if [ $? -ne 0 ]; then exit 1; fi
     make -j
     if [ $? -ne 0 ]; then exit 1; fi
-#     cp -fv kvsd_stream_master $ayla_install_dir/bin
+
+    # Install
+    cp -av kvsd_stream_master $ayla_install_dir/usr/bin
 }
 
 install_kvsd_stream_hls() {
@@ -84,6 +99,7 @@ install_kvsd_stream_hls() {
     cmake_toolchain_flags=$2
     cmake_includes=$3
     cmake_library_path=$4
+    ayla_install_dir=$5
     mkdir kvsd_stream_hls/build
     cd kvsd_stream_hls/build
     cmake \
@@ -95,27 +111,30 @@ install_kvsd_stream_hls() {
     if [ $? -ne 0 ]; then exit 1; fi
     make -j
     if [ $? -ne 0 ]; then exit 1; fi
-#     cp -fv kvsd_stream_hls $ayla_install_dir/bin
+
+    # Install
+    cp -av kvsd_stream_hls $ayla_install_dir/usr/bin
 }
 
-install_test() {
-    cmake_c_flags=$1
-    cmake_toolchain_flags=$2
-    cmake_includes=$3
-    cmake_library_path=$4
-    mkdir test_gst_arm/build
-    cd test_gst_arm/build
-    cmake \
-        $cmake_toolchain_flags \
-        -DCMAKE_C_FLAGS="$cmake_c_flags" \
-        -DCMAKE_CXX_FLAGS="$cmake_c_flags" \
-        -DCMAKE_LIBRARY_PATH=$cmake_library_path \
-        ..
-    if [ $? -ne 0 ]; then exit 1; fi
-    make -j
-    if [ $? -ne 0 ]; then exit 1; fi
-#     cp -fv kvsd_stream_hls $ayla_install_dir/bin
+# Loop through all .so.* files
+so_link_fix() {
+    DIR=$1
+    if [[ "$DIR" == "" ]]; then
+        return
+    fi
+
+    CURR=$PWD
+    cd $DIR
+    for file in *.so.*; do
+        # Extract the base name without version
+        base_name=$(echo "$file" | sed 's/\(.*\)\..*/\1/')
+
+        # Create a symbolic link
+        ln -sf "$file" "$base_name"
+    done
+    cd $CURR
 }
+
 
 #####################  Main
 if [ $# -ne 4 ]; then
@@ -133,20 +152,30 @@ echo "=== Cmake Toolchain flags: $cmake_toolchain_flags"
 
 
 DIR=$PWD
+ayla_install_dir=$PWD/rootfs
+echo "=== Install rootfs path: '$ayla_install_dir'"
+
+if [[ -d "$ayla_install_dir" ]]; then
+    echo "Rootfs for KVSD apps already exists: '$ayla_install_dir'. Deleting."
+    rm -rf $ayla_install_dir
+fi
+mkdir -p $ayla_install_dir
+mkdir -p $ayla_install_dir/usr/lib
+mkdir -p $ayla_install_dir/usr/lib/gstreamer-1.0
+mkdir -p $ayla_install_dir/usr/bin
 
 cd $DIR
-install_hls_sdk "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+install_hls_sdk "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path" "$ayla_install_dir"
  
 cd $DIR
-install_kvsd_stream_webrtc "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+install_kvsd_stream_webrtc "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path" "$ayla_install_dir"
  
 cd $DIR
-install_kvsd_stream_master "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+install_kvsd_stream_master "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path" "$ayla_install_dir"
  
 cd $DIR
-install_kvsd_stream_hls "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+install_kvsd_stream_hls "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path" "$ayla_install_dir"
 
-#cd $DIR
-#install_test "$cmake_c_flags" "$cmake_toolchain_flags" "$cmake_includes" "$cmake_library_path"
+so_link_fix $ayla_install_dir/usr/lib
 
 exit 0
