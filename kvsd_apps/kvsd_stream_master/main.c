@@ -112,7 +112,7 @@ master_bus_msg(GstBus* bus, GstMessage* msg, gpointer data)
 {
     GstPipeline* pipeline = data;
 
-    printf("Master: Bus message '%d': %s\n", GST_MESSAGE_TYPE (msg), GST_MESSAGE_TYPE_NAME (msg));
+    //printf("Master: Bus message '%d': %s\n", GST_MESSAGE_TYPE (msg), GST_MESSAGE_TYPE_NAME (msg));
 
     switch(GST_MESSAGE_TYPE (msg))
     {
@@ -208,7 +208,7 @@ master_bus_msg(GstBus* bus, GstMessage* msg, gpointer data)
                         gst_element_state_get_name(new_state));
             }
 
-            print_state_for_all_elements(GST_ELEMENT (pipeline));
+            //print_state_for_all_elements(GST_ELEMENT (pipeline));
             break;
         }
         default:
@@ -322,7 +322,7 @@ start_source()
     gst_bus_add_watch(GST_ELEMENT_BUS (pipeline), master_bus_msg, pipeline);
 
     source = gst_element_factory_make("rtspsrc", "rtspsrc");
-//    set_check_property(source, "is-live", 1, NULL);
+    set_check_property(source, "is-live", 1, NULL);
     set_check_property(source, "latency", 0, NULL);
     set_check_property(source, "drop-on-latency", TRUE, NULL);
     set_check_property(source, "buffer-mode", 0, NULL);
