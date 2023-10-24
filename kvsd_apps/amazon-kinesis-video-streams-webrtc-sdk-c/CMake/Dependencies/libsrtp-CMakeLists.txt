@@ -52,7 +52,7 @@ message("==================== project_libsrtp BUILD_ARGS=${BUILD_ARGS}")
 
 include(ExternalProject)
 ExternalProject_Add(project_libsrtp
-    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/libsrtp.tar.gz
+    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/libsrtp
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CMAKE_ARGS        ${BUILD_ARGS}
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}

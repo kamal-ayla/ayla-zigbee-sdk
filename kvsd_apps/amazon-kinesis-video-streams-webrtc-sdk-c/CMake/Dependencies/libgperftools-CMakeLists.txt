@@ -6,8 +6,13 @@ set(CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libgperftool
 
 include(ExternalProject)
 ExternalProject_Add(project_libgperftools
-    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/gperftools-2.8.zip
+    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/gperftools-2.8
+    DOWNLOAD_COMMAND  
+                      cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/gperftools-2.8/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libgperftools
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
+    BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libgperftools
+    BUILD_IN_SOURCE   FALSE
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
     TEST_COMMAND      ""
 )
