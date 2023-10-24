@@ -3,12 +3,11 @@ cmake_minimum_required(VERSION 3.6.3)
 project(libgtest-download NONE)
 
 include(ExternalProject)
-   
+
 ExternalProject_Add(libgtest-download
-    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/googletest
-	BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/build"
+    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../../CMake/Dependencies/googletest
+    BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/build"
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
-    BUILD_IN_SOURCE   FALSE
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}
         -DBUILD_GMOCK=0

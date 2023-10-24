@@ -6,9 +6,13 @@ include(ExternalProject)
 
 # clone repo only
 ExternalProject_Add(libkvscproducer-download
-    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/amazon-kinesis-video-streams-producer-c.tar.gz
+	SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/amazon-kinesis-video-streams-producer-c
+	DOWNLOAD_COMMAND  
+					  cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/amazon-kinesis-video-streams-producer-c/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/kvscproducer-src
 	SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvscproducer-src"
-	BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvscproducer-build"
+	#BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvscproducer-build"
+	BUILD_IN_SOURCE   FALSE
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND     ""
 	INSTALL_COMMAND   ""

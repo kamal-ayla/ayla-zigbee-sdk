@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.6.3)
+
+project(libkvspic-download NONE)
+
+include(ExternalProject)
+
+# clone repo only
+ExternalProject_Add(libkvspic-download
+	SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/amazon-kinesis-video-streams-pic
+	DOWNLOAD_COMMAND  
+					  cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/amazon-kinesis-video-streams-pic/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/kvspic-src
+	SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvspic-src"
+	BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvspic-build"
+	CMAKE_ARGS
+	  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND     ""
+	INSTALL_COMMAND   ""
+	TEST_COMMAND      ""
+)

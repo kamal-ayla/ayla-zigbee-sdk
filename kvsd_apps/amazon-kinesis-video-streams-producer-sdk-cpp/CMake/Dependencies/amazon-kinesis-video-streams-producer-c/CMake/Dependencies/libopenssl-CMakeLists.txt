@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.6.3)
+
+project(libopenssl-download NONE)
+
+if (WIN32)
+  find_program(MAKE_EXE NAMES nmake)
+  SET(CONFIGURE_COMMAND perl ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl/Configure VC-WIN64A no-asm --prefix=${OPEN_SRC_INSTALL_PREFIX} --openssldir=${OPEN_SRC_INSTALL_PREFIX})
+else()
+  message("===========================")
+
+  execute_process(
+      COMMAND env
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE env_output
+  )
+  message(STATUS "env output: ${env_output}")
+
+  find_program(MAKE_EXE NAMES make)
+  if (BUILD_STATIC)
+    SET(OPENSSL_EXTRA ${OPENSSL_EXTRA} no-shared no-dso)
+  endif()
+
+  if (DEFINED BUILD_OPENSSL_PLATFORM AND NOT BUILD_OPENSSL_PLATFORM STREQUAL OFF)
+    SET(CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl/Configure ${OPENSSL_EXTRA} --prefix=${OPEN_SRC_INSTALL_PREFIX} --openssldir=${OPEN_SRC_INSTALL_PREFIX} ${BUILD_OPENSSL_PLATFORM} -Wno-nullability-completeness -Wno-expansion-to-defined)
+  else()
+    SET(CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl/config ${OPENSSL_EXTRA} --prefix=${OPEN_SRC_INSTALL_PREFIX} --openssldir=${OPEN_SRC_INSTALL_PREFIX} -Wno-nullability-completeness -Wno-expansion-to-defined)
+  endif()
+endif()
+
+message("=========================== CONFIGURE_COMMAND: ${CONFIGURE_COMMAND}")
+message("=========================== MAKE_EXE: ${MAKE_EXE}")
+message("=========================== CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+message("=========================== CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message("=========================== CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
+message("=========================== CC: ${CC}")
+
+include(ExternalProject)
+ExternalProject_Add(project_libopenssl
+    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../../CMake/Dependencies/openssl
+    DOWNLOAD_COMMAND  
+                      cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../../CMake/Dependencies/openssl/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl
+    PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
+    BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl
+    BUILD_IN_SOURCE   FALSE
+    CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
+    BUILD_COMMAND     ${MAKE_EXE}
+    INSTALL_COMMAND   ${MAKE_EXE} install_sw
+    TEST_COMMAND      ""
+)

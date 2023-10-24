@@ -20,11 +20,16 @@ endif()
 
 include(ExternalProject)
 ExternalProject_Add(project_libopenssl
-    URL               ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/openssl.tar.gz
+    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/openssl
+    DOWNLOAD_COMMAND  
+                      cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/openssl/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl
+    PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
+    BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libopenssl
+    BUILD_IN_SOURCE   FALSE
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
     BUILD_COMMAND     ${MAKE_EXE}
-    BUILD_IN_SOURCE   TRUE
     INSTALL_COMMAND   ${MAKE_EXE} install_sw
     TEST_COMMAND      ""
 )

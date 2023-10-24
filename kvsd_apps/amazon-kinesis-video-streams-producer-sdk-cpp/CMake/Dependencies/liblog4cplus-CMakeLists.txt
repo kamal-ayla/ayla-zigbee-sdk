@@ -32,11 +32,15 @@ if (WIN32)
   )
 else()
   ExternalProject_Add(project_log4cplus
-       URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/log4cplus.tar.gz
+       SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/log4cplus
+       DOWNLOAD_COMMAND  
+                        cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/log4cplus/. 
+                            ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_log4cplus
        PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
        CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
+       BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_log4cplus
        BUILD_COMMAND     ${MAKE_EXE}
-       BUILD_IN_SOURCE   TRUE
+       BUILD_IN_SOURCE   FALSE
        INSTALL_COMMAND   ${MAKE_EXE} install
        TEST_COMMAND      ""
   )
