@@ -1,7 +1,7 @@
 #!/bin/bash
 
 help() {
-    echo "Usage: $0 <cmake_c_flags_path> <cmake_toolchain_flags_path> <cmake_library_path>"
+    echo "Usage: $0 <cmake_c_flags_path> <cmake_toolchain_flags_path> <cmake_includes.cmake> <cmake_library_path>"
     exit 1
 }
 
