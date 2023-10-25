@@ -379,6 +379,11 @@ start_source()
     {
         set_check_property(x264enc, "bitrate", video_convert_conf.kbitrate, NULL);
     }
+    else
+    {
+        const guint max_allowed_bitrate = 102400;
+        set_check_property(x264enc, "bitrate", max_allowed_bitrate, NULL);     // Force x264enc to use the max bitrate. Tests confirms that the video is running more smoothly.
+    }
 
     // Support for the flip
     if(video_convert_conf.flip != 0)
