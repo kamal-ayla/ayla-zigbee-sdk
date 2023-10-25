@@ -6,17 +6,11 @@ find_program(MAKE_EXE NAMES make)
 
 include(ExternalProject)
 ExternalProject_Add(project_libautoconf
-    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/autoconf-2.69
+    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/autoconf-2.69.tar.gz
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
-    DOWNLOAD_COMMAND  
-                        cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/autoconf-2.69/. 
-                            ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautoconf
     CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautoconf/configure --prefix=${OPEN_SRC_INSTALL_PREFIX}
-    BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautoconf
     BUILD_COMMAND     ${MAKE_EXE} -j 4
-    BUILD_IN_SOURCE   FALSE
+    BUILD_IN_SOURCE   TRUE
     INSTALL_COMMAND   ${MAKE_EXE} install
     TEST_COMMAND      ""
 )
-
-# DOWNLOAD_COMMAND - DO NOT USE build-in CMAKE `copy_directory` command as it does not preserver the modification date. The autoconf is checking those date to build the inner documentation and it will fail.
