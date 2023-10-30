@@ -26,8 +26,6 @@ define Package/ayla-zigbee-sdk
 	TITLE:=AYLA
 endef
 
-# 	DEPENDS:= +libcurl +jansson +nginx +fcgi +spawn-fcgi +transformer-tch +glib2 +gstreamer1 +gst1-plugins-base +log4cplus
-
 define Package/ayla-zigbee-sdk/description
 	Ayla Module
 endef
@@ -38,72 +36,11 @@ define Build/Prepare
 endef
 
 define Build/Compile
-###############################################
 	cd $(PKG_BUILD_DIR)/kvsd_apps && \
 	echo $(CMAKE_C_FLAGS) > ./cmake_c_flags.cmake && \
 	echo $(CMAKE_TOOLCHAIN_FLAGS) > ./cmake_toolchain_flags.cmake && \
 	echo $(CMAKE_INCLUDES) > ./cmake_includes.cmake && \
 	echo $(CMAKE_LIBRARY_PATH) > ./cmake_library_path.cmake
-###############################################
-
-
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/CMake/Dependencies/amazon-kinesis-video-streams-producer-c/CMake/Dependencies/openssl && \
-#	CC=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc ./Configure --prefix=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local --openssldir=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local linux-generic32 -Wno-nullability-completeness -Wno-expansion-to-defined && \
-#	make -j && make install_sw
-
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/CMake/Dependencies/amazon-kinesis-video-streams-producer-c/CMake/Dependencies/openssl && \
-#	./Configure --prefix=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local --openssldir=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local linux-generic32 -Wno-nullability-completeness -Wno-expansion-to-defined && \
-#	$(MAKE) CC=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc CFLAGS=-I$(TOOLCHAIN_DIR)/usr/include/ LD=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc AR=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar \
-#	STAGING_DIR="$(STAGING_DIR)" \
-#	TOOLCHAIN_DIR="$(TOOLCHAIN_DIR)" \
-#	TARGET_CROSS="$(TARGET_CROSS)" \
-#	PKG_BUILD_DIR="$(PKG_BUILD_DIR)"
-
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/CMake/Dependencies/amazon-kinesis-video-streams-producer-c/CMake/Dependencies/openssl && \
-#	./Configure --prefix=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local --openssldir=$(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local linux-generic32 -Wno-nullability-completeness -Wno-expansion-to-defined && \
-#	$(MAKE) CC=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc STAGING_DIR="$(STAGING_DIR)" TOOLCHAIN_DIR="$(TOOLCHAIN_DIR)" TARGET_CROSS="$(TARGET_CROSS)"
-
-
-
-
-
-
-
-
-###############################################
-# 	cd $(PKG_BUILD_DIR)/kvsd_apps && \
-# 	./kvsd_build_apps.sh ./cmake_c_flags.cmake ./cmake_toolchain_flags.cmake ./cmake_includes.cmake ./cmake_library_path.cmake
-###############################################
-
-#	cd $(PKG_BUILD_DIR)/kvsd_apps && \
-#	mkdir -p amazon-kinesis-video-streams-producer-sdk-cpp/build && \
-#	cd amazon-kinesis-video-streams-producer-sdk-cpp/build && \
-#	cmake -DBUILD_OPENSSL_PLATFORM=linux-generic32 \
-#    	    -DBUILD_LOG4CPLUS_HOST=arm-linux \
-#    	    -DBUILD_GSTREAMER_PLUGIN=TRUE \
-#    	    $(CMAKE_TOOLCHAIN_FLAGS) \
-#    	    -DCMAKE_C_FLAGS=$(CMAKE_C_FLAGS) \
-#    	    -DGST_APP_INCLUDE_DIRS=$(CMAKE_INCLUDES) \
-#    	    ..
-
-
-
-#	mkdir $(PKG_BUILD_DIR)/kvsd_apps/kvsd_stream_hls/build && \
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/kvsd_stream_hls/build && \
-#	cmake $(CMAKE_DEFS) .. && \
-#	$(MAKE) -j
-#
-#	mkdir $(PKG_BUILD_DIR)/kvsd_apps/kvsd_stream_master/build && \
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/kvsd_stream_master/build && \
-#	cmake $(CMAKE_DEFS) .. && \
-#	$(MAKE) -j
-#
-#	cd $(PKG_BUILD_DIR)/kvsd_apps/amazon-kinesis-video-streams-producer-sdk-cpp/build && \
-#	make -j
-
-
-
-
 
 	$(MAKE)  COMPILER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc COMPILER_INCLUDES=-I$(TOOLCHAIN_DIR)/usr/include/ LINKER=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)gcc ARCHIVE=$(TOOLCHAIN_DIR)/bin/$(TARGET_CROSS)ar  -C $(PKG_BUILD_DIR)/v3.2/app/builder/ember \
 	GENERATE_LIBRARY=1 \
