@@ -1,7 +1,7 @@
 #!/bin/bash
 
 help() {
-    echo "Usage: $0 <cmake_c_flags_path> <cmake_toolchain_flags_path> <cmake_includes.cmake> <cmake_library_path>"
+    echo "Usage: $0 <cmake_c_flags_path> <cmake_toolchain_flags_path> <cmake_includes.cmake> <cmake_library_path> <staging_dir_path"
     exit 1
 }
 
@@ -36,6 +36,7 @@ install_hls_sdk() {
 	cp -av build/libKinesisVideoProducer.so $ayla_install_dir/usr/lib
 	cp -av build/libgstkvssink.so $ayla_install_dir/usr/lib/gstreamer-1.0
     cp -av open-source/local/lib/liblog4cplus*.so* $ayla_install_dir/usr/lib
+    cp -av build/dependency/libkvscproducer/kvscproducer-src/libcproducer.so $ayla_install_dir/usr/lib 
 }
 
 install_kvsd_stream_webrtc() {
@@ -69,6 +70,8 @@ install_kvsd_stream_webrtc() {
     cp -av build/samples/kvsWebrtcClientMasterGstSample $ayla_install_dir/usr/bin/kvsd_stream_webrtc
     cp -av open-source/lib/libcrypto*.so* $ayla_install_dir/usr/lib
     cp -av open-source/lib/libssl*.so* $ayla_install_dir/usr/lib
+    cp -av open-source/lib/libsrtp2*.so* $ayla_install_dir/usr/lib
+    cp -av open-source/lib/libwebsockets*.so* $ayla_install_dir/usr/lib
     cp -av open-source/lib/engines* $ayla_install_dir/usr/lib
 }
 
@@ -137,7 +140,7 @@ so_link_fix() {
 
 
 #####################  Main
-if [ $# -ne 4 ]; then
+if [ $# -ne 5 ]; then
     help
     exit 1
 fi
@@ -146,9 +149,13 @@ cmake_c_flags=$(cat $1)
 cmake_toolchain_flags=$(cat $2)
 cmake_includes=$(cat $3)
 cmake_library_path=$(cat $4)
+staging_dir_path=$(cat $5)
 
 echo "=== Cmake C flags: $cmake_c_flags"
 echo "=== Cmake Toolchain flags: $cmake_toolchain_flags"
+echo "=== Staging dir path: $staging_dir_path"
+
+export STAGING_DIR="$staging_dir_path"
 
 
 DIR=$PWD
