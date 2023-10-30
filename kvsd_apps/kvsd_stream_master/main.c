@@ -336,6 +336,7 @@ start_source()
     GstElement* videoconvert = gst_element_factory_make("videoconvert", "videoconvert"); GST_CHK_ELEM(videoconvert);
     GstElement* x264enc = gst_element_factory_make("x264enc", "x264enc"); GST_CHK_ELEM(x264enc);
     set_check_property(x264enc, "tune", 4 /*"zerolatency"*/, NULL);
+    set_check_property(x264enc, "key-int-max", 10, NULL);
     GstElement* rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay"); GST_CHK_ELEM(rtph264pay);
 
     tee = gst_element_factory_make("tee", "tee"); GST_CHK_ELEM(tee);
@@ -377,6 +378,11 @@ start_source()
     if(video_convert_conf.kbitrate != 0)
     {
         set_check_property(x264enc, "bitrate", video_convert_conf.kbitrate, NULL);
+    }
+    else
+    {
+        const guint max_allowed_bitrate = 102400;
+        set_check_property(x264enc, "bitrate", max_allowed_bitrate, NULL);     // Force x264enc to use the max bitrate. Tests confirms that the video is running more smoothly.
     }
 
     // Support for the flip

@@ -6,15 +6,11 @@ find_program(MAKE_EXE NAMES make)
 
 include(ExternalProject)
 ExternalProject_Add(project_libautomake
-    SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/automake-1.16.1
+    URL               ${CMAKE_SOURCE_DIR}/../../CMake/Dependencies/automake-1.16.1.tar.gz
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
-    DOWNLOAD_COMMAND  
-                        cp -av ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/Dependencies/automake-1.16.1/.
-                              ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautomake
     CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautomake/configure --prefix=${OPEN_SRC_INSTALL_PREFIX}
-    BINARY_DIR        ${CMAKE_CURRENT_BINARY_DIR}/build/src/project_libautomake
     BUILD_COMMAND     ${MAKE_EXE} -j 4
-    BUILD_IN_SOURCE   FALSE
+    BUILD_IN_SOURCE   TRUE
     INSTALL_COMMAND   ${MAKE_EXE} install
     TEST_COMMAND      ""
 )
