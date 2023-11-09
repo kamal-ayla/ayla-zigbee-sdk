@@ -66,12 +66,14 @@
 #define ARR_POINTER_LEN 3
 #define MIN_BUF_LEN 8
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "vantiva_zigbee_gateway_v1.1";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.2";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
 static struct timer ngrok_data_update_timer;
 static struct timer reboot_cause_update_timer;
+static struct timer wet_mode_update_timer;
+static struct timer wps_button_update_timer;
 static unsigned int zb_join_enable;
 static unsigned int zb_change_channel;
 static u8 zb_join_status;
@@ -160,6 +162,7 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define GW_CTRL_ALMAC_ADDRESS           "gw_ctrl_almac_address"
 #define GW_WIFI_TXOP_5G			"gw_wifi_txop_5g"
 #define GW_WIFI_TXOP_2G			"gw_wifi_txop_2g"
+#define GW_WIFI_WET_MODE_STATUS         "gw_wifi_wet_mode_status"
 
 #define WIFI_GET_STA_RSSI               "get_stainfo.sh -sta_rssi"
 #define WIFI_GET_STA_NOISE              "get_stainfo.sh -sta_noise"
@@ -177,6 +180,7 @@ static char gw_ctrl_almac_address[WIFI_STA_ADDR_LEN];
 #define GET_GW_CTRL_ALMAC_ADDRESS       "get_stainfo.sh -sta_controller_almac"
 #define GET_GW_WIFI_TXOP_5G		"get_stainfo.sh -sta_txop_5g"
 #define GET_GW_WIFI_TXOP_2G		"get_stainfo.sh -sta_txop_2g"
+#define GET_GW_WIFI_WET_MODE_STATUS     "get_stainfo.sh -sta_wet_mode_status"
 
 #define CHANNEL_COMMAND_LEN 80
 static int channel_2ghz;
@@ -503,6 +507,30 @@ static int gw_get_tx_power_5G;
 #define WLAN_RSTART "/etc/init.d/wlan_mgr restart"
 #define GET_TX_POWER_2G "uci get wireless.radio1.tx_power_adjust"
 #define GET_TX_POWER_5G "uci get wireless.radio0.tx_power_adjust"
+
+//To completely Enable/disable the mesh broker
+#define MESHBROKER_ENABLE "uci set mesh_broker.mesh_broker.enable='%d'"
+#define START_MESH_ENABLE "uci set mesh_broker.mesh_broker.start_mesh='%d'"
+#define AGENT_ENABLE "uci set mesh_broker.mesh_common.agent_enabled='%d'"
+#define CONTROLLER_ENABLE "uci set mesh_broker.mesh_common.controller_enabled='0'"
+
+// To configure the nvram
+#define NVRAM_MULTIAP_MODE "nvram set multiap_mode=%d"
+#define NVRAM_COMMIT "nvram commit"
+#define NVRAM_RESTART "nvram restart"
+
+// wps button script file
+#define WPS_BUTTON "wps_button_pressed.sh"
+
+// Switch the mode either wet to sta (or) sta to wet
+#define MODE_CHANGE "uci set wireless.wl0.mode='%s'"
+// To get the status of the wireless mode
+#define GET_WET_MODE_STATUS "wireless_get_overview.sh | grep wl0 | awk '{print $3,$4}' | head -1"
+#define BACKHAUL_TYPE "ubus call mesh_broker.agent.device_info get | awk '/\"BackhaulLinkType\"/ {print $2}' | sed 's/\"//g' | sed 's/,//g'"
+static u8  wet_mode_enable;
+static int gw_wifi_wet_mode_status;
+static int wet_iteration;
+static int wps_iteration;
 
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);
@@ -1370,6 +1398,305 @@ void appd_prop_init()
 
    timer_set(app_get_timers(), &reboot_cause_update_timer, 180000);
 }
+
+/** @brief enable/disable gateway wet mode  from cloud.
+*
+* This function will execute the uci commands for mesh broker , wireless & nvram files update the values
+* based on request from the cloud  which is wet enable or disable the mode and trigger the timer with 2 minutes
+* to verify the status of the mode
+*
+* @param1 prop pointer declared to the prop structure
+* @param2 val void pointer declared
+* @param3 len variable declared
+* @param4 args pointer declared to the op_args structure
+* @return return 1 if any command failed to execute, return 0 if everything successfully. the  execute the commands
+*/
+static int appd_gw_wifi_wet_mode(struct prop *prop, const void *val,
+                                size_t len, const struct op_args *args)
+{
+   FILE *wet_sta = NULL;
+   char mode_cmd[BUFF_LEN] = {0};
+   char buf[MIN_BUF_LEN] = {0};
+   char bh_type[MIN_BUF_LEN] = {0};
+   int value = 0;
+   unsigned int status = 0;
+
+   if(prop_arg_set(prop, val, len, args) != ERR_OK) {
+   log_err("prop_arg_set returned error");
+   return -1;
+   }
+
+   status=appd_mesh_controller_status();
+   // gateway configured as a agent if status is zero
+   if ( status == 0 ) {
+      // To get the current status of the wet mode
+      wet_sta = popen(GET_WET_MODE_STATUS,"r");
+      if (wet_sta == NULL) {
+         log_debug("get the wireless mode failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      fscanf(wet_sta, "%[^\n]", buf);
+      pclose(wet_sta);
+
+      log_debug("[%d] CURRENTLY WIRELESS MODE : %s", __LINE__, buf);
+
+      if ( ( !strcmp(buf, "1/1 wet") && wet_mode_enable == 1 ) || ( !strcmp(buf, "1/1 sta") && wet_mode_enable == 0 ) ) {
+         log_debug(" Not allowed to set config with the same mode request ");
+         return 1;
+      }
+
+      if ( wet_mode_enable == 1 ) {
+         // To get the backhaul type of gateway
+         wet_sta = popen(BACKHAUL_TYPE,"r");
+         if (wet_sta == NULL) {
+            log_debug("To get the backhaul type command failed");
+            pclose(wet_sta);
+            return 1;
+         }
+	 else {
+            fscanf(wet_sta, "%[^\n]", bh_type);
+	    log_debug("[%d] backhaul type : %s",__LINE__,bh_type);
+	    if ( !strcmp(bh_type, "Wi-Fi")) {
+	       log_debug(" Allowed to set the wet mode configuration ");
+	    }
+	    else {
+               log_debug(" Not allowed to set the wet mode configuration due to backhaul type is mismatch !!!");
+	       pclose(wet_sta);
+	       return 1;
+	    }
+	 }
+	 pclose(wet_sta);
+	 value = 0;
+	 log_debug(" mesh broker params & nvram set with value : %d",value);
+      }
+      else {
+         value = 1;
+         log_debug(" Allowed to set the sta mode configuration & mesh broker params set with value : %d",value);
+      }
+
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), MESHBROKER_ENABLE, value);
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To enable or disable the mesh broker enable parameter
+      wet_sta = popen(mode_cmd, "r");
+      if (wet_sta == NULL) {
+         log_debug("Mesh Broker enable failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), START_MESH_ENABLE, value);
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To enable or disable start mesh enable parameter
+      wet_sta = popen(mode_cmd, "r");
+      if (wet_sta == NULL) {
+         log_debug("Start Mesh enable failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), AGENT_ENABLE, value);
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To enable or disable Agent enable parameter
+      wet_sta = popen(mode_cmd, "r");
+      if (wet_sta == NULL) {
+         log_debug("Agent enable failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To disable controller enable parameter
+      wet_sta = popen(CONTROLLER_ENABLE, "r");
+      if (wet_sta == NULL) {
+         log_debug("Agent enable failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), MODE_CHANGE, value == 0 ? "wet" : "sta");
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To change the mode from sta to wet (or) wet to sta
+      wet_sta = popen(mode_cmd, "r");
+      if (wet_sta == NULL) {
+         log_debug("mode change failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      snprintf(mode_cmd, sizeof(mode_cmd), NVRAM_MULTIAP_MODE, value == 0 ? 0 : 2);
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To enable/disable nvram multiap mode
+      wet_sta = popen(mode_cmd, "r");
+      if (wet_sta == NULL) {
+         log_debug("NVRAM Multiap mode failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To commit the wireless and mesh broker changes
+      wet_sta = popen(UCI_COMMIT, "r");
+      if (wet_sta == NULL) {
+         log_debug("Wireless commit failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To commit the nvram
+      wet_sta = popen(NVRAM_COMMIT, "r");
+      if (wet_sta == NULL) {
+         log_debug("NVRAM Commit failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To restart the nvram configuration
+      wet_sta = popen(NVRAM_RESTART, "r");
+      if (wet_sta == NULL) {
+         log_debug("NVRAM restart failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To Restart the mesh broker file
+      wet_sta = popen(RESTART_MESH_BROKER, "r");
+      if (wet_sta == NULL) {
+         log_debug("Mesh Broker Commit failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To Restart the wlan
+      wet_sta = popen(WLAN_RSTART, "r");
+      if (wet_sta == NULL) {
+         log_debug("wlan restart failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+      timer_set(app_get_timers(), &wet_mode_update_timer, 120000);
+   }
+   else {
+      log_debug(" Not allowed to configure due to device act as a controller !!!");
+   }
+
+   return 0;
+}
+
+/** @brief wet mode update timer
+ *          This function will check the status of the mode either wet or sta based on trigger the wps button pressed  timer.
+ *          if status not changed then ,trigger the timer with 1 minute until 3 iterations only
+ *
+ * @param timer_wet_mode_update pointer declared to the timer structure
+ *
+ * @return None
+ */
+static void appd_wet_mode_update(struct timer *timer_wet_mode_update)
+{
+   FILE *wet_status = NULL;
+   char buf[MIN_BUF_LEN] = {0};
+   unsigned int wet_flag = 0;
+   unsigned int sta_flag = 0;
+
+   timer_cancel(app_get_timers(), timer_wet_mode_update);
+   // To get the current status of the wet mode
+   wet_status = popen(GET_WET_MODE_STATUS,"r");
+   if (wet_status == NULL) {
+      log_debug("get the wireless mode failed");
+      pclose(wet_status);
+      exit(1);
+   }
+   memset(buf, '\0', sizeof(buf));
+   fscanf(wet_status, "%[^\n]", buf);
+   log_debug("wet status : %s",buf);
+   pclose(wet_status);
+
+   if (( wet_mode_enable == 1 ) && (( !strcmp(buf, "1/0 wet") ) || ( !strcmp(buf, "1/1 wet")))) {
+      wet_flag = 1;
+      log_debug("mode changed to wet  ",wet_flag);
+   }
+   else if (( wet_mode_enable == 0 ) && (( !strcmp (buf, "1/0 sta")) || ( !strcmp (buf, "1/1 sta")))) {
+      sta_flag = 1;
+      log_debug("mode change to sta",sta_flag);
+   }
+   else {
+      timer_set(app_get_timers(), &wet_mode_update_timer, 60000);
+      wet_iteration++;
+   }
+
+   if (( wet_flag == 1 ) || ( sta_flag == 1 )) {
+      timer_set(app_get_timers(), &wps_button_update_timer, 5000);
+      wet_iteration = 0;
+      log_debug("wet iteration reset : %d",wet_iteration);
+   }
+   // To verify the number of iterations
+   if ( wet_iteration >= 3 ){
+      wet_iteration = 0;
+      log_debug(" [%d] wet timer iteration set to zero due to expiry the number of iterations : %d",__LINE__,wet_iteration);
+   }
+   else {
+      log_debug("wet timer iteration value : %d",wet_iteration);
+   }
+}
+
+/** @brief wps button pressed
+ *          This function will execute the wps_btton_pressed script for try to pair with near by deivce.
+ *
+ * @param None
+ * @return success 0 or fail 1
+ */
+static int appd_gw_wifi_wps_button(void) {
+   FILE *wps = NULL;
+   wps = popen(WPS_BUTTON, "r");
+   if (wps == NULL) {
+      log_debug("wps btton pressed script failed to excute !!!");
+      pclose(wps);
+      return 1;
+   }
+   pclose(wps);
+   return 0;
+}
+
+/** @brief wps button update timer
+ *          This function will execute the wps_btton_pressed script for try to pair with near by deivce.
+ *          trigger the wps button pressed script timer with 2 minutes until 3 iterations only
+ *
+ * @param timer_wps_button_update pointer declared to the timer structure
+ * @return None
+ */
+static void appd_wps_button_update(struct timer *timer_wps_button_update)
+{
+   // Cancel the timer
+   timer_cancel(app_get_timers(), timer_wps_button_update);
+   // To get the device led status to know the status of the wps pairing
+   prop_send_by_name("gw_led_status");
+   // To run the wps button pressed script file
+   appd_gw_wifi_wps_button();
+   //To check the numbe of iterations
+   if ( wps_iteration >= 2 ) {
+      wps_iteration = 0;
+      log_debug("[%d]wps iteration value set to zero : %d due to wps iterations completed ",__LINE__,wps_iteration);
+   }
+   else {
+      timer_set(app_get_timers(), &wps_button_update_timer, 120000);
+      wps_iteration++;
+      log_debug("[%d]wps button pressed and triggered the timer with 2 minutes , wps_iteration value : %d",__LINE__,wps_iteration);
+   }
+}
+
 /*
  *Reboot cause update timer
  */
@@ -4513,7 +4840,13 @@ void appd_wifi_sta_poll()
 		appd_update_whitelist_get();
 
         }
-        
+
+        memset(command,'\0',sizeof(command));
+        memset(data,'\0',sizeof(data));
+        snprintf(command, sizeof(command), GET_GW_WIFI_WET_MODE_STATUS);
+        exec_systemcmd(command, data, DATA_SIZE);
+        appd_send_wifi_sta_data(GW_WIFI_WET_MODE_STATUS, data);
+
 	// guest ssid 2g & 5g enable/disable properties update only when the change status
 	appd_guest_status_update();
 
@@ -4587,6 +4920,7 @@ static int appd_check_wifi_sta_data_deviation(char *name, char *value)
 static int appd_send_wifi_sta_data(char *name, char *value)
 {
 	int tmp = 0;
+        char temp[MIN_BUF_LEN];
 
 	if (!strcmp(name, WIFI_STA_CHANNEL)) {
 
@@ -4750,8 +5084,26 @@ static int appd_send_wifi_sta_data(char *name, char *value)
                 gw_wifi_txop_2g = tmp;
 
                 prop_send_by_name(name);
-        }
 
+	}else if (!strcmp(name, GW_WIFI_WET_MODE_STATUS)) {
+                log_debug("[%d] Get Wireless Mode %s",__LINE__,value);
+                memset(temp,'\0',sizeof(temp));
+                strncpy(temp, value, strlen(value)-1);
+		if (strcmp(temp, "1/1 wet") == 0) {
+		   tmp = 1;
+		}
+		else {
+		   tmp = 0;
+		}
+
+                if (tmp == gw_wifi_wet_mode_status) {
+                        return 0;
+                }
+
+		gw_wifi_wet_mode_status = tmp;
+
+                prop_send_by_name(name);
+	}
 
 	return 0;
 }
@@ -4832,17 +5184,18 @@ static int appd_schedule_reboot(struct prop *prop, const void *val,
 static int appd_gw_wps_button(struct prop *prop, const void *val,
         size_t len, const struct op_args *args)
 {
+	unsigned int status = 0;
+
         if (prop_arg_set(prop, val, len, args) != ERR_OK) {
                 log_err("prop_arg_set returned error");
                 return -1;
         }
 
         if (gw_wps_button == 1) {
-                log_debug("WPS button pressed");
-                memset(command,'\0',sizeof(command));
-                memset(data,'\0',sizeof(data));
-                sprintf(command, "wps_button_pressed.sh");
-                exec_systemcmd(command, data, DATA_SIZE);
+           status = appd_gw_wifi_wps_button();
+           if ( status == 1 ) {
+	      return 1;
+	   }
                 timer_set(app_get_timers(), &gw_led_status_timer, 110000);
         } else if (gw_wps_button== 0) {
                 timer_set(app_get_timers(), &gw_led_status_timer, 1000);
@@ -6416,6 +6769,22 @@ static struct prop appd_gw_prop_table[] = {
                 .arg = &gw_tx_power_5G,
                 .len = sizeof(gw_tx_power_5G),
                 .skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_wet_mode_enable",
+                .type = PROP_BOOLEAN,
+                .set = appd_gw_wifi_wet_mode,
+		.send = prop_arg_send,
+                .arg = &wet_mode_enable,
+                .len = sizeof(wet_mode_enable),
+		.skip_init_update_from_cloud = 1,
+        },
+        {
+                .name = "gw_wifi_wet_mode_status",
+                .type = PROP_INTEGER,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_wet_mode_status,
+                .len = sizeof(gw_wifi_wet_mode_status),
         }
 
 };
@@ -6603,6 +6972,8 @@ int appd_init(void)
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
 	timer_init(&reboot_cause_update_timer, appd_reboot_cause_update);
+	timer_init(&wet_mode_update_timer, appd_wet_mode_update);
+	timer_init(&wps_button_update_timer, appd_wps_button_update);
 
 	appd_prop_init();
 

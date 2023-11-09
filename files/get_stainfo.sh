@@ -476,6 +476,12 @@ get_txop_2g()
         echo $status
 }
 
+get_wet_mode_status()
+{
+   status=`wireless_get_overview.sh | grep wl0 | awk '{print $3,$4}' | head -1`
+   echo $status
+}
+
 Macaddr=$2
 
 case "$1" in
@@ -562,9 +568,12 @@ case "$1" in
 	-sta_txop_2g)
 		get_txop_2g
 		;;
+	-sta_wet_mode_status)
+	       get_wet_mode_status
+               ;;
 	*)
 		echo "Usage: get_stainfo.sh [-status|-channel|-mac|-rssi|-noise|-interf|-stationtype|-ssid|-parent|-assoc_ap|-bandwidth \
-|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bandwidth|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time|-sta_txop_5g|-sta_txop_2g]"
+|-sta_rssi|-sta_noise|-sta_bssid|-sta_ssid|-sta_channel|-sta_bandwidth|-sta_bssid_fronthaul_2G|-sta_bssid_fronthaul_5G|-sta_bssid_backhaul|-sta_device_mac|-sta_agent_almac|-sta_controller_almac|-sta_parent_mac|-sta_bh_type|-backhaul_nw_up_time|-sta_txop_5g|-sta_txop_2g|-sta_wet_mode_status]"
 		exit 1
 		;;
 esac
