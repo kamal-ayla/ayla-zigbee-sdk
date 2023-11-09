@@ -688,7 +688,9 @@ static void gw_cmd_free(void *arg)
 	if (!gw_cmd) {
 		return;
 	}
-	json_decref(gw_cmd->data);
+	if(gw_cmd->data!=NULL) {
+		json_decref(gw_cmd->data);
+	}
 	if (gw_cmd->free_arg_handler) {
 		gw_cmd->free_arg_handler(gw_cmd->arg);
 	}
