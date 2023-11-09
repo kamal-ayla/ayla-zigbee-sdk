@@ -66,7 +66,7 @@
 #define ARR_POINTER_LEN 3
 #define MIN_BUF_LEN 8
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "vantiva_zigbee_gateway_v1.2";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.3";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -74,6 +74,7 @@ static struct timer ngrok_data_update_timer;
 static struct timer reboot_cause_update_timer;
 static struct timer wet_mode_update_timer;
 static struct timer wps_button_update_timer;
+static struct timer tx_max_pwr_adjust_update_timer;
 static unsigned int zb_join_enable;
 static unsigned int zb_change_channel;
 static u8 zb_join_status;
@@ -531,6 +532,15 @@ static u8  wet_mode_enable;
 static int gw_wifi_wet_mode_status;
 static int wet_iteration;
 static int wps_iteration;
+
+// To get the radio 0 max target power adjust value
+#define MAX_TARGET_PWR_ADJUST_RADIO0 "ubus call wireless.radio get '{\"name\":\"radio0\"}' | awk -e /'max_target_power_adjusted/' | sed 's/\t\t*/ /g' | tr -d '\",{: ' | sed 's/max_target_power_adjusted//g'"
+//To get the radio 1 max target power adjust value
+#define MAX_TARGET_PWR_ADJUST_RADIO1 "ubus call wireless.radio get '{\"name\":\"radio1\"}' | awk -e /'max_target_power_adjusted/' | sed 's/\t\t*/ /g' | tr -d '\",{: ' | sed 's/max_target_power_adjusted//g'"
+
+// To store the max power adjust values
+static char gw_wifi_pwr_adjust_5G[MIN_BUF_LEN];
+static char gw_wifi_pwr_adjust_2G[MIN_BUF_LEN];
 
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);
@@ -1397,6 +1407,56 @@ void appd_prop_init()
    }
 
    timer_set(app_get_timers(), &reboot_cause_update_timer, 180000);
+}
+
+/** @brief appd_gw_tx_pwr_adjusted_status
+ *          This function will excute the ubus call command and get the radio0 and radio 1 max target power adjust value
+ *          radio0 represents the 5ghz and radio 1 represents the 2ghz
+ *          values will be validated before sending to the cloud.
+ *
+ * @param No input argument
+ *
+ * @return return value 1 if command failed excute and 0 if everything is success
+ */
+
+static int appd_gw_tx_pwr_adjusted_status(void) {
+   char adjust_value[MIN_BUF_LEN]= {0};
+   FILE *pwr_adjust = NULL;
+
+   pwr_adjust = popen(MAX_TARGET_PWR_ADJUST_RADIO0,"r");
+   if (pwr_adjust == NULL) {
+      log_debug("get the max target power adjust radio0 cmd failed");
+      pclose(pwr_adjust);
+      return 1;
+   }
+   memset(adjust_value,'\0',sizeof(adjust_value));
+   fscanf(pwr_adjust, "%s", adjust_value);
+   pclose(pwr_adjust);
+   log_debug("[%d][RADIO0-5GHZ] max target power adjust value : %s", __LINE__, adjust_value);
+
+   // if data mismatch then only send to the cloud
+   if (strcmp(adjust_value, gw_wifi_pwr_adjust_5G)) {
+      strncpy(gw_wifi_pwr_adjust_5G,adjust_value,strlen(adjust_value));
+      prop_send_by_name("gw_tx_power_adjusted_5G");
+   }
+
+   pwr_adjust = popen(MAX_TARGET_PWR_ADJUST_RADIO1,"r");
+   if (pwr_adjust == NULL) {
+      log_debug("get the max target power adjust radio1 cmd failed");
+      pclose(pwr_adjust);
+      return 1;
+   }
+   memset(adjust_value,'\0',sizeof(adjust_value));
+   fscanf(pwr_adjust, "%s", adjust_value);
+   pclose(pwr_adjust);
+   log_debug("[%d][RADIO1-2.4GHZ] max target power adjust value : %s", __LINE__, adjust_value);
+
+   // if data mismatch then only send to the cloud
+   if (strcmp(adjust_value, gw_wifi_pwr_adjust_2G)) {
+      strncpy(gw_wifi_pwr_adjust_2G,adjust_value,strlen(adjust_value));
+      prop_send_by_name("gw_tx_power_adjusted_2G");
+   }
+   return 0;
 }
 
 /** @brief enable/disable gateway wet mode  from cloud.
@@ -5218,6 +5278,24 @@ static int appd_gw_ota_type(struct prop *prop, const void *val,
 	return 0;
 }
 
+/** @brief appd_tx_max_pwr_adjust_update
+ *          This function will excute the appd_gw_tx_pwr_adjusted_status func and check the status after expiry the 1 min timer
+ *
+ * @param timer_tx_max_pwr_adjust_update pointer declared to the timer structure
+ *
+ * @return None
+ */
+static void appd_tx_max_pwr_adjust_update(struct timer *timer_tx_max_pwr_adjust_update)
+{
+   unsigned int status = 0;
+   // To cancel the timer
+   timer_cancel(app_get_timers(), timer_tx_max_pwr_adjust_update);
+   status = appd_gw_tx_pwr_adjusted_status();
+   if ( status == 0 ) {
+      log_debug ("max power adjust 2g or 5g successfully completed !!!");
+   }
+
+}
 static int appd_gw_tx_power_2G(struct prop *prop, const void *val,
                                         size_t len, const struct op_args *args)
 {
@@ -5276,6 +5354,8 @@ static int appd_gw_tx_power_2G(struct prop *prop, const void *val,
                 }
 	pclose(tx_power_2G);
 	prop_send_by_name("gw_tx_power_2G");
+	// To set the timer with 1 minute and excute the call back function after timer expiry
+	timer_set(app_get_timers(), &tx_max_pwr_adjust_update_timer, 60000);
 
         return 0;
 }
@@ -5338,6 +5418,8 @@ static int appd_gw_tx_power_5G(struct prop *prop, const void *val,
 	}
 	pclose(tx_power_5G);
 	prop_send_by_name("gw_tx_power_5G");
+	// To set the timer with 1 minute and excute the call back function after timer expiry
+	timer_set(app_get_timers(), &tx_max_pwr_adjust_update_timer, 60000);
         return 0;
 }
 
@@ -5565,6 +5647,8 @@ static int appd_update_from_device_prop_value(void)
     fscanf(update_dev, "%d", &gw_crash_count);
     log_debug("[%d] Get crash count from dcm_props file after networkup : %d", __LINE__, gw_crash_count);
     pclose(update_dev);
+    // update the current max target power adjust 2g & 5g values in the cloud
+    appd_gw_tx_pwr_adjusted_status();
 
     return 0;
 }
@@ -6785,6 +6869,20 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_wifi_wet_mode_status,
                 .len = sizeof(gw_wifi_wet_mode_status),
+        },
+        {
+                .name = "gw_tx_power_adjusted_2G",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_pwr_adjust_2G,
+                .len = sizeof(gw_wifi_pwr_adjust_2G),
+        },
+        {
+                .name = "gw_tx_power_adjusted_5G",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_wifi_pwr_adjust_5G,
+                .len = sizeof(gw_wifi_pwr_adjust_5G),
         }
 
 };
@@ -6974,6 +7072,7 @@ int appd_init(void)
 	timer_init(&reboot_cause_update_timer, appd_reboot_cause_update);
 	timer_init(&wet_mode_update_timer, appd_wet_mode_update);
 	timer_init(&wps_button_update_timer, appd_wps_button_update);
+	timer_init(&tx_max_pwr_adjust_update_timer, appd_tx_max_pwr_adjust_update);
 
 	appd_prop_init();
 
