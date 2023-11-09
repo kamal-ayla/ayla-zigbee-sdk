@@ -61,7 +61,9 @@
 /* Maximum # of datapoints allowed in a batch */
 #define APPD_MAX_BATCHED_DPS				64
 
-
+#define BUFF_LEN  128
+#define ARR_POINTER_LEN 3
+#define MIN_BUF_LEN 8
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
 const char *appd_template_version = "vantiva_zigbee_gateway_v1.1";
 
@@ -89,9 +91,9 @@ static char file_path[50];
 static u8  get_sysinfo_status;
 static unsigned int controller_status;
 static unsigned int mesh_controller_status;
-static char board_model[100];
-static char ram_usage[100];
-static char cpu_usage[5];
+static char board_model[BUFF_LEN];
+static char ram_usage[BUFF_LEN];
+static char cpu_usage[MIN_BUF_LEN];
 static char up_time[UPTIME_LEN];
 //#define GET_MESH_CONTROLLER_STATUS "uci get multiap.controller.enabled"
 #define GET_MESH_CONTROLLER_STATUS_GCNT "uci get multiap.controller.enabled"
@@ -99,11 +101,9 @@ static char up_time[UPTIME_LEN];
 #define BOARD_TYPE   "uci get version.@version[0].product"
 #define GET_DEVICE_UPTIME "/bin/get_sysinfo.sh"
 
-#define GET_RAM_FREE "free | grep Mem | awk '{print $4}'"
-#define GET_RAM_USED "free | grep Mem | awk '{print $3}'"
-#define GET_RAM_TOTAL "free | grep Mem | awk '{print $2}'"
+#define RAM_USAGE "free | grep Mem | awk '{print $2,$3,$4}'"
 
-#define GET_CURRENT_CPU_USAGE "transformer-cli get sys.proc.CurrentCPUUsage | grep -o '[0-9]*'"
+#define GET_CURRENT_CPU_USAGE   "top -n 1 | grep CPU | awk '{print $2}' | head -n1"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
 #define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.core_logread.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
@@ -115,8 +115,7 @@ static char up_time[UPTIME_LEN];
 #define DELETE_CORE_TAR_FILE "rm -rf /root/core.tar"
 #define DELETE_CORE_FILES "rm -rf /root/*.gz %s"
 #define WIFI_STA_ADDR_LEN               50
-#define COMMAND_LENGTH	100
-extern char command[COMMAND_LENGTH];
+extern char command[BUFF_LEN];
 extern char data[DATA_SIZE];
 static pthread_t vnode_poll_thread = (pthread_t)NULL;
 static unsigned int wifi_sta_info_update_period_min;
@@ -5159,83 +5158,57 @@ static enum err_t appd_zwave_fw(struct prop *prop, int req_id,
  */
 static int appd_update_from_device_prop_value(void)
 {
-   FILE *fp;
-   FILE *get_val;
-   static unsigned int ram_mb, ram_kb;
-   static unsigned int cpusage;
-   char buffer[CHAR_MINI_SIZE];
-   fp = popen(GET_RAM_FREE,"r");
-   if (fp == NULL) {
-      log_err("Ram usage get failed");
-      exit(1);
+
+   char *array[ARR_POINTER_LEN];
+   int i = 0;
+   FILE *update_dev;
+   char buf[MAX_CMD_BUF_LEN];
+
+   memset(buf, '\0', sizeof(buf));
+   update_dev = popen(RAM_USAGE,"r");
+
+   if (update_dev == NULL) {
+      log_debug("Ram usage get failed");
+      pclose(update_dev);
+      return 1;
    }
-   fscanf(fp, "%d", &ram_kb);
-   pclose(fp);
-   ram_mb = ram_kb / 1024;
+   fscanf(update_dev, "%[^\n]", buf);
+   pclose(update_dev);
 
-   // Displaying output
-   log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-   strcpy(ram_usage,"Free=");
-   sprintf(buffer,"%d",ram_mb);
-   strcat(ram_usage,buffer);
-   strcat(ram_usage,"MB");
+   log_debug("[%d] RAM USAGE RAW DATA : %s", __LINE__, buf);
 
-   fp = popen(GET_RAM_USED,"r");
-   if (fp == NULL) {
-      log_err("Ram usage get failed");
-      exit(1);
+   char *token = strtok( buf, " ");
+
+   /* Verify other tokens */
+   while( token != NULL ) {
+   array[i++] = token;
+   token = strtok(NULL, " ");
    }
-   fscanf(fp, "%d", &ram_kb);
-   pclose(fp);
-   ram_mb = ram_kb / 1024;
 
-   // Displaying output
-   log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-   strcat(ram_usage," Used=");
-   sprintf(buffer,"%d",ram_mb);
-   strcat(ram_usage,buffer);
-   strcat(ram_usage,"MB");
+   memset(ram_usage,'\0',sizeof(ram_usage));
+   snprintf(ram_usage, sizeof(ram_usage), "Free=%dMB Used=%dMB Total=%dMB", atoi(array[2])/1024, atoi(array[1])/1024, atoi(array[0])/1024);
+   log_debug("[%d] RAM USAGE : %s", __LINE__, ram_usage);
 
-   fp = popen(GET_RAM_TOTAL,"r");
-   if (fp == NULL) {
-      log_err("Ram usage get failed");
-      exit(1);
+   update_dev = popen(GET_CURRENT_CPU_USAGE,"r");
+   if (update_dev == NULL) {
+      log_debug("CPU Usage get failed");
+      pclose(update_dev);
+      return 1;
    }
-   fscanf(fp, "%d", &ram_kb);
-   pclose(fp);
-   ram_mb = ram_kb / 1024;
+   fscanf(update_dev, "%s", cpu_usage);
+   pclose(update_dev);
+   log_debug("[%d] cpu_usage is :%s\n", __LINE__, cpu_usage);
 
-   // Displaying output
-    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-    strcat(ram_usage," Total=");
-    sprintf(buffer,"%d",ram_mb);
-    strcat(ram_usage,buffer);
-    strcat(ram_usage,"MB");
-    log_debug(" ram_usage is :%s\n", ram_usage);
-
-    memset(buffer,'\0',sizeof(buffer));
-    fp = popen(GET_CURRENT_CPU_USAGE,"r");
-    if (fp == NULL) {
-       log_err("cpu usage get failed");
-       exit(1);
-    }
-    fscanf(fp, "%d", &cpusage);
-    pclose(fp);
-    sprintf(buffer,"%d",cpusage);
-    strcpy(cpu_usage,buffer);
-    strcat(cpu_usage,"%");
-    log_debug(" cpu_usage is :%s\n", cpu_usage);
-
-    // To get the crash count from dcm_props file
-    get_val = popen(GET_CRASH_COUNT,"r");
-    if( get_val == NULL) {
+   // To get the crash count from dcm_props file
+   update_dev = popen(GET_CRASH_COUNT,"r");
+    if( update_dev == NULL) {
        log_debug("GET CRASH COUNT COMMAND FAILED");
-       pclose(get_val);
+       pclose(update_dev);
        return 1;
     }
-    fscanf(get_val, "%d", &gw_crash_count);
-    log_debug("Get crash count from dcm_props file after networkup : %d",gw_crash_count);
-    pclose(get_val);
+    fscanf(update_dev, "%d", &gw_crash_count);
+    log_debug("[%d] Get crash count from dcm_props file after networkup : %d", __LINE__, gw_crash_count);
+    pclose(update_dev);
 
     return 0;
 }
@@ -5246,24 +5219,27 @@ static int appd_update_from_device_prop_value(void)
 static enum err_t appd_cpu_usage_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
-	FILE *fp;
-	static unsigned int cpusage;
-	char buffer[5];
-	fp = popen(GET_CURRENT_CPU_USAGE,"r");
-	if (fp == NULL) {
-		log_err("Ram usage get failed");
-		exit(1);
-	}
-	fscanf(fp, "%d", &cpusage);
-	pclose(fp);
-	sprintf(buffer,"%d",cpusage);
-	if(!strcmp(cpu_usage,buffer)){
-		return 0;
-	}
-	strcpy(cpu_usage,buffer);
-	strcat(cpu_usage,"%");
-	log_debug(" cpu_usage is :%s\n", cpu_usage);
-	return prop_arg_send(prop, req_id, opts);
+   FILE *cpu;
+   char tmp[MIN_BUF_LEN];
+
+   strncpy(tmp,cpu_usage,sizeof(cpu_usage));
+   cpu = popen(GET_CURRENT_CPU_USAGE,"r");
+   if (cpu == NULL) {
+      log_debug("CPU Usage get failed");
+      pclose(cpu);
+      return 1;
+   }
+   fscanf(cpu, "%s", cpu_usage);
+   pclose(cpu);
+   log_debug("[%d] cpu_usage is :%s", __LINE__, cpu_usage);
+
+   if(!strcmp(tmp,cpu_usage)){
+      return 0;
+   } else {
+      log_debug(" CPU Usage is the same as previous value ");
+   }
+
+   return prop_arg_send(prop, req_id, opts);
 }
 
 
@@ -5273,63 +5249,47 @@ static enum err_t appd_cpu_usage_send(struct prop *prop, int req_id,
 static enum err_t appd_ram_usage_send(struct prop *prop, int req_id,
                    const struct op_options *opts)
 {
+   char tmp[BUFF_LEN];
+   char *array[ARR_POINTER_LEN];
+   int i = 0;
+   FILE *ram;
+   char buf[MAX_CMD_BUF_LEN];
 
-	FILE *fp;
-	static unsigned int ram_mb, ram_kb;
-	char buffer[10];
-	char tmp[100];
-	fp = popen(GET_RAM_FREE,"r");
-	if (fp == NULL) {
-		log_err("Ram usage get failed");
-		exit(1);
-	}
-	fscanf(fp, "%d", &ram_kb);
-	pclose(fp);
-	ram_mb = ram_kb / 1024;
-    
-    // Displaying output
-    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-    strcpy(ram_usage,"Free=");
-	sprintf(buffer,"%d",ram_mb);
-	strcat(ram_usage,buffer);
-	strcat(ram_usage,"MB");
+   strncpy(tmp,ram_usage,sizeof(ram_usage));
 
-	fp = popen(GET_RAM_USED,"r");
-	if (fp == NULL) {
-		log_err("Ram usage get failed");
-		exit(1);
-	}
-	fscanf(fp, "%d", &ram_kb);
-	pclose(fp);
-	ram_mb = ram_kb / 1024;
-    
-    // Displaying output
-    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-    strcat(ram_usage," Used=");
-	sprintf(buffer,"%d",ram_mb);
-	strcat(ram_usage,buffer);
-	strcat(ram_usage,"MB");
+   memset(buf, '\0', sizeof(buf));
+   ram = popen(RAM_USAGE,"r");
 
-		fp = popen(GET_RAM_TOTAL,"r");
-	if (fp == NULL) {
-		log_err("Ram usage get failed");
-		exit(1);
-	}
-	fscanf(fp, "%d", &ram_kb);
-	pclose(fp);
-	ram_mb = ram_kb / 1024;
-    
-    // Displaying output
-    log_debug("***********************************%d Kilobytes = %d Megabytes", ram_kb, ram_mb);
-    strcat(ram_usage," Total=");
-	sprintf(buffer,"%d",ram_mb);
-	strcat(ram_usage,buffer);
-	strcat(ram_usage,"MB");
-    log_debug(" ram_usage is :%s\n", ram_usage);
-	if(!strcmp(tmp,ram_usage)){
-		return 0;
-	}
-	return prop_arg_send(prop, req_id, opts);
+   if (ram == NULL) {
+      log_debug("Ram usage get failed");
+      pclose(ram);
+      return 1;
+   }
+   fscanf(ram, "%[^\n]", buf);
+   pclose(ram);
+
+   log_debug("[%d] RAM USAGE RAW DATA : %s", __LINE__, buf);
+
+   char *token = strtok( buf, " ");
+
+   /* Verify other tokens */
+   while( token != NULL ) {
+   array[i++] = token;
+   token = strtok(NULL, " ");
+   }
+
+   memset(ram_usage,'\0',sizeof(ram_usage));
+   snprintf(ram_usage, sizeof(ram_usage), "Free=%dMB Used=%dMB Total=%dMB", atoi(array[2])/1024, atoi(array[1])/1024, atoi(array[0])/1024);
+   log_debug("[%d] RAM USAGE : %s", __LINE__, ram_usage);
+
+
+   if(!strcmp(tmp,ram_usage)){
+      return 0;
+   } else {
+      log_debug("RAM Usage is the same as previous value");
+   }
+
+   return prop_arg_send(prop, req_id, opts);
 }
 
 /*
