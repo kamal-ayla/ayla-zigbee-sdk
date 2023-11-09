@@ -48,6 +48,7 @@
 #define ZB_LIGHT_PROP_NAME		"light"
 #define ZB_TAP_PROP_NAME		"tap"
 #define ZB_TAMPER_PROP_NAME		"tamper"
+#define ZB_BATTERY_VOLTAGE		"battery_voltage"
 
 /*
  * Update node as online status
@@ -174,6 +175,9 @@ void appd_update_decimal_prop(uint16_t node_id, char *name, double value);
  * Update node int prop
  */
 void appd_update_int_prop(uint16_t node_id, char *name, int value);
+
+void appd_zb_send_battery_voltage_request(char *node_addr);
+
 
 #endif /* __APPD_INTERFACE_H__ */
 

@@ -71,6 +71,7 @@
 #define ZB_TEMPLATE_TRI_BUTTON_VERSION		"1.0"
 #define ZB_TEMPLATE_LOCK_VERSION		"1.0"
 #define ZB_TEMPLATE_TEMPHUMI_VERSION		"1.0"
+#define ZB_TEMPLATE_VERSION_1_1		"1.1"
 
 #define ZB_PROFILE_ID_HA			0x0104
 
@@ -282,6 +283,22 @@ static const struct node_prop_def zb_template_leak[] = {
 	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
+/* Water leak prop define */
+static const struct node_prop_def zb_template_leak_1[] = {
+	{ ZB_LEAK_ALARM_PROP_NAME,	PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_DEFECT_NAME,	PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_LOW_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_VOLTAGE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+};
+
 /* Smoke detector prop define */
 static const struct node_prop_def zb_template_smoke[] = {
 	{ ZB_SMOKE_ALARM_PROP_NAME,	PROP_BOOLEAN,	PROP_FROM_DEVICE },
@@ -312,6 +329,35 @@ static const struct node_prop_def zb_template_motion[] = {
 	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
+/* Motion detector prop define with battery voltage*/
+static const struct node_prop_def zb_template_motion_1[] = {
+	{ ZB_STATUS_PROP_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_VOLTAGE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+};
+/*
+static const struct node_prop_def zb_template_motion_1[] = {
+	{ ZB_STATUS_PROP_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_DEFECT_NAME,	PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_LOW_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_VOLTAGE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+};
+*/
 /* Motion / Light detector prop define *//*
 static const struct node_prop_def zb_template_motion_1_1[] = {
 	{ ZB_STATUS_PROP_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
@@ -476,7 +522,7 @@ static const struct node_prop_def zb_template_measure_temphumi_2[] = {
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 */ //temporary change to ignore the warning
-
+/*
 static const struct node_prop_def zb_template_measure_temphumi[] = {
 	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
 	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
@@ -488,8 +534,20 @@ static const struct node_prop_def zb_template_measure_temphumi[] = {
 	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
 	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
+*/
+static const struct node_prop_def zb_template_measure_temphumi_1[] = {
+	{ ZB_MEASURE_TEMPERATURE,	PROP_BOOLEAN,	PROP_TO_DEVICE	 },
+	{ ZB_LOCAL_HUMIDITY,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_LOCAL_TEMPERATURE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_VOLTAGE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
 
-
+};
 /* IAS Zone prop define */
 
 static const struct node_prop_def zb_template_ias_zone[] = {
@@ -502,6 +560,19 @@ static const struct node_prop_def zb_template_ias_zone[] = {
 	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
 };
 
+/* IAS Zone prop define */
+
+static const struct node_prop_def zb_template_ias_zone_1[] = {
+	{ ZB_STATUS_PROP_NAME,		PROP_BOOLEAN,	PROP_FROM_DEVICE },
+	{ ZB_SHORT_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_LONG_ADDR_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_SRC_PROP_NAME,	PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_POWER_LEV_PROP_NAME,	PROP_INTEGER,	PROP_FROM_DEVICE },
+	{ ZB_MODEL_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_ALIAS_PROP_NAME,		PROP_STRING,	PROP_FROM_DEVICE },
+	{ ZB_BATTERY_VOLTAGE,		PROP_DECIMAL,	PROP_FROM_DEVICE },
+};
+
 /* Prop define table */
 static struct nd_prop_info prop_info_array[] = {
 	{
@@ -512,7 +583,7 @@ static struct nd_prop_info prop_info_array[] = {
 		.template_version = ZB_TEMPLATE_LEAK_VERSION,
 		.prop_def = zb_template_leak,
 		.def_size = ARRAY_LEN(zb_template_leak)
-	},
+	},/*
 	{
 		.device_id = ZB_DEVICE_ID_LEAK,
 		.model_id = ZB_MODEL_ID_CENTRALITE_LEAK,
@@ -521,6 +592,15 @@ static struct nd_prop_info prop_info_array[] = {
 		.template_version = ZB_TEMPLATE_LEAK_VERSION,
 		.prop_def = zb_template_leak,
 		.def_size = ARRAY_LEN(zb_template_leak)
+	},*/
+	{
+		.device_id = ZB_DEVICE_ID_LEAK,
+		.model_id = ZB_MODEL_ID_CENTRALITE_LEAK,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_LEAK,
+		.template_version = ZB_TEMPLATE_VERSION_1_1,
+		.prop_def = zb_template_leak_1,
+		.def_size = ARRAY_LEN(zb_template_leak_1)
 	},
 	{
 		.device_id = ZB_DEVICE_ID_LEAK,
@@ -599,10 +679,19 @@ static struct nd_prop_info prop_info_array[] = {
 		.model_id = ZB_MODEL_ID_CENTRALITE_MOTION,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_MOTION,
+		.template_version = "2.0",
+		.prop_def = zb_template_motion_1,
+		.def_size = ARRAY_LEN(zb_template_motion_1)
+	},/*
+	{
+		.device_id = ZB_DEVICE_ID_MOTION,
+		.model_id = ZB_MODEL_ID_CENTRALITE_MOTION,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_MOTION,
 		.template_version = ZB_TEMPLATE_MOTION_VERSION,
 		.prop_def = zb_template_motion,
 		.def_size = ARRAY_LEN(zb_template_motion)
-	},
+	},*/
 	{
 		.device_id = ZB_DEVICE_ID_MOTION_NEO,
 		.model_id = ZB_MODEL_ID_MOTION_NEO,
@@ -752,9 +841,9 @@ static struct nd_prop_info prop_info_array[] = {
 		.model_id = ZB_MODEL_ID_CENTRALITE_TEMPHUMI,
 		.subdevice_key = ZB_SUBDEVICE,
 		.template_key = ZB_TEMPLATE_TEMPHUMI_MEASURE,
-		.template_version = "1.0",
-		.prop_def = zb_template_measure_temphumi,
-		.def_size = ARRAY_LEN(zb_template_measure_temphumi)
+		.template_version = ZB_TEMPLATE_VERSION_1_1,
+		.prop_def = zb_template_measure_temphumi_1,
+		.def_size = ARRAY_LEN(zb_template_measure_temphumi_1)
 	},
 	{
 		.device_id = ZB_DEVICE_ID_TEMPHUMI,
@@ -890,7 +979,7 @@ static struct nd_prop_info prop_info_array[] = {
 		.template_version = ZB_TEMPLATE_IAS_ZONE_VERSION,
 		.prop_def = zb_template_ias_zone,
 		.def_size = ARRAY_LEN(zb_template_ias_zone)
-	},
+	},/*
 	{
 		.device_id = ZB_DEVICE_ID_IAS_ZONE,
 		.model_id = ZB_MODEL_ID_CENTRALITE_DOOR,
@@ -899,7 +988,16 @@ static struct nd_prop_info prop_info_array[] = {
 		.template_version = ZB_TEMPLATE_IAS_ZONE_VERSION,
 		.prop_def = zb_template_ias_zone,
 		.def_size = ARRAY_LEN(zb_template_ias_zone)
-	},		
+	},*/
+	{
+		.device_id = ZB_DEVICE_ID_IAS_ZONE,
+		.model_id = ZB_MODEL_ID_CENTRALITE_DOOR,
+		.subdevice_key = ZB_SUBDEVICE,
+		.template_key = ZB_TEMPLATE_IAS_ZONE,
+		.template_version = ZB_TEMPLATE_VERSION_1_1,
+		.prop_def = zb_template_ias_zone_1,
+		.def_size = ARRAY_LEN(zb_template_ias_zone_1)
+	},
 	{
 		.device_id = ZB_DEVICE_ID_SMART_PLUG,
 		.model_id = "",
@@ -1711,6 +1809,30 @@ static void appd_power_query_timeout(struct timer *timer)
 	log_debug("Send power request to node %s, poll_count %u",
 	    info->node->addr, info->poll_count);
 	zb_send_power_request(info->node_id);
+		zb_send_power_level_request(info->node_id);
+
+	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
+}
+
+/*
+ * Handle poll timer timeout
+ */
+static void appd_battery_voltage_query_timeout(struct timer *timer)
+{
+	struct zb_node_info *info;
+
+	info = CONTAINER_OF(struct zb_node_info, poll_timer, timer);
+	info->poll_count++;
+	if (info->poll_count >= POLL_TIMEOUT_COUNT) {
+		log_info("Poll node %s power timeout %u times",
+		    info->node->addr, info->poll_count);
+		appd_update_as_offline_status(info);
+	}
+
+	log_debug("Send battery voltage level request to node %s, poll_count %u",
+	    info->node->addr, info->poll_count);
+	zb_send_power_level_request(info->node_id);
+
 	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
 }
 
@@ -1726,6 +1848,23 @@ static void appd_start_power_poll(struct zb_node_info *info)
 	timer_reset(app_get_timers(), &(info->poll_timer),
 	    appd_power_query_timeout, WAIT_RESP_PERIOD);
 	zb_send_power_request(info->node_id);
+		zb_send_power_level_request(info->node_id);
+
+}
+
+/*
+ * Start battery voltage request poll
+ */
+static void appd_start_battery_voltage_poll(struct zb_node_info *info)
+{
+	ASSERT(info != NULL);
+	/* Set poll timer to get battery voltage info query */
+	log_debug("node %s start to battery voltage info query",
+	    info->node->addr);
+	timer_reset(app_get_timers(), &(info->poll_timer),
+	    appd_battery_voltage_query_timeout, WAIT_RESP_PERIOD);
+		zb_send_power_level_request(info->node_id);
+
 }
 
 /*
@@ -1755,6 +1894,11 @@ static int appd_start_power_query(struct node *zb_node, void *arg)
 		return 0;
 	}
 
+	if(!strcmp(info->model_id, "3310-G") || !strcmp(info->model_id, "3315-G")
+			|| !strcmp(info->model_id, "3323-G") || !strcmp(info->model_id, "3328-G")) {
+		log_debug("Start battery voltage query");
+		appd_start_battery_voltage_poll(info);
+	}
 	appd_start_power_poll(info);
 	return 0;
 }
@@ -1780,6 +1924,8 @@ static void appd_power_source_query_timeout(struct timer *timer)
 	info = CONTAINER_OF(struct zb_node_info, poll_timer, timer);
 	log_debug("node %s get power source timeout", info->node->addr);
 	zb_send_power_source_request(info->node_id);
+	log_debug("#################node %s get power level timeout", info->node->addr);
+	zb_send_power_level_request(info->node_id);
 	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
 }
 
@@ -1794,6 +1940,8 @@ static void appd_start_power_source_query(struct zb_node_info *info)
 	timer_reset(app_get_timers(), &(info->poll_timer),
 	    appd_power_source_query_timeout, WAIT_RESP_PERIOD);
 	zb_send_power_source_request(info->node_id);
+	log_debug("#################node %s get power level", info->node->addr);
+	zb_send_power_level_request(info->node_id);
 }
 
 /*
@@ -2275,7 +2423,12 @@ void appd_device_specific_complete_handler(uint16_t node_id,
 			appd_node_bind_control(node_id,
 			0xFC45, 1);
 		}
-	} else {
+	} else if(!strcmp(info->model_id, "3310-G") || !strcmp(info->model_id, "3315-G")
+			|| !strcmp(info->model_id, "3323-G") || !strcmp(info->model_id, "3328-G")) {
+		log_debug("************ appd_device_specific_complete_handler  bind battery voltage for %s",info->model_id);
+		appd_node_bind_control(node_id,
+			ZCL_POWER_CONFIG_CLUSTER_ID, 1);
+	}else {
 		log_debug("no device specific handlers found");
 	}
 }
@@ -3394,3 +3547,29 @@ void appd_update_all_node_state(void)
 	}
 }
 
+void appd_zb_send_battery_voltage_request(char *node_addr)
+{
+	log_debug("#################node node_addr=%s get battery_voltage request sending", node_addr);
+	uint8_t node_eui[8];
+	struct node *zb_node;
+	struct zb_node_info *info;
+	appd_node_addr_to_eui(node_addr, node_eui);
+	log_debug("node %02X%02X%02X%02X%02X%02X%02X%02X"
+			    " node eui print",
+			    node_eui[7], node_eui[6], node_eui[5],
+			    node_eui[4], node_eui[3], node_eui[2],
+			    node_eui[1], node_eui[0]);
+
+	zb_node = node_lookup(node_addr);
+	if (!zb_node) {
+		log_info("no node with addr: %s", node_addr);
+		return;
+	}
+
+	info = (struct zb_node_info *)node_state_get(zb_node, STATE_SLOT_NET);
+	if(info != NULL){
+		zb_send_battery_voltage_request(info->node_id);
+		log_debug("################ sending battery_voltage req from appd");
+	}
+
+}

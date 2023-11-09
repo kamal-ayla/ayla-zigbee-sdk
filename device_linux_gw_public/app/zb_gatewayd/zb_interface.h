@@ -47,6 +47,10 @@ int zb_send_ieee_addr_request(uint16_t node_id);
  */
 int zb_send_power_source_request(uint16_t node_id);
 
+int zb_send_power_level_request(uint16_t node_id);
+
+int zb_send_battery_voltage_request(uint16_t node_id);
+
 /*
  * Send model identifier request to node
  */

@@ -50,6 +50,7 @@
 #include "gateway.h"
 #include "node.h"
 #include "zb_interface.h"
+#include "appd_interface.h"
 #include "att/vt_interface.h"
 #include "att/att_interface.h"
 
@@ -991,6 +992,8 @@ int appd_node_ops_confirm_handler(enum ayla_gateway_op op,
 		if (confirm_info->status == CONF_STAT_SUCCESS) {
 			log_info("node %s added to cloud successfully",
 			    node->addr);
+			// To send battery_voltage req when sensor added successfully so we won't miss the value update
+                        appd_zb_send_battery_voltage_request(node->addr);
 		} else {
 			log_warn("node %s add failed: err %u", node->addr,
 			    confirm_info->err);

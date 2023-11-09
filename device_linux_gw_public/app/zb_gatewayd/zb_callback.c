@@ -498,6 +498,21 @@ static void zbc_read_attr_resp_handle(uint16_t source, uint8_t *msg)
 		}
 		appd_power_source_complete_handler(source, primary_power);
 	}
+
+	else if (attr->attr_id == ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID) {
+		log_debug("################# read attr resp ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID ");
+		if (attr->status == 0) {
+			if (attr->data_type == ZCL_INT8U_ATTRIBUTE_TYPE) {
+				log_debug("################# read attr resp int8u value = %d",attr->value[0]);
+				appd_update_int_prop(source, ZB_POWER_LEV_PROP_NAME,
+					attr->value[0]);
+			} else {
+					log_err("data type %d wrong", attr->data_type);
+			}
+		} else {
+			log_err("status %d error", attr->status);
+		}
+	}
 	return;
 }
 
@@ -526,6 +541,15 @@ static void zbc_power_cfg_report_attribute(uint16_t source, uint16_t attr_id,
 {
 	if (attr_id == ZCL_BATTERY_PERCENTAGE_REMAINING_ATTRIBUTE_ID) {
 		if (data_type == ZCL_INT8U_ATTRIBUTE_TYPE) {
+			appd_update_int_prop(source, ZB_POWER_LEV_PROP_NAME,
+			    data[0]);
+		}
+	}
+	log_debug("zbc_power_cfg_report_attribute start - attr_id=0x%04X", attr_id);
+	if (attr_id == ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID) {
+		log_debug("zbc_power_cfg_report_attribute attr_id ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID data_type=%d",data_type);
+		if (data_type == ZCL_INT8U_ATTRIBUTE_TYPE) {
+			log_debug("zbc_power_cfg_report_attribute power_level=%d",data[0]);
 			appd_update_int_prop(source, ZB_POWER_LEV_PROP_NAME,
 			    data[0]);
 		}
@@ -649,15 +673,34 @@ static void zbc_report_attribute_msg_handle(uint16_t source,
 static void zbc_power_config_cluster_msg_handle(uint16_t source,
 			uint8_t cmd_id, uint8_t *msg, uint16_t msg_len)
 {
+	struct zcl_attr_rept *attr;
 	switch (cmd_id) {
 	case ZCL_REPORT_ATTRIBUTES_COMMAND_ID:
 		zbc_report_attribute_msg_handle(source,
 		    ZCL_POWER_CONFIG_CLUSTER_ID, msg, msg_len);
 		break;
+	case ZCL_READ_ATTRIBUTES_RESPONSE_COMMAND_ID:
+			attr = (struct zcl_attr_rept *)msg;
+			if (attr->attr_id == ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID) {
+				log_debug("Received attribute report"
+				    " value=0x%02X, from source=0x%04X",
+				    attr->value, source);
+					log_debug("#######ZCL_READ_ATTRIBUTES_RESPONSE_COMMAND_ID#######");
+					double voltage;
+					int volt = *(msg + 4);
+					log_debug("volt = %d", volt);
+					voltage	= volt / 10.0;
+					log_debug("voltage = %f", voltage);
+					voltage = (int) *(msg + 4) /(double) 10.00;
+					log_debug("voltage = %f", voltage);
+					appd_update_decimal_prop(source, ZB_BATTERY_VOLTAGE,voltage);
+					log_debug("#########Voltage value= %f ##########",voltage);
+			}
+			break;
 	default:
 		log_debug("Received power config cluster type=%d message,"
-		    " msg_len=%d from source=0x%04X",
-		    cmd_id, msg_len, source);
+		    " msg_len=%d from source=0x%04X , ######%d#######",
+		    cmd_id, msg_len, source, msg);
 		break;
 	}
 }

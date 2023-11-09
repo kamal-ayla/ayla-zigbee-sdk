@@ -422,6 +422,26 @@ int zb_send_power_source_request(uint16_t node_id)
 }
 
 /*
+ * Send power level request to node
+ */
+int zb_send_power_level_request(uint16_t node_id)
+{
+	log_debug("#################node node_id=0x%04X get power level(voltage) request sending", node_id);
+	return zb_send_read_attribute_request(node_id,
+	    ZCL_POWER_CONFIG_CLUSTER_ID, ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID);
+}
+
+/*
+ * Send battery voltage request to node
+ */
+int zb_send_battery_voltage_request(uint16_t node_id)
+{
+	log_debug("#################node node_id=0x%04X get battery voltage request sending", node_id);
+	return zb_send_read_attribute_request(node_id,
+	    ZCL_POWER_CONFIG_CLUSTER_ID, ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID);
+}
+
+/*
  * Send model identifier request to node
  */
 int zb_send_model_identifier_request(uint16_t node_id)
