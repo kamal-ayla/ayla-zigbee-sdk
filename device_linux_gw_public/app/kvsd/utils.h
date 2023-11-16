@@ -14,5 +14,6 @@ int get_url_userpass(const char* url, const char* username, const char* passwd, 
 int check_url_userpass(const char* url);
 int kill_all_proc(const char* proc_name, uint32_t wait_ms);
 int kill_proc(pid_t pid, uint32_t wait_ms);
+void redirect_output_to_null(void);
 
 #endif // UTILS_H

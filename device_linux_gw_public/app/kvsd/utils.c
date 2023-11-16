@@ -13,6 +13,7 @@
 #include <ayla/log.h>
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "utils.h"
 
@@ -142,4 +143,15 @@ int kill_all_proc(const char* proc_name, uint32_t wait_ms)
 	}
 
 	return err;
+}
+
+void redirect_output_to_null(void)
+{
+	// Redirect standard error to standard output
+	dup2(STDOUT_FILENO, STDERR_FILENO);
+
+	// Redirect standard output to /dev/null
+	int devNull = open("/dev/null", O_WRONLY);
+	dup2(devNull, STDOUT_FILENO);
+	close(devNull);
 }

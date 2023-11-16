@@ -504,12 +504,21 @@ static void* master_stream_comm_thread(void* arg)
 
 	int cmd;
 	mss->running = true;
+	u32 err_cnt = 0;
+	bool err_flag = false;
 
 	while(1)
 	{
 		// Read from the client
-		log_debug("Server: waiting for data...");
+		if(! err_flag || (err_flag && (err_cnt % 1000 == 0)))
+		{
+			log_debug("Server: waiting for data...");
+		}
 		numRead = read(mss->fd, buffer, comm_buff_size);
+		if(0 <= numRead)
+		{
+			err_flag = false;
+		}
 		if(false == mss->running)
 		{
 			log_debug("Server: master stream process stopped");
@@ -572,8 +581,14 @@ static void* master_stream_comm_thread(void* arg)
 		}
 		else
 		{
-			log_debug("Server: read error");
-			perror("Server: read error");
+			err_flag = true;
+			++err_cnt;
+			if(err_cnt % 1000 == 0)
+			{
+				log_err("Server: read error");
+				perror("Server: read error");
+				break;
+			}
 			continue;
 		}
 	}
@@ -1650,11 +1665,11 @@ static void cam_node_sample_timeout(struct timer *timer)
 	struct cam_node_state *node_state = CONTAINER_OF(struct cam_node_state,
 	    sample_timer, timer);
 
-	// Print node properties
-	static uint32_t print_props_counter;
-	if(print_props_counter++ % 100 == 0) {
-		cam_debug_print_props(node_state->node);
-	}
+//	// Print node properties
+//	static uint32_t print_props_counter;
+//	if(print_props_counter++ % 100 == 0) {
+//		cam_debug_print_props(node_state->node);
+//	}
 
 //	// Check for update HLS and WebRTC stream credentials
 //	if(/*(! gst_video_stream_is_initialized(&node_state->gst_data)) &&*/ node_state->hls_data.received && node_state->webrtc_data.received)
@@ -1929,8 +1944,8 @@ static void webrtc_streaming_start_delay_timeout(struct timer *timer)
 static void start_kvs_streaming(struct node* node)
 {
 	char storage_size[16];
-	char *argv[12];
-	char *env[12];
+	char *argv[16];
+	char *env[16];
 	char aws_key_id[80],aws_secret[80],aws_region[40];
 	char aws_session_token[2048];
 	char urlfull[512];
@@ -1969,10 +1984,11 @@ static void start_kvs_streaming(struct node* node)
 	snprintf(aws_session_token,sizeof(aws_session_token),"AWS_SESSION_TOKEN=%s",kvs_ds->session_token);
 	snprintf(port, sizeof(port), "%u", cam_node->master_stream_state.hls_port);
 
-//	argv[i++] = SHELL_DEFAULT;
-//	argv[i++] = "-c";
+	if(! app_get_debug()) {
+		redirect_output_to_null();
+	}
+
 	argv[i++] = HLS_STREAM_APP;
-//	argv[i++] = urlfull;
 	argv[i++] = kvs_ds->kvs_channel_name;
 	argv[i++] = storage_size;
 	argv[i++] = port;
@@ -1990,6 +2006,14 @@ static void start_kvs_streaming(struct node* node)
 
 	log_warn("now setting the env list");
 	i = 0;
+	if(app_get_debug())
+	{
+		env[i++] = "GST_DEBUG=5";
+	}
+	else
+	{
+		env[i++] = "GST_DEBUG=1";
+	}
 	env[i++]=GST_PLUGIN_PATH_ENV;
 	env[i++]=ADDITIONAL_LIB_PATH_ENV;
 	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
@@ -2022,8 +2046,8 @@ static void start_kvs_streaming(struct node* node)
 
 static void start_webrtc_streaming(struct node* node)
 {
-	char *argv[12];
-	char *env[12];
+	char *argv[16];
+	char *env[16];
 	char aws_key_id[80],aws_secret[80],aws_region[40];
 	char aws_session_token[2048];
 	char urlfull[512];
@@ -2051,6 +2075,10 @@ static void start_webrtc_streaming(struct node* node)
 
 	snprintf(port, sizeof(port), "%u", cam_node->master_stream_state.webrtc_port);
 
+	if(! app_get_debug()) {
+		redirect_output_to_null();
+	}
+
 //	argv[i++] = SHELL_DEFAULT;
 //	argv[i++] = "-c";
 	argv[i++] = WEBRTC_STREAM_APP;
@@ -2070,6 +2098,14 @@ static void start_webrtc_streaming(struct node* node)
 
 	log_warn("now setting the env list");
 	i = 0;
+	if(app_get_debug())
+	{
+		env[i++] = "GST_DEBUG=5";
+	}
+	else
+	{
+		env[i++] = "GST_DEBUG=1";
+	}
 	env[i++]=aws_key_id;
 	env[i++]=aws_secret;
 	env[i++]=aws_region;
@@ -2103,8 +2139,8 @@ static void start_webrtc_streaming(struct node* node)
 
 static void start_master_stream(struct node* node)
 {
-	char *argv[12];
-	char *env[12];
+	char *argv[16];
+	char *env[16];
 	char urlfull[512];
 	char hls_port[16];
 	char webrtc_port[16];
@@ -2138,6 +2174,10 @@ static void start_master_stream(struct node* node)
 	snprintf(bitrate, sizeof(width), "%d", *((int*)bitrate_prop->val));
 	snprintf(flip, sizeof(width), "%d", *((int*)flip_prop->val));
 
+	if(! app_get_debug()) {
+		redirect_output_to_null();
+	}
+
 	argv[i++] = MASTER_STREAM_APP;
 	argv[i++] = urlfull;
 	argv[i++] = cam_node->master_stream_state.master_path;
@@ -2161,7 +2201,14 @@ static void start_master_stream(struct node* node)
 
 	log_warn("now setting the env list");
 	i = 0;
-	env[i++]="GST_DEBUG=\"*:5\"";
+	if(app_get_debug())
+	{
+		env[i++] = "GST_DEBUG=5";
+	}
+	else
+	{
+		env[i++] = "GST_DEBUG=1";
+	}
 	env[i++]=GST_PLUGIN_PATH_ENV;
 	env[i++]=ADDITIONAL_LIB_PATH_ENV;
 	env[i++]=GST_PLUGIN_SCANNER_PATH_ENV;
