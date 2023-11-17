@@ -325,8 +325,8 @@ start_source()
     set_check_property(source, "is-live", 1, NULL);
     set_check_property(source, "latency", 0, NULL);
     set_check_property(source, "drop-on-latency", TRUE, NULL);
-    set_check_property(source, "buffer-mode", 0, NULL);
-    set_check_property(source, "ntp-sync", FALSE, NULL);
+    set_check_property(source, "buffer-mode", 3, NULL);
+    set_check_property(source, "ntp-sync", TRUE, NULL);
     set_check_property(source, "udp-buffer-size", 51200, NULL);
     set_check_property(source, "tcp-timeout", 1000, NULL);
     set_check_property(source, "short-header", TRUE, NULL);
@@ -347,19 +347,19 @@ start_source()
     set_check_property(udpsink2, "host", "127.0.0.1", "port", webrtc_stream_data.port, NULL);
 
     queue1 = gst_element_factory_make("queue", "queue1"); GST_CHK_ELEM(queue1);
-    set_check_property(queue1, "flush-on-eos", 1, NULL);
+    set_check_property(queue1, "flush-on-eos", TRUE, NULL);
     set_check_property(queue1, "leaky", 2, NULL);
-    set_check_property(queue1, "max-size-buffers", 0, NULL);
-    set_check_property(queue1, "max-size-bytes", 0, NULL);
-    set_check_property(queue1, "max-size-time", (guint64)0, NULL);
+    set_check_property(queue1, "max-size-buffers", 30, NULL);
+    set_check_property(queue1, "max-size-bytes", 5000000, NULL);
+    set_check_property(queue1, "max-size-time", (guint64)250000000, NULL);
     queue1_blockpad = gst_element_get_static_pad (queue1, "src");
 
     queue2 = gst_element_factory_make("queue", "queue2"); GST_CHK_ELEM(queue2);
-    set_check_property(queue2, "flush-on-eos", 1, NULL);
+    set_check_property(queue2, "flush-on-eos", TRUE, NULL);
     set_check_property(queue2, "leaky", 2, NULL);
-    set_check_property(queue2, "max-size-buffers", 0, NULL);
-    set_check_property(queue2, "max-size-bytes", 0, NULL);
-    set_check_property(queue2, "max-size-time", (guint64)0, NULL);
+    set_check_property(queue2, "max-size-buffers", 30, NULL);
+    set_check_property(queue2, "max-size-bytes", 5000000, NULL);
+    set_check_property(queue2, "max-size-time", (guint64)250000000, NULL);
     queue2_blockpad = gst_element_get_static_pad (queue2, "src");
 
     fakesink1 = gst_element_factory_make("fakesink", "fakesink1"); GST_CHK_ELEM(fakesink1);
