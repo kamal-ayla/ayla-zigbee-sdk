@@ -155,3 +155,34 @@ void redirect_output_to_null(void)
 	dup2(devNull, STDOUT_FILENO);
 	close(devNull);
 }
+
+int convert_special_to_html_ascii(const char* input, char* output, size_t output_size)
+{
+	char* ptr = output;
+	size_t output_size_free = output_size;
+	size_t input_len = strlen(input);
+	int ret;
+
+	for(unsigned int i=0; i<input_len; ++i)
+	{
+		char c = input[i];
+		if((c < '0' || c > '9') && (c < 'A' || c > 'Z') && (c < 'a' || c > 'z'))
+		{
+			ret = snprintf(ptr, output_size_free, "%%%02X", c);
+			if(0 > ret)
+			{
+				return -1;
+			}
+			ptr += ret;
+			output_size_free -= ret;
+		}
+		else
+		{
+			*ptr = c;
+			++ptr;
+			--output_size_free;
+		}
+	}
+
+	return output_size - output_size_free;
+}

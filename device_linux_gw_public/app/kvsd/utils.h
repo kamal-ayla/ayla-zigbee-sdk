@@ -15,5 +15,6 @@ int check_url_userpass(const char* url);
 int kill_all_proc(const char* proc_name, uint32_t wait_ms);
 int kill_proc(pid_t pid, uint32_t wait_ms);
 void redirect_output_to_null(void);
+int convert_special_to_html_ascii(const char* input, char* output, size_t output_size);
 
 #endif // UTILS_H

@@ -2149,6 +2149,7 @@ static void start_master_stream(struct node* node)
 	char bitrate[8];
 	char flip[8];
 	int i = 0;
+	char password_ascii_converted[128] = {0};
 
 	struct cam_node_state *cam_node = cam_node_state_get(node);
 
@@ -2156,7 +2157,13 @@ static void start_master_stream(struct node* node)
 	struct node_prop * user_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_USERID);
 	struct node_prop * passwd_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_PASSWORD);
 
-	if(get_url_userpass(url_prop->val, user_prop->val, passwd_prop->val, urlfull) < 0)
+	if(convert_special_to_html_ascii((const char*)passwd_prop->val, password_ascii_converted, 128) < 0)
+	{
+		log_err("failed to convert password to html ascii");
+		return;
+	}
+
+	if(get_url_userpass(url_prop->val, user_prop->val, password_ascii_converted, urlfull) < 0)
 	{
 		log_err("failed to get url with user and password");
 		return;
