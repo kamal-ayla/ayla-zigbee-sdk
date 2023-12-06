@@ -325,8 +325,8 @@ start_source()
     set_check_property(source, "is-live", 1, NULL);
     set_check_property(source, "latency", 0, NULL);
     set_check_property(source, "drop-on-latency", TRUE, NULL);
-    set_check_property(source, "buffer-mode", 3, NULL);
-    set_check_property(source, "ntp-sync", TRUE, NULL);
+    set_check_property(source, "buffer-mode", 0, NULL);
+    set_check_property(source, "ntp-sync", FALSE, NULL);
     set_check_property(source, "udp-buffer-size", 51200, NULL);
     set_check_property(source, "tcp-timeout", 1000, NULL);
     set_check_property(source, "short-header", TRUE, NULL);
