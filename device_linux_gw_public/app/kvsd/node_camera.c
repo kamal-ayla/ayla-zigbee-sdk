@@ -45,7 +45,7 @@
 
 /* Template keys */
 #define CAM_NODE_TEMPLATE_BASE		"kvs_base"
-#define CAM_NODE_TEMPLATE_NODE		"kvs_cam"
+#define CAM_NODE_TEMPLATE_NODE		"kvs_cam2"
 
 /* Default between node property updates */
  #define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	1000
@@ -64,6 +64,7 @@
 #define CAM_WEBRTC_ENABLE_DEFAULT   		false
 #define CAM_KVS_STREAM_UPDATE_DEFAULT		0
 #define CAM_WEBRTC_STREAM_UPDATE_DEFAULT	0
+#define CAM_SERVICE_QUEUE_DEFAULT			""
 
 #define CAM_PROP_NAME_KVS_ENABLE            "kvs_enable"
 #define CAM_PROP_NAME_WEBRTC_ENABLE         "webrtc_enable"
@@ -80,6 +81,7 @@
 #define CAM_PROP_NAME_FLIP					"flip"
 #define CAM_PROP_NAME_KVS_STREAM_UPDATE		"kvs_stream_update"
 #define CAM_PROP_NAME_WEBRTC_STREAM_UPDATE	"webrtc_stream_update"
+#define CAM_PROP_NAME_SERVICE_QUEUE			"service_queue"
 
 #define STREAM_START_DELAY_MS				10000	/* Delay before starting stream */
 
@@ -180,6 +182,11 @@ static void cam_node_prop_init_webrtc_stream_update_setpoint(struct node *node,
 static int cam_node_prop_update_webrtc_stream_update(struct node *node,
 												  struct node_prop *prop);
 
+static void cam_node_prop_init_service_queue(struct node *node,
+													 struct node_prop *prop);
+static int cam_node_prop_update_service_queue(struct node *node,
+											 struct node_prop *prop);
+
 static void fork_and_start_kvs_streaming(struct node *node);
 static void kvs_streaming_timeout(struct timer *timer);
 static void kill_kvs_streaming(struct node* node);
@@ -244,6 +251,8 @@ static const struct cam_node_prop_def cam_template_node[] = {
             cam_node_prop_init_bitratemax_setpoint, cam_node_prop_update_bitratemax },
 	{ { CAM_PROP_NAME_FLIP,	PROP_INTEGER,	PROP_TO_DEVICE },
 			cam_node_prop_init_flip_setpoint, cam_node_prop_update_flip },
+	{ { CAM_PROP_NAME_SERVICE_QUEUE,	PROP_STRING,	PROP_TO_DEVICE },
+			cam_node_prop_init_service_queue, cam_node_prop_update_service_queue },
 };
 
 /*****************************************
@@ -1016,6 +1025,25 @@ static void cam_node_prop_init_flip_setpoint(struct node *node,
  * Update the max flip property.
  */
 static int cam_node_prop_update_flip(struct node *node,
+											 struct node_prop *prop)
+{
+	return 0;
+}
+
+/*
+ * Initialize the service queue property.
+ */
+static void cam_node_prop_init_service_queue(struct node *node,
+													 struct node_prop *prop)
+{
+	ASSERT(prop->type == PROP_STRING);
+	strcpy(prop->val, CAM_SERVICE_QUEUE_DEFAULT);
+}
+
+/*
+ * Update the max service property.
+ */
+static int cam_node_prop_update_service_queue(struct node *node,
 											 struct node_prop *prop)
 {
 	return 0;
@@ -2136,7 +2164,6 @@ static void start_webrtc_streaming(struct node* node)
 	exit(1);
 }
 
-
 static void start_master_stream(struct node* node)
 {
 	char *argv[16];
@@ -2148,6 +2175,7 @@ static void start_master_stream(struct node* node)
 	char height[8];
 	char bitrate[8];
 	char flip[8];
+	char service_queue[512] = {0};
 	int i = 0;
 	char password_ascii_converted[128] = {0};
 
@@ -2181,6 +2209,20 @@ static void start_master_stream(struct node* node)
 	snprintf(bitrate, sizeof(width), "%d", *((int*)bitrate_prop->val));
 	snprintf(flip, sizeof(width), "%d", *((int*)flip_prop->val));
 
+	// Get service options
+	bool service_queue_prop_present = false;
+	struct node_prop * service_queue_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_SERVICE_QUEUE);
+	if(NULL == service_queue_prop)
+	{
+		log_err("Failed to get service queue property");
+		strncpy(service_queue, "", sizeof(service_queue));
+	}
+	else
+	{
+		strncpy(service_queue, service_queue_prop->val, sizeof(service_queue));
+		service_queue_prop_present = true;
+	}
+
 	if(! app_get_debug()) {
 		redirect_output_to_null();
 	}
@@ -2194,6 +2236,10 @@ static void start_master_stream(struct node* node)
 	argv[i++] = width;
 	argv[i++] = height;
 	argv[i++] = flip;
+	if(true == service_queue_prop_present)
+	{
+		argv[i++] = service_queue;
+	}
 	argv[i] = NULL;
 
 	ASSERT(i <= ARRAY_LEN(argv));

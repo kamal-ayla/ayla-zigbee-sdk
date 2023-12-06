@@ -10,11 +10,22 @@
 #include <stdbool.h>
 #include "stream_comm.h"
 #include <stdint.h>
+#include "cJSON.h"
+
 
 #define GST_CHK_ELEM(elem) if(elem == NULL) { g_printerr("Error\n"); exit(-1); }
 #define GST_CHK(bool) if(bool == FALSE) { g_printerr("Error\n"); exit(-1); }
 #define COMM_BUFFER_SIZE        32
 
+#define SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_STR            "flush-on-eos"
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_STR        "max-size-buffers"
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_STR          "max-size-bytes"
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_STR        "max-size-time-ms"
+
+#define SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_DEFAULT        true
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_DEFAULT    30
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_DEFAULT      5000000
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_DEFAULT    250000000
 
 static GMainLoop* loop = NULL;
 GstPad *queue1_blockpad, *queue2_blockpad;
@@ -65,14 +76,23 @@ struct comm_data
     struct stream_data* webrtc_stream_data;
 };
 
+struct service_queue_params
+{
+    bool flush_on_eos;
+    uint32_t max_size_buffers;
+    uint32_t max_size_bytes;
+    guint64 max_size_time;
+};
+
 int start_stream(struct stream_data* sdata);
 int stop_stream(struct stream_data* sdata);
 void restart_pipeline(void);
 static void print_state_for_all_elements(GstElement *container);
 
-struct stream_data hls_stream_data;
-struct stream_data webrtc_stream_data;
-struct comm_data comm_stream_data;
+static struct stream_data hls_stream_data;
+static struct stream_data webrtc_stream_data;
+static struct comm_data comm_stream_data;
+static struct service_queue_params service_queue_params;
 
 gboolean set_check_property(GstElement *object, const gchar *property_name, ...) {
     GParamSpec *property_spec;
@@ -347,19 +367,19 @@ start_source()
     set_check_property(udpsink2, "host", "127.0.0.1", "port", webrtc_stream_data.port, NULL);
 
     queue1 = gst_element_factory_make("queue", "queue1"); GST_CHK_ELEM(queue1);
-    set_check_property(queue1, "flush-on-eos", TRUE, NULL);
+    set_check_property(queue1, "flush-on-eos", service_queue_params.flush_on_eos, NULL);
     set_check_property(queue1, "leaky", 2, NULL);
-    set_check_property(queue1, "max-size-buffers", 30, NULL);
-    set_check_property(queue1, "max-size-bytes", 5000000, NULL);
-    set_check_property(queue1, "max-size-time", (guint64)250000000, NULL);
+    set_check_property(queue1, "max-size-buffers", service_queue_params.max_size_buffers, NULL);
+    set_check_property(queue1, "max-size-bytes", service_queue_params.max_size_bytes, NULL);
+    set_check_property(queue1, "max-size-time", service_queue_params.max_size_time, NULL);
     queue1_blockpad = gst_element_get_static_pad (queue1, "src");
 
     queue2 = gst_element_factory_make("queue", "queue2"); GST_CHK_ELEM(queue2);
-    set_check_property(queue2, "flush-on-eos", TRUE, NULL);
+    set_check_property(queue2, "flush-on-eos", service_queue_params.flush_on_eos, NULL);
     set_check_property(queue2, "leaky", 2, NULL);
-    set_check_property(queue2, "max-size-buffers", 30, NULL);
-    set_check_property(queue2, "max-size-bytes", 5000000, NULL);
-    set_check_property(queue2, "max-size-time", (guint64)250000000, NULL);
+    set_check_property(queue2, "max-size-buffers", service_queue_params.max_size_buffers, NULL);
+    set_check_property(queue2, "max-size-bytes", service_queue_params.max_size_bytes, NULL);
+    set_check_property(queue2, "max-size-time", service_queue_params.max_size_time, NULL);
     queue2_blockpad = gst_element_get_static_pad (queue2, "src");
 
     fakesink1 = gst_element_factory_make("fakesink", "fakesink1"); GST_CHK_ELEM(fakesink1);
@@ -662,17 +682,78 @@ void handle_sigpipe(int signal) {
     printf("SIGPIPE received. Other end closed the connection.\n");
 }
 
+int parse_service_queue_params(char* json_string, struct service_queue_params* params)
+{
+    int ret = 0;
+    struct service_queue_params params_tmp;
+
+    // Parse JSON
+    cJSON *json = cJSON_Parse(json_string);
+    if(NULL == json)
+    {
+        printf("Error: Parsing service queue params JSON\n");
+        ret = -1;
+        goto end;
+    }
+
+    cJSON *obj;
+    obj = cJSON_GetObjectItem(json, SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_STR);
+    if(NULL == obj || obj->type != cJSON_Number)
+    {
+        goto wrong_arg;
+    }
+    params_tmp.flush_on_eos = (bool)obj->valueint;
+
+    obj = cJSON_GetObjectItem(json, SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_STR);
+    if(NULL == obj || obj->type != cJSON_Number)
+    {
+        goto wrong_arg;
+    }
+    params_tmp.max_size_buffers = (uint32_t)obj->valueint;
+
+    obj = cJSON_GetObjectItem(json, SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_STR);
+    if(NULL == obj || obj->type != cJSON_Number)
+    {
+        goto wrong_arg;
+    }
+    params_tmp.max_size_bytes = (uint32_t)obj->valueint;
+
+    obj = cJSON_GetObjectItem(json, SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_STR);
+    if(NULL == obj || obj->type != cJSON_Number)
+    {
+        goto wrong_arg;
+    }
+    params_tmp.max_size_time = ((guint64)obj->valueint * (guint64)1000000);
+
+    *params = params_tmp;
+    goto end;
+
+    wrong_arg:
+    ret = -1;
+    printf("Error: Wrong JSON argument.\n");
+
+    end:
+    if(NULL == json)
+    {
+        cJSON_Delete(json);
+    }
+    return ret;
+}
+
 int main(int argc, char** argv)
 {
-    if(argc < 5 || argc > 9)
+    if(argc < 5 || argc > 10)
     {
-        printf("Usage: %s <rtsp_location> <comm_socket> <hls_port> <webrtc_port> (kbitrate) (width) (height) (flip)\n", argv[0]);
-        printf("Eg.: %s rtsp://127.0.0.1:554 /tmp/comm.socket 5001 5002 500 640 480 1"
+        printf("Usage: %s <rtsp_location> <comm_socket> <hls_port> <webrtc_port> (kbitrate) (width) (height) (flip) (service_queue_json)\n", argv[0]);
+        printf("Eg.: %s rtsp://127.0.0.1:554 /tmp/comm.socket 5001 5002 500 640 480 1 {json-string}\n"
                "Optional parameters:\n"
                "\tkbitrate: bitrate in kbit/s\n"
                 "\twidth: width of the video\n"
                 "\theight: height of the video\n"
                 "\tflip: flip the video (gstreamer 'videoflip' compatible format)\n"
+                "\tservice_queue_json: JSON string with the service queue parameters without spaces. Example:\n"
+                "\t\t{\"" SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_STR "\":1,\"" SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_STR "\":30,\"" SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_STR "\":5000000,\"" SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_STR "\":250}\n"
+                "\t\t\tPlease notice that the max-size-time-ms is in milliseconds not in nanoseconds as in gstreamer queue docs.\n"
                , argv[0]);
         return -1;
     }
@@ -700,10 +781,32 @@ int main(int argc, char** argv)
         video_convert_conf.flip = atoi(argv[8]);
     }
 
+    // Service queue params
+    // Load default
+    service_queue_params.flush_on_eos = SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_DEFAULT;
+    service_queue_params.max_size_buffers = SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_DEFAULT;
+    service_queue_params.max_size_bytes = SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_DEFAULT;
+    service_queue_params.max_size_time = SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_DEFAULT;
+    // Load from JSON
+    if(argc >= 10)
+    {
+        printf("Parsing service queue params JSON string: %s\n", argv[9]);
+        if(parse_service_queue_params(argv[9], &service_queue_params) != 0)
+        {
+            printf("Error: Failed to parse service queue params - running with default\n");
+        }
+    }
+
     printf("RTSP location: %s\n", rtsp_location);
     printf("Socket Comm: %s\n", comm_stream_data.path);
     printf("HLS port: %u\n", hls_stream_data.port);
     printf("WebRTC port: %u\n", webrtc_stream_data.port);
+
+    printf("Service queue params:\n");
+    printf("\t%s: %u\n", SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_STR, service_queue_params.flush_on_eos);
+    printf("\t%s: %u\n", SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_STR, service_queue_params.max_size_buffers);
+    printf("\t%s: %u\n", SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_STR, service_queue_params.max_size_bytes);
+    printf("\t%s: %lu\n", SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_STR, service_queue_params.max_size_time / (guint64)1000000);
 
     // Handle Ctrl+C
     struct sigaction action;

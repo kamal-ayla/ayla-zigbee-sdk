@@ -186,3 +186,27 @@ int convert_special_to_html_ascii(const char* input, char* output, size_t output
 
 	return output_size - output_size_free;
 }
+
+int escape_double_quotes(const char* input, char* output, size_t output_size)
+{
+	size_t len = strlen(input);
+	size_t j = 0; // Index for the output string
+
+	if (output_size <= len * 2) {
+		return -1; // Output buffer is too small to hold the modified string
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		if (input[i] == '"') {
+			if (j + 2 >= output_size) {
+				return -1; // Output buffer is too small to hold the modified string
+			}
+			output[j++] = '\\'; // Add a backslash
+		}
+		output[j++] = input[i]; // Copy the character from the input
+	}
+
+	output[j] = '\0'; // Null-terminate the output string
+
+	return 0; // Success
+}
