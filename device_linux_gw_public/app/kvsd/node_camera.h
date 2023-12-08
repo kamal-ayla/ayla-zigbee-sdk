@@ -47,6 +47,15 @@ struct master_stream_state {
 	u16 webrtc_port;
 };
 
+enum cam_node_state_machine {
+	CAM_NODE_STATE_INIT=0,
+	CAM_NODE_STATE_IDLE,
+	CAM_NODE_STATE_REQ_KVS_KEYS,
+	CAM_NODE_STATE_REQ_KVS_KEYS_WAIT,
+	CAM_NODE_STATE_REQ_WEBRTC_KEYS,
+	CAM_NODE_STATE_REQ_WEBRTC_KEYS_WAIT,
+};
+
 /*
  * Camera node state
  */
@@ -64,6 +73,11 @@ struct cam_node_state {
 
 	struct webrtc_data webrtc_data;	/* WebRTC data for node */
 	struct stream_state webrtc_stream_state;	/* WebRTC streaming state */
+
+	// State machine
+	struct timer sm_timer;	/* Timer for state machine */
+	unsigned int sm_timeout_ms;			/* Timeout for state machine */
+	unsigned int sm_state;			/* State machine state */
 };
 
 /*

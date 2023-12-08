@@ -48,7 +48,9 @@
 #define CAM_NODE_TEMPLATE_NODE		"kvs_cam2"
 
 /* Default between node property updates */
- #define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	1000
+#define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	1000
+
+#define CAM_NODE_STATE_MACHINE_TIME_MS	1000
 
 #define CAM_URL_DEFAULT             		""
 #define CAM_USERID_DEFAULT          		""
@@ -207,6 +209,7 @@ static int master_stream_send_cmd(enum stream_comm_to_master_cmds cmd, struct ca
 static void kill_master_stream(struct node* node);
 static void cam_webrtc_stream_update_exec(struct cam_node_state *cam_node);
 static void cam_kvs_stream_update_exec(struct cam_node_state *cam_node);
+static void cam_node_state_machine(struct timer *timer);
 
 
 /*****************************************
@@ -938,7 +941,10 @@ static int cam_node_request_kvs_stream_update(struct node *node)
 {
 	struct node_prop * stream_update_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_KVS_STREAM_UPDATE);
 
+	CHK_RET(node_prop_integer_send(node, stream_update_prop, 0));
+	usleep(500000);
 	CHK_RET(node_prop_integer_send(node, stream_update_prop, 1));
+	usleep(500000);
 	CHK_RET(node_prop_integer_send(node, stream_update_prop, 0));
 
 	return 0;
@@ -951,7 +957,10 @@ static int cam_node_request_webrtc_stream_update(struct node *node)
 {
 	struct node_prop * stream_update_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_WEBRTC_STREAM_UPDATE);
 
+	CHK_RET(node_prop_integer_send(node, stream_update_prop, 0));
+	usleep(500000);
 	CHK_RET(node_prop_integer_send(node, stream_update_prop, 1));
+	usleep(500000);
 	CHK_RET(node_prop_integer_send(node, stream_update_prop, 0));
 
 	return 0;
@@ -1140,6 +1149,13 @@ static struct cam_node_state *cam_node_start(struct node *node,
 							CAM_NODE_SAMPLE_TIME_DEFAULT_MS;
 	timer_set(app_get_timers(), &node_state->sample_timer,
 			  node_state->sample_ms);
+
+	/* Timer for state machine */
+	node_state->sm_state = CAM_NODE_STATE_INIT;
+	timer_init(&node_state->sm_timer, cam_node_state_machine);
+	node_state->sm_timeout_ms = CAM_NODE_STATE_MACHINE_TIME_MS;
+	timer_set(app_get_timers(), &node_state->sm_timer,
+			  node_state->sm_timeout_ms);
 	
 	return node_state;
 }
@@ -1394,10 +1410,10 @@ json_t *cam_node_save(const struct node *node)
 	    json_integer(cam_node->sample_ms));
 
 	/* Save KVS data */
-	cam_node_save_kvs_data(net_state_obj, &cam_node->hls_data);
+	// cam_node_save_kvs_data(net_state_obj, &cam_node->hls_data);
 	
 	/* Save WebRTC data */
-	cam_node_save_webrtc_data(net_state_obj, &cam_node->webrtc_data);
+	// cam_node_save_webrtc_data(net_state_obj, &cam_node->webrtc_data);
 	
 	return net_state_obj;
 }
@@ -1447,19 +1463,19 @@ static int cam_node_loaded(struct node *node, json_t *net_state_obj)
 			cam_node_state_get((struct node *)node);
 	
 	/* Load KVS data */
-	if(cam_node_load_kvs_data(net_state_obj, &cam_node->hls_data) != 0)
-	{
-		log_err("%s: failed to load kvs data", node->addr);
-		return -1;
-	}
-	cam_kvs_stream_update_exec(cam_node);
+	// if(cam_node_load_kvs_data(net_state_obj, &cam_node->hls_data) != 0)
+	// {
+	// 	log_err("%s: failed to load kvs data", node->addr);
+	// 	return -1;
+	// }
+	// cam_node_request_kvs_stream_update(node);
 
-	if(cam_node_load_webrtc_data(net_state_obj, &cam_node->webrtc_data) != 0)
-	{
-		log_err("%s: failed to load webrtc data", node->addr);
-		return -1;
-	}
-	cam_webrtc_stream_update_exec(cam_node);
+	// if(cam_node_load_webrtc_data(net_state_obj, &cam_node->webrtc_data) != 0)
+	// {
+	// 	log_err("%s: failed to load webrtc data", node->addr);
+	// 	return -1;
+	// }
+	// cam_node_request_webrtc_stream_update(node);
 
 	/*
 	 * Call init routine for each property.  Supply NULL
@@ -1714,6 +1730,86 @@ static void cam_node_sample_timeout(struct timer *timer)
 	// Restart timer
 	timer_set(app_get_timers(), &node_state->sample_timer,
 	    node_state->sample_ms);
+}
+
+/*
+ * Handler for node state machine.
+ */
+void cam_node_state_machine(struct timer *timer)
+{
+	struct cam_node_state *node_state = CONTAINER_OF(struct cam_node_state,
+		sm_timer, timer);
+
+	// log_debug("cam_node_state_machine, node: %s, state: %d", node_state->node->addr, node_state->sm_state);
+
+	switch(node_state->sm_state)
+	{
+		case CAM_NODE_STATE_INIT:
+		{
+			const unsigned int startup_delay_ms = 5000;
+			const unsigned int startup_delay_cnt = startup_delay_ms / node_state->sm_timeout_ms;
+			static unsigned int startup_cnt = 0;
+
+			if(startup_cnt >= startup_delay_cnt)
+			{
+				node_state->sm_state = CAM_NODE_STATE_REQ_KVS_KEYS;
+			}
+			++startup_cnt;
+			break;
+		}
+		case CAM_NODE_STATE_IDLE:
+		{
+			// Do not restart timer. Do it manully if needed to start this state machine.
+			return;
+		}
+		case CAM_NODE_STATE_REQ_KVS_KEYS:
+		{
+			cam_node_request_kvs_stream_update(node_state->node);
+			node_state->sm_state = CAM_NODE_STATE_REQ_KVS_KEYS_WAIT;
+			break;
+		}
+		case CAM_NODE_STATE_REQ_KVS_KEYS_WAIT:
+		{
+			const unsigned int kvswait_delay_ms = 5000;
+			const unsigned int kvswait_delay_cnt = kvswait_delay_ms / node_state->sm_timeout_ms;
+			static unsigned int kvswait_cnt = 0;
+
+			if(kvswait_cnt >= kvswait_delay_cnt)
+			{
+				node_state->sm_state = CAM_NODE_STATE_REQ_WEBRTC_KEYS;
+			}
+			++kvswait_cnt;
+			break;
+		}
+		case CAM_NODE_STATE_REQ_WEBRTC_KEYS:
+		{
+			cam_node_request_webrtc_stream_update(node_state->node);
+			node_state->sm_state = CAM_NODE_STATE_REQ_WEBRTC_KEYS_WAIT;
+			break;
+		}
+		case CAM_NODE_STATE_REQ_WEBRTC_KEYS_WAIT:
+		{
+			const unsigned int webrtcwait_delay_ms = 5000;
+			const unsigned int webrtcwait_delay_cnt = webrtcwait_delay_ms / node_state->sm_timeout_ms;
+			static unsigned int webrtcwait_cnt = 0;
+
+			if(webrtcwait_cnt >= webrtcwait_delay_cnt)
+			{
+				node_state->sm_state = CAM_NODE_STATE_IDLE;
+			}
+			++webrtcwait_cnt;
+			break;
+		}
+		default:
+		{
+			log_debug("cam_node_state_machine, node: %s, unknown state: %d", node_state->node->addr, node_state->sm_state);
+			node_state->sm_state = CAM_NODE_STATE_IDLE;
+		}
+	}
+
+	// Restart timer
+	timer_set(app_get_timers(), &node_state->sm_timer,
+		node_state->sm_timeout_ms);
 }
 
 /*

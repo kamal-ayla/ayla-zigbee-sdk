@@ -1072,7 +1072,7 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
 
 	log_debug("kvs stream info for cam node addr: %s", cam_node_name);
 
-	conf_save();
+	// conf_save();
 
     return 0;
 }
@@ -1152,7 +1152,7 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
 
 	log_debug("kvs stream info for cam node addr: %s", cam_node_name);
 
-	conf_save();
+	// conf_save();
 
 	return 0;
 }

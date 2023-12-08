@@ -1466,7 +1466,7 @@ err:
 				json_get_int(prop_info_j, "value", &val);
 				if(1 == val) {
 					if (ds_update_webrtc_streaming_channel(err_name) != 0) {
-						log_err("Failed to update KVS streaming channel");
+						log_err("Failed to update WebRTC streaming channel");
 					}
 				}
 			}
