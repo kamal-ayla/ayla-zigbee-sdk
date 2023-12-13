@@ -1243,7 +1243,7 @@ static void appd_online_send_prop(struct node *zb_node,
 			struct zb_node_info *info)
 {
 	char addr[ZB_NODE_ADDR_LEN + 1];
-	char *power[] = { "MAINS", "BATTERY", "UNKOWN" };
+	//char *power[] = { "MAINS", "BATTERY", "UNKOWN" };
 
 	ASSERT(zb_node != NULL);
 	ASSERT(info != NULL);
@@ -1257,7 +1257,8 @@ static void appd_online_send_prop(struct node *zb_node,
 	appd_send_node_prop(zb_node, ZB_LONG_ADDR_PROP_NAME, zb_node->addr);
 	appd_send_node_prop(zb_node, ZB_MODEL_PROP_NAME, info->model_id);
 	appd_send_node_prop(zb_node, ZB_ALIAS_PROP_NAME, info->alias);
-
+		log_debug("######## zb_node-power is %d",zb_node->power);
+/*
 	if (zb_node->power <= GP_BATTERY) {
 		appd_send_node_prop(zb_node, ZB_POWER_SRC_PROP_NAME,
 		    power[zb_node->power]);
@@ -1265,7 +1266,7 @@ static void appd_online_send_prop(struct node *zb_node,
 		appd_send_node_prop(zb_node, ZB_POWER_SRC_PROP_NAME,
 		    power[2]);
 	}
-
+*/
 	node_prop_batch_end(zb_node);
 }
 
@@ -2161,13 +2162,21 @@ void appd_power_source_complete_handler(uint16_t node_id,
 	timer_cancel(app_get_timers(), &(info->poll_timer));
 
 	if (primary_power == EMBER_ZCL_POWER_SOURCE_BATTERY) {
+		log_debug(" ################ primary power is EMBER_ZCL_POWER_SOURCE_BATTERY");
 		zb_node->power = GP_BATTERY;
 	} else {
+		log_debug(" ################ primary power is =0x%02X so setting as MAINS",primary_power);
 		zb_node->power = GP_MAINS;
 	}
 
 	log_debug("node %s got power source=0x%02X, set power=0x%02X",
 	    zb_node->addr, primary_power, zb_node->power);
+			char *power[] = { "MAINS", "BATTERY", "UNKOWN" };
+
+		appd_send_node_prop(zb_node, ZB_POWER_SRC_PROP_NAME,
+		    power[zb_node->power]);
+					log_debug(" ################ primary power sent to cloud");
+
 	debug_print_node_info(info);
 
 	appd_start_model_identifier_query(info);
@@ -3570,6 +3579,34 @@ void appd_zb_send_battery_voltage_request(char *node_addr)
 	if(info != NULL){
 		zb_send_battery_voltage_request(info->node_id);
 		log_debug("################ sending battery_voltage req from appd");
+	}
+
+}
+
+void appd_zb_send_power_source_request(char *node_addr)
+{
+	log_debug("#################node node_addr=%s get power_source request sending", node_addr);
+	uint8_t node_eui[8];
+	struct node *zb_node;
+	struct zb_node_info *info;
+	appd_node_addr_to_eui(node_addr, node_eui);
+	log_debug("node %02X%02X%02X%02X%02X%02X%02X%02X"
+			    " node eui print",
+			    node_eui[7], node_eui[6], node_eui[5],
+			    node_eui[4], node_eui[3], node_eui[2],
+			    node_eui[1], node_eui[0]);
+
+	zb_node = node_lookup(node_addr);
+	if (!zb_node) {
+		log_info("no node with addr: %s", node_addr);
+		return;
+	}
+
+	info = (struct zb_node_info *)node_state_get(zb_node, STATE_SLOT_NET);
+	if(info != NULL){
+		zb_send_power_source_request(info->node_id);
+		log_debug("################ sending power_source req from appd");
+
 	}
 
 }

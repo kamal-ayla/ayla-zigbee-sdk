@@ -1032,6 +1032,7 @@ int appd_node_ops_confirm_handler(enum ayla_gateway_op op,
 			    node->addr);
 			// To send battery_voltage req when sensor added successfully so we won't miss the value update
                         appd_zb_send_battery_voltage_request(node->addr);
+                        appd_zb_send_power_source_request(node->addr);
 		} else {
 			log_warn("node %s add failed: err %u", node->addr,
 			    confirm_info->err);

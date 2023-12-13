@@ -487,9 +487,11 @@ static void zbc_read_attr_resp_handle(uint16_t source, uint8_t *msg)
 		}
 		appd_model_identifier_complete_handler(source, model_id);
 	} else if (attr->attr_id == ZCL_POWER_SOURCE_ATTRIBUTE_ID) {
+		log_debug("################# read attr resp ZCL_POWER_SOURCE_ATTRIBUTE_ID ");
 		if (attr->status == 0) {
 			if (attr->data_type == ZCL_ENUM8_ATTRIBUTE_TYPE) {
 				primary_power = (attr->value[0] & 0x0F);
+				log_debug("################# read attr resp primary_power = %d",primary_power);
 			} else {
 				log_err("data type %d wrong", attr->data_type);
 			}

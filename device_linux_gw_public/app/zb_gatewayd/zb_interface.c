@@ -417,6 +417,7 @@ static int zb_send_read_attribute_request(uint16_t node_id,
  */
 int zb_send_power_source_request(uint16_t node_id)
 {
+		log_debug("#################node node_id=0x%04X get power_source request sending", node_id);
 	return zb_send_read_attribute_request(node_id,
 	    ZCL_BASIC_CLUSTER_ID, ZCL_POWER_SOURCE_ATTRIBUTE_ID);
 }

@@ -178,6 +178,7 @@ void appd_update_int_prop(uint16_t node_id, char *name, int value);
 
 void appd_zb_send_battery_voltage_request(char *node_addr);
 
+void appd_zb_send_power_source_request(char *node_addr);
 
 #endif /* __APPD_INTERFACE_H__ */
 
