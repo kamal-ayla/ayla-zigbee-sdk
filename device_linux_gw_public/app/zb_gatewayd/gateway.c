@@ -1966,6 +1966,7 @@ static int  core_dump_file_verfication(void)
    int log_file = 0;
    int conf_file = 0;
    int core_file = 0;
+   char metadata_buf[METADATA_SIZE];
    char file_timestamp[CHAR_MINI_SIZE];
    char tar_cmd[CHAR_LARGE_SIZE];
    char core_file_path[350];
@@ -2006,7 +2007,7 @@ static int  core_dump_file_verfication(void)
       log_debug("Get crash count from dcm_props file : %d",crash_count);
       pclose(cmd_fp);
 
-      memset(metadata_log,'\0',sizeof(metadata_log));
+      memset(metadata_buf,'\0',sizeof(metadata_buf));
       memset(buf,'\0',sizeof(buf));
       // Read date & time, file name line by line
       while(fgets(line, sizeof(line), cmd_resp)) {
@@ -2038,8 +2039,8 @@ static int  core_dump_file_verfication(void)
             // to get log file name alone from the file using token
             memset(tmp,'\0',sizeof(tmp));
 	    memcpy(tmp,array[2],strlen(*(array+2))-1);
-	    strcat(metadata_log, tmp+6);
-	    strcat(metadata_log,",");
+	    strcat(metadata_buf, tmp+6);
+	    strcat(metadata_buf,",");
 
 	    memset(tmp,'\0',sizeof(tmp));
 	    memcpy(tmp, array[2],strlen(*(array+2))-1);
@@ -2053,6 +2054,8 @@ static int  core_dump_file_verfication(void)
       memset(log_time,'\0',sizeof(log_time));
       memcpy(log_time,buf,sizeof(buf));
       log_debug("multiple log files time: %s",log_time);
+      memset(metadata_log,'\0',sizeof(metadata_log));
+      memcpy(metadata_log,metadata_buf,sizeof(metadata_buf));
       log_debug("metadata log : %s",metadata_log);
       log_debug("multiple log files path: %s",log_file_path);
 
