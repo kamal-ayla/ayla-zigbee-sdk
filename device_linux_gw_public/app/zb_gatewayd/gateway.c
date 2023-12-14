@@ -287,11 +287,6 @@ static char guest_2g_state_change[GUEST_COMMAND_LEN];
 // get commands 5ghz 
 #define GET_WIRELESS_GUEST_SSID_5G "uci get wireless.wl0_2.state"
 #define GET_MESH_GUEST_SSID_5G "uci get mesh_broker.cred4.state"
-// get traffic seperation
-#define GET_TRAFFIC_SEPERATION "uci get smartmesh.sm_traffic_separation.enabled"
-
-#define TRAFFIC_SEPERATION_ENABLE "uci set smartmesh.sm_traffic_separation.enabled='1'"
-#define TRAFFIC_SEPERATION_DISABLE "uci set smartmesh.sm_traffic_separation.enabled='0'"
 #define WIRELESS_RELOAD "ubus call wireless reload"
 #define SMART_MESH_RELOAD "/etc/init.d/mesh-broker reload"
 
@@ -4057,11 +4052,8 @@ static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
 
    int wl_enable;
    int mesh_enable;
-   int traffic_enable;
    unsigned int traffic_flag = 0;
-  // unsigned int tmp = 0;
    unsigned int control_status = 0;
-   //char status[10];
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
@@ -4093,17 +4085,6 @@ static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
          log_debug("mesh guest ssid enable/disable : %d",mesh_enable);
       }
       pclose(fp1);
-   
-      // To get traffic seperation value
-      fp2 = popen(GET_TRAFFIC_SEPERATION,"r");
-      if(fp2 == NULL) {
-         log_err("Get traffic seperation command failed");
-         exit(1);
-      } else {
-         fscanf(fp2, "%d", &traffic_enable);
-         log_debug("traffic seperation enable/disable : %d",traffic_enable);
-      }
-      pclose(fp2);
 
       if(guest_ssid_2g_enable > 1) {
          guest_ssid_2g_enable  = 1;
@@ -4157,38 +4138,6 @@ static int appd_guest_ssid_2g_enable(struct prop *prop, const void *val,
       } else {
            log_debug("mesh guest ssid failed due to tried with existing value to set in the device !!!");
       }
-     
-
-      if ((traffic_enable == 1) && (guest_ssid_2g_enable == 1)) {
-
-    	 fp1 = popen(TRAFFIC_SEPERATION_DISABLE, "r");
-     
-	 if(fp1 == NULL) {
-            log_err("disable traffic seperation disable failed !!!");
-            exit(1);
-         } else {
-	    traffic_flag = 1;
-	 }
-
-         pclose(fp1);
-	     
-      }
-      else if ( guest_ssid_2g_enable == 0 ) {
-
-         fp2 = popen(TRAFFIC_SEPERATION_ENABLE, "r");
-
-         if(fp2 == NULL) {
-            log_err("disable traffic seperation disable failed !!!");
-            exit(1);
-	 } else {
-		traffic_flag = 2;
-	 }
-         pclose(fp2);
-
-      } else {
-           log_debug("traffic seperation failed due to tried with existing value to set in the device !!!");     
-      }
-
 
       if ( ( mesh_enable != guest_ssid_2g_enable ) || ( traffic_flag == 1 ) || ( traffic_flag == 2 )) {   
 
@@ -4231,12 +4180,8 @@ static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
 
    int wl_enable;
    int mesh_enable;
-   int traffic_enable;
    unsigned int traffic_flag = 0;
-//   unsigned int tmp = 0;
    unsigned int control_status = 0;
-//   char status[10];
-
 
    if(prop_arg_set(prop, val, len, args) != ERR_OK) {
        log_err("prop_arg_set returned error");
@@ -4268,17 +4213,6 @@ static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
          log_debug("mesh guest ssid enable/disable : %d",mesh_enable);
       }
       pclose(fp1);
-
-      // To get traffic seperation value
-      fp2 = popen(GET_TRAFFIC_SEPERATION,"r");
-      if(fp2 == NULL) {
-         log_err("Get traffic seperation command failed");
-         exit(1);
-      } else {
-         fscanf(fp2, "%d", &traffic_enable);
-         log_debug("traffic seperation enable/disable : %d",traffic_enable);
-      }
-      pclose(fp2);
 
       if(guest_ssid_5g_enable > 1) {
           guest_ssid_5g_enable  = 1;
@@ -4332,38 +4266,6 @@ static int appd_guest_ssid_5g_enable(struct prop *prop, const void *val,
       } else {
            log_debug("mesh guest ssid failed due to tried with existing value to set in the device !!!");
       }
-
-
-      if ((traffic_enable == 1) && (guest_ssid_5g_enable == 1)) {
-
-         fp1 = popen(TRAFFIC_SEPERATION_DISABLE, "r");
-
-	 if(fp1 == NULL) {
-            log_err("disable traffic seperation disable failed !!!");
-            exit(1);
-         } else {
-	    traffic_flag = 1;
-	 }
-
-         pclose(fp1);
-
-      }
-      else if ( guest_ssid_5g_enable == 0 ) {
-
-         fp2 = popen(TRAFFIC_SEPERATION_ENABLE, "r");
-
-         if(fp2 == NULL) {
-            log_err("disable traffic seperation disable failed !!!");
-            exit(1);
-	 } else {
-		traffic_flag = 2;
-	 }
-         pclose(fp2);
-
-      } else {
-           log_debug("traffic seperation failed due to tried with existing value to set in the device !!!");
-      }
-
 
       if ( ( mesh_enable != guest_ssid_5g_enable ) || ( traffic_flag == 1 ) || ( traffic_flag == 2 )) {
 
