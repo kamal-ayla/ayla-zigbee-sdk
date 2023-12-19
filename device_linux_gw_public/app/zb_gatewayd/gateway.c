@@ -510,6 +510,9 @@ static int gw_get_tx_power_5G;
 #define AGENT_ENABLE "uci set mesh_broker.mesh_common.agent_enabled='%d'"
 #define CONTROLLER_ENABLE "uci set mesh_broker.mesh_common.controller_enabled='0'"
 
+// To set and unset the wl0_bssid command
+#define NVRAM_WIRELESS_0_BSSID_CMD "nvram %s wl0_bssid"
+
 // To configure the nvram
 #define NVRAM_MULTIAP_MODE "nvram set multiap_mode=%d"
 #define NVRAM_COMMIT "nvram commit"
@@ -1576,18 +1579,25 @@ static int appd_gw_wifi_wet_mode(struct prop *prop, const void *val,
       }
       pclose(wet_sta);
 
-      memset(mode_cmd,'\0',sizeof(mode_cmd));
-      snprintf(mode_cmd, sizeof(mode_cmd), MODE_CHANGE, value == 0 ? "wet" : "sta");
-      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
-      // To change the mode from sta to wet (or) wet to sta
-      wet_sta = popen(mode_cmd, "r");
+      // To commit the mesh broker changes
+      wet_sta = popen(UCI_COMMIT, "r");
       if (wet_sta == NULL) {
-         log_debug("mode change failed");
+         log_debug("Wireless commit failed");
          pclose(wet_sta);
          return 1;
       }
       pclose(wet_sta);
 
+      // To Restart the mesh broker file
+      wet_sta = popen(RESTART_MESH_BROKER, "r");
+      if (wet_sta == NULL) {
+         log_debug("Mesh Broker Commit failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
       snprintf(mode_cmd, sizeof(mode_cmd), NVRAM_MULTIAP_MODE, value == 0 ? 0 : 2);
       log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
       // To enable/disable nvram multiap mode
@@ -1599,12 +1609,15 @@ static int appd_gw_wifi_wet_mode(struct prop *prop, const void *val,
       }
       pclose(wet_sta);
 
-      // To commit the wireless and mesh broker changes
-      wet_sta = popen(UCI_COMMIT, "r");
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), NVRAM_WIRELESS_0_BSSID_CMD, value == 0 ? "unset" : "set");
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To set/unset nvram wl0_bssid
+      wet_sta = popen(mode_cmd, "r");
       if (wet_sta == NULL) {
-         log_debug("Wireless commit failed");
+         log_debug("NVRAM set/unset wl0_bssid failed");
          pclose(wet_sta);
-         return 1;
+	 return 1;
       }
       pclose(wet_sta);
 
@@ -1626,10 +1639,22 @@ static int appd_gw_wifi_wet_mode(struct prop *prop, const void *val,
       }
       pclose(wet_sta);
 
-      // To Restart the mesh broker file
-      wet_sta = popen(RESTART_MESH_BROKER, "r");
+      memset(mode_cmd,'\0',sizeof(mode_cmd));
+      snprintf(mode_cmd, sizeof(mode_cmd), MODE_CHANGE, value == 0 ? "wet" : "sta");
+      log_debug( "[%d] execute command : %s",__LINE__, mode_cmd );
+      // To change the mode from sta to wet (or) wet to sta
+      wet_sta = popen(mode_cmd, "r");
       if (wet_sta == NULL) {
-         log_debug("Mesh Broker Commit failed");
+         log_debug("mode change failed");
+         pclose(wet_sta);
+         return 1;
+      }
+      pclose(wet_sta);
+
+      // To commit the wireless changes
+      wet_sta = popen(UCI_COMMIT, "r");
+      if (wet_sta == NULL) {
+         log_debug("Wireless commit failed");
          pclose(wet_sta);
          return 1;
       }
