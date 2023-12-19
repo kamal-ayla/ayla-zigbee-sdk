@@ -1703,6 +1703,8 @@ struct node_prop *node_prop_add(struct node *node,
 		    template_version);
 		snprintf(t->template.version, sizeof(t->template.version), "%s",
 		    template_version);
+		log_debug("Since template override happened due to template change, calling node_info_changed to update this to cloud");
+		node_info_changed(node, "-");
 	}
 	return &p->prop;
 }

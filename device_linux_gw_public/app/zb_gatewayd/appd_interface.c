@@ -2018,6 +2018,7 @@ static void appd_query_complete_handler(struct zb_node_info *info)
 	ASSERT(info != NULL);
 
 	if (info->query_complete) {
+		log_debug("If condition may be new device/sensor added");
 		ret = appd_set_node_template(info);
 		if (ret < 0) {
 			result = NETWORK_UNSUPPORTED;
@@ -2027,7 +2028,17 @@ static void appd_query_complete_handler(struct zb_node_info *info)
 		info->query_complete(info->node, result);
 		info->query_complete = NULL;
 	}
-
+	else{
+		log_debug("Else condition may be old device/sensor needs update");
+		ret = appd_set_node_template(info);
+		if (ret < 0) {
+			result = NETWORK_UNSUPPORTED;
+		}
+		log_debug("node %s call query complete callback function",
+		    info->node->addr);
+		//info->query_complete(info->node, result);
+		info->query_complete = NULL;
+	}
 	log_debug("node %s query step completed", info->node->addr);
 }
 
