@@ -361,6 +361,27 @@ static const struct cam_node_prop_def *cam_node_template_lookup(
 	}
 	return NULL;
 }
+static bool HLS_ready(struct node *node)
+{
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	struct hls_data* kvs_ds = &cam_node->hls_data;
+	if (NULL == kvs_ds->kvs_channel_name) {
+		log_err("Failed to get channel name for use in HLS streaming");
+		return false;
+	}
+	return true;
+}
+
+static bool webrtc_ready(struct node *node)
+{
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	struct webrtc_data* kvs_ds = &cam_node->webrtc_data;
+	if (NULL == kvs_ds->webrtc_channel_name) {
+		log_err("Failed to get channel name for use in WebRTC");
+		return false;
+	}
+	return true;
+}
 
 /*
  * Initial setup of a node property.
@@ -2105,20 +2126,47 @@ static void kill_master_stream(struct node* node)
 /*
  * Handle kvs streaming start delay timer
  */
+void* delayed_HLS_thread(void* data)
+{
+	//give sufficient time to fetch JSON data from AWS cloud
+	sleep(30);
+	fork_and_start_kvs_streaming((struct node *)data);
+	return NULL;
+}
+
 static void kvs_streaming_start_delay_timeout(struct timer *timer)
 {
+	pthread_t thr;
 	log_info("Starting delayed KVS Stream");
 	timer_cancel(app_get_timers(), timer);
+	if (!HLS_ready(timer->data)) {
+		pthread_create(&thr, NULL, delayed_HLS_thread,\
+			       	(void *)timer->data);
+		return;
+	}
 	fork_and_start_kvs_streaming(timer->data);
 }
 
 /*
  * Handle webrtc streaming start delay timer
  */
+void* delayed_webrtc_thread(void* data)
+{
+	//give sufficient time to fetch JSON data from AWS cloud
+	sleep(30);
+	fork_and_start_webrtc_streaming((struct node *)data);
+	return NULL;
+}
 static void webrtc_streaming_start_delay_timeout(struct timer *timer)
 {
+	pthread_t thr;
 	log_info("Starting delayed WebRTC Stream");
 	timer_cancel(app_get_timers(), timer);
+	if (!webrtc_ready(timer->data)) {
+		pthread_create(&thr, NULL, delayed_webrtc_thread,\
+			       	(void *)timer->data);
+		return;
+	}
 	fork_and_start_webrtc_streaming(timer->data);
 }
 
