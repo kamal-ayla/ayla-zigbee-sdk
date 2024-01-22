@@ -423,11 +423,13 @@ static void cam_node_prop_init_webrtc_enable(struct node *node,
 
 static void kvs_start_delayed_streaming(struct cam_node_state *cam_node, int delay_ms)
 {
+	cam_node->hls_stream_state.starting = true;
 	timer_set(app_get_timers(), &cam_node->hls_stream_state.start_delay_timer, delay_ms);	/* Start the KVS Streaming after 1 second to delay other properties being setup. */
 }
 
 static void webrtc_start_delayed_streaming(struct cam_node_state *cam_node, int delay_ms)
 {
+	cam_node->webrtc_stream_state.starting = true;
 	timer_set(app_get_timers(), &cam_node->webrtc_stream_state.start_delay_timer, delay_ms);	/* Start the WebRTC Streaming after 1 second to delay other properties being setup. */
 }
 
@@ -435,6 +437,7 @@ static void stop_kvs_streaming(struct node *node, struct cam_node_state *cam_nod
 {
 	log_debug("Stopping KVS Streaming");
 
+	cam_node->hls_stream_state.starting = false;
 	timer_cancel(app_get_timers(), &cam_node->hls_stream_state.stream_timer);
 	timer_cancel(app_get_timers(), &cam_node->hls_stream_state.stream_update_timer);
 
@@ -460,6 +463,7 @@ static void stop_webrtc_streaming(struct node *node, struct cam_node_state *cam_
 {
 	log_debug("Stopping WebRTC Streaming");
 
+	cam_node->webrtc_stream_state.starting = false;
 	timer_cancel(app_get_timers(), &cam_node->webrtc_stream_state.stream_timer);
 	timer_cancel(app_get_timers(), &cam_node->webrtc_stream_state.stream_update_timer);
 
@@ -704,7 +708,16 @@ static int cam_node_prop_update_kvs_enable(struct node *node,
 	}
 	else
 	{
-		stop_kvs_streaming(node, cam_node);
+		/* Allow to stop the stream only when it is fully started */
+		if(cam_node->hls_stream_state.starting && cam_node->hls_stream_state.pid <= 0)
+		{
+			node_prop_boolean_send(node, prop, true);
+			log_warn("Stopping HLS streaming not allowed during startup of the stream. Wait and try again.");
+		}
+		else
+		{
+			stop_kvs_streaming(node, cam_node);
+		}
 	}
 
 	return 0;
@@ -737,7 +750,16 @@ static int cam_node_prop_update_webrtc_enable(struct node *node,
 	}
 	else
 	{
-		stop_webrtc_streaming(node, cam_node);
+		/* Allow to stop the stream only when it is fully started */
+		if(cam_node->webrtc_stream_state.starting && cam_node->webrtc_stream_state.pid <= 0)
+		{
+			node_prop_boolean_send(node, prop, true);
+			log_warn("Stopping WebRTC streaming not allowed during startup of the stream. Wait and try again.");
+		}
+		else
+		{
+			stop_webrtc_streaming(node, cam_node);
+		}
 	}
 
 	return 0;
@@ -1908,14 +1930,18 @@ int cam_node_remove(enum camera_node_type type)
 	return 0;
 }
 
-static void kvs_stream_failed_inform_cloud(struct node *node)
+static void kvs_stream_failed_inform(struct node *node)
 {
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	cam_node->hls_stream_state.starting = false;
 	struct node_prop * en_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_KVS_ENABLE);
 	node_prop_boolean_send(node, en_prop, false);
 }
 
-static void webrtc_stream_failed_inform_cloud(struct node *node)
+static void webrtc_stream_failed_inform(struct node *node)
 {
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	cam_node->webrtc_stream_state.starting = false;
 	struct node_prop * en_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_WEBRTC_ENABLE);
 	node_prop_boolean_send(node, en_prop, false);
 }
@@ -1928,7 +1954,7 @@ static void fork_and_start_kvs_streaming(struct node *node)
 	if(ret != 0)
 	{
 		log_err("Failed to send start HLS command to master stream process");
-		kvs_stream_failed_inform_cloud(node);
+		kvs_stream_failed_inform(node);
 		return;
 	}
 	usleep(100000);
@@ -1944,10 +1970,10 @@ static void fork_and_start_kvs_streaming(struct node *node)
 	pid = fork();
 	if (pid < 0) {
 		log_err("fork failed");
-		kvs_stream_failed_inform_cloud(node);
+		kvs_stream_failed_inform(node);
 		return;
 	}
-	if (pid == 0) {
+	if (pid <= 0) {
 		start_kvs_streaming(node);
 	} else {
 		cam_node->hls_stream_state.pid = pid;
@@ -1967,7 +1993,7 @@ static void fork_and_start_webrtc_streaming(struct node *node)
 	if(ret != 0)
 	{
 		log_err("Failed to send start WebRTC command to master stream process");
-		webrtc_stream_failed_inform_cloud(node);
+		webrtc_stream_failed_inform(node);
 		return;
 	}
 	usleep(10000);
@@ -1982,10 +2008,10 @@ static void fork_and_start_webrtc_streaming(struct node *node)
 	pid = fork();
 	if (pid < 0) {
 		log_err("fork failed");
-		webrtc_stream_failed_inform_cloud(node);
+		webrtc_stream_failed_inform(node);
 		return;
 	}
-	if (pid == 0) {
+	if (pid <= 0) {
 		start_webrtc_streaming(node);
 	} else {
 		cam_node->webrtc_stream_state.pid = pid;
@@ -2018,6 +2044,7 @@ static void kill_kvs_streaming(struct node* node)
 	{
 		log_debug("KVS streaming not running. PID = %d", cam_node->hls_stream_state.pid);
 	}
+	cam_node->hls_stream_state.starting = false;
 
 	struct node_prop * prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_KVS_ENABLE);
 	node_prop_boolean_send(node, prop, false);
@@ -2035,6 +2062,7 @@ static void kill_webrtc_streaming(struct node* node) {
 	} else {
 		log_debug("WebRTC streaming not running. PID = %d", cam_node->webrtc_stream_state.pid);
 	}
+	cam_node->webrtc_stream_state.starting = false;
 
 	struct node_prop *prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_WEBRTC_ENABLE);
 	node_prop_boolean_send(node, prop, false);
@@ -2043,7 +2071,7 @@ static void kill_webrtc_streaming(struct node* node) {
 static void kill_master_stream(struct node* node)
 {
 	struct cam_node_state *cam_node = cam_node_state_get(node);
-	if(cam_node->hls_stream_state.pid > 0 || cam_node->webrtc_stream_state.pid > 0)
+	if(cam_node->hls_stream_state.starting || cam_node->webrtc_stream_state.starting)
 	{
 		log_debug("Can not kill master stream. HLS or WebRTC streaming is running.");
 		return;
@@ -2104,7 +2132,7 @@ static void start_kvs_streaming(struct node* node)
 	if(get_url_userpass(url_prop->val, user_prop->val, passwd_prop->val, urlfull) < 0)
 	{
 		log_err("failed to get url with user and password");
-		kvs_stream_failed_inform_cloud(node);
+		kvs_stream_failed_inform(node);
 		return;
 	}
 
@@ -2114,7 +2142,7 @@ static void start_kvs_streaming(struct node* node)
 		//if(key_id == NULL || secret == NULL || region == NULL || (strlen(hls_stream_name) == 0) || hls_storage_size == 0 )
 	{
 		log_err("did not set the stroage size so not starting HLS-Streaming");
-		kvs_stream_failed_inform_cloud(node);
+		kvs_stream_failed_inform(node);
 		return;
 	}
 
@@ -2205,7 +2233,7 @@ static void start_webrtc_streaming(struct node* node)
 	if(get_url_userpass(url_prop->val, user_prop->val, passwd_prop->val, urlfull) < 0)
 	{
 		log_err("failed to get url with user and password");
-		webrtc_stream_failed_inform_cloud(node);
+		webrtc_stream_failed_inform(node);
 		return;
 	}
 
