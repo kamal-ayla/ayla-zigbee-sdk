@@ -354,6 +354,7 @@ static const struct cam_node_prop_def *cam_node_template_lookup(
 	}
 	return NULL;
 }
+#if 0
 static bool HLS_ready(struct node *node)
 {
 	struct cam_node_state *cam_node = cam_node_state_get(node);
@@ -364,6 +365,7 @@ static bool HLS_ready(struct node *node)
 	}
 	return true;
 }
+#endif
 
 static bool webrtc_ready(struct node *node)
 {
@@ -2133,6 +2135,7 @@ static void kill_master_stream(struct node* node)
 /*
  * Handle kvs streaming start delay timer
  */
+#if 0
 void* delayed_HLS_thread(void* data)
 {
 	//give sufficient time to fetch JSON data from AWS cloud
@@ -2141,17 +2144,20 @@ void* delayed_HLS_thread(void* data)
 	fork_and_start_kvs_streaming((struct node *)data);
 	return NULL;
 }
+#endif
 
 static void kvs_streaming_start_delay_timeout(struct timer *timer)
 {
 	pthread_t thr;
 	log_info("Starting delayed KVS Stream");
 	timer_cancel(app_get_timers(), timer);
+#if 0
 	if (!HLS_ready(timer->data)) {
 		pthread_create(&thr, NULL, delayed_HLS_thread,\
 			       	(void *)timer->data);
 		return;
 	}
+#endif
 	fork_and_start_kvs_streaming(timer->data);
 }
 
