@@ -308,7 +308,7 @@ get_ssid()
         if [ $ap_interface == "0" ]; then          
                 echo "0"                       
         else
-		uci get wireless.${ap_interface}.ssid
+		wl -i ${ap_interface} ssid | awk '{print $3}' | sed 's/"//g'
 	fi
 }
 
