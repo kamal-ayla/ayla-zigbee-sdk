@@ -4841,7 +4841,12 @@ void appd_wifi_sta_poll()
         memset(data,'\0',sizeof(data));
         snprintf(command, sizeof(command), GET_GW_WIFI_WET_MODE_STATUS);
         exec_systemcmd(command, data, DATA_SIZE);
-        appd_send_wifi_sta_data(GW_WIFI_WET_MODE_STATUS, data);
+        if ( strcmp (data, "") ) {
+           appd_send_wifi_sta_data(GW_WIFI_WET_MODE_STATUS, data);
+        }
+        else {
+           log_debug("wifi wet mode status buffer is empty");
+        }
 
 	// guest ssid 2g & 5g enable/disable properties update only when the change status
 	appd_guest_status_update();
