@@ -62,6 +62,9 @@
 /* Maximum # of datapoints allowed in a batch */
 #define APPD_MAX_BATCHED_DPS				64
 
+#define GET_CUSTO_ITERATION_VALUE "uci get version.@version[0].custo_iteration"
+static unsigned int custo_iteration_value;
+
 #define BUFF_LEN  128
 #define ARR_POINTER_LEN 3
 #define MIN_BUF_LEN 8
@@ -614,8 +617,108 @@ static enum err_t appd_send_version(struct prop *prop, int req_id,
         log_debug("*******************************%s\n", ayla_new_appd_version);
 
 /**********************************************/
-	//return prop_val_send(prop, req_id, appd_version, 0, NULL);//David's code
-	return prop_val_send(prop, req_id, ayla_new_appd_version, 0, NULL); //Added by Saritha for showing HW version on Dashboard	
+/* Keeping the old change sent as well,
+once this is fixed and new prop for ayla pkg version is added,
+above changes can be removed */
+/*****************************Extract homeware version*****************************************/
+    char *homeware_version;
+    log_debug("Extract homeware version");
+    tf_ctx_t *ctx = tf_new_ctx(NULL, 0);
+    tf_req_t req = {
+        .type = TF_REQ_GPV,
+        .u.gpv.path = "uci.version.version.@version[0].version"};
+    tf_fill_request(ctx, &req);
+    const tf_resp_t *resp;
+    while ((resp = tf_next_response(ctx, false)))
+    {
+        switch (resp->type)
+        {
+        case TF_RESP_GPV:
+            printf("%s%s=%s (%d)\n", resp->u.gpv.partial_path,
+                   resp->u.gpv.param, resp->u.gpv.value, resp->u.gpv.ptype);
+            printf("\nhomeware sw version: %s\n", resp->u.gpv.value);
+            homeware_version = (char *)malloc(1 + strlen(resp->u.gpv.value));
+            strcpy(homeware_version, resp->u.gpv.value);
+            break;
+        case TF_RESP_ERROR:
+            puts("** Error reading homeware version**");
+            printf("%" PRIu16 ": %s\n", resp->u.error.code, resp->u.error.msg);
+            return -1;
+            break;
+        default:
+            break;
+        }
+    }
+    tf_free_ctx(ctx);
+
+    tf_ctx_t *ctx1 = tf_new_ctx(NULL, 0);
+	char *product;
+	tf_req_t req1 = {
+        .type = TF_REQ_GPV,
+        .u.gpv.path = "uci.version.version.@version[0].product"};
+    tf_fill_request(ctx1, &req1);
+    const tf_resp_t *resp1;
+    while ((resp1 = tf_next_response(ctx1, false)))
+    {
+        switch (resp1->type)
+        {
+        case TF_RESP_GPV:
+            printf("%s%s=%s (%d)\n", resp1->u.gpv.partial_path,
+                   resp1->u.gpv.param, resp1->u.gpv.value, resp1->u.gpv.ptype);
+            printf("\nhomeware sw product version: %s\n", resp1->u.gpv.value);
+            product = (char *)malloc(1 + strlen(resp1->u.gpv.value));
+            strcpy(product, resp1->u.gpv.value);
+            break;
+        case TF_RESP_ERROR:
+            puts("** Error reading homeware product version**");
+            printf("%" PRIu16 ": %s\n", resp1->u.error.code, resp1->u.error.msg);
+            return -1;
+            break;
+        default:
+            break;
+        }
+    }
+    tf_free_ctx(ctx1);
+    char ayla_new_version_homeware[100];
+    char *homeware_version_extract=NULL;
+    char *version=NULL;
+
+    FILE *fp1;
+
+    homeware_version_extract=strtok(homeware_version, "-");
+    version=strtok(NULL, "-");
+
+    if ( strcmp (product, "gdnt-r_extender") == 0 )
+    {
+
+       fp1 = popen(GET_CUSTO_ITERATION_VALUE,"r");
+       if (fp1 == NULL)
+       {
+          log_err("get custo iteration failed");
+	  exit(1);
+       }
+
+       fscanf(fp1, "%d", &custo_iteration_value);
+
+       if(custo_iteration_value <= 0)
+       {
+          log_debug("custo_iteration_value : %d\n",custo_iteration_value);
+	  sprintf(ayla_new_version_homeware,"%s-%s",homeware_version_extract,version);
+       }
+       else
+       {
+	   log_debug("custo_iteration_value : %d\n",custo_iteration_value);
+	   sprintf(ayla_new_version_homeware,"%s-%s-i%d",homeware_version_extract,version,custo_iteration_value);
+       }
+
+        pclose(fp1);
+    }
+
+    log_debug("ayla_new_version_homeware : %s\n",ayla_new_version_homeware);
+    printf("Homeware version is :%s\n", ayla_new_version_homeware);
+   /****************************************************************************************/
+
+	return prop_val_send(prop, req_id, ayla_new_version_homeware, 0, NULL);
 }
 
 /*
