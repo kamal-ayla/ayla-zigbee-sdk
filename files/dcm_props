@@ -1,7 +1,7 @@
 
 config attributes 'core_dump_upload_file'
 	option last_checked_timestamp ''
-	option delete_uploaded_file '0'
+	option delete_uploaded_file '1'
         option crash_count '0'
 config attributes 'ota_upgrade'
 	option gw_ota_type '0'
