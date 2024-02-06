@@ -55,6 +55,7 @@ SOURCES = \
 	gateway.c \
 	main.c \
 	node.c \
+  speedtest.c \
 	$(NULL)
 
 #
