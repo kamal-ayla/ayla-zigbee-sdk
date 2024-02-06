@@ -18,11 +18,14 @@
 
 #include "app/framework/include/af.h"
 #include "app/framework/util/af-main.h"
-
+#include "app/framework/include/log.h"
 #include "network-creator-security.h"
 
 #include "app/framework/security/af-security.h" // emAfAllowTrustCenterRejoins
 #include "app/util/zigbee-framework/zigbee-device-common.h" // emberLeaveRequest
+
+int zb_close_count=0;
+int zb_open_count=0;
 
 #ifdef EZSP_HOST
 // NCP
@@ -259,13 +262,32 @@ EmberStatus emberAfPluginNetworkCreatorSecurityStart(bool centralizedNetwork)
   return status;
 }
 
+EmberStatus emberAfPluginNetworkCreatorSecurityReinitAfNetworkState(void){
+
+	zb_exit();
+	zb_init();
+}
+
 EmberStatus emberAfPluginNetworkCreatorSecurityOpenNetwork(void)
 {
+   int p_id, p_pid;
+
+   p_id = getpid(); /*process id*/
+   p_pid = getpid(); /*parent process id*/
+
+   log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityOpenNetwork process id %d parent process id %d pthread_self %lu",p_id,p_pid,(unsigned long int)pthread_self());
+
   EmberStatus status = EMBER_SUCCESS;
   EmberCurrentSecurityState securityState;
 
   if (emberAfNetworkState() != EMBER_JOINED_NETWORK) {
-    return EMBER_ERR_FATAL;
+	  log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityCloseNetwork emberAfNetworkState != EMBER_JOINED_NETWORK %02x",emberAfNetworkState());
+          zb_open_count++;
+          emberAfPluginNetworkCreatorSecurityReinitAfNetworkState();
+          if(zb_open_count==3){
+		  zb_open_count=0;
+		return EMBER_ERR_FATAL;
+	  }
   }
 
   emberGetCurrentSecurityState(&securityState);
@@ -304,14 +326,22 @@ EmberStatus emberAfPluginNetworkCreatorSecurityOpenNetwork(void)
 EmberStatus emberAfPluginNetworkCreatorSecurityCloseNetwork(void)
 {
   EmberStatus status = EMBER_ERR_FATAL;
+  log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityCloseNetwork emberAfNetworkState %02x",emberAfNetworkState());
 
   if (emberAfNetworkState() == EMBER_JOINED_NETWORK) {
     emberClearTransientLinkKeys();
     emberAfNetworkEventControlSetInactive(openNetworkEventControl);
     zaTrustCenterSetJoinPolicy(EMBER_ALLOW_REJOINS_ONLY);
     status = emberAfPermitJoin(0, true); // broadcast
-  }
 
+  }  else {
+	log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityCloseNetwork emberAfNetworkState != EMBER_JOINED_NETWORK %02x",emberAfNetworkState());
+        zb_close_count++;
+        emberAfPluginNetworkCreatorSecurityReinitAfNetworkState();
+        if(zb_close_count==3){
+              zb_close_count=0;
+	      zb_exit();
+	}
   return status;
 }
 

@@ -42,6 +42,12 @@ extern bool allowHaDevices;
  */
 EmberStatus emberAfPluginNetworkCreatorSecurityStart(bool centralizedNetwork);
 
+/** This API EmberStatus emberAfPluginNetworkCreatorSecurityReinitAfNetworkState used for
+ * reinit when afnetwork state is 0x01
+ */
+
+EmberStatus emberAfPluginNetworkCreatorSecurityReinitAfNetworkState(void){
+
 /** @brief Opens a network for joining.
  *
  * This API broadcasts a permit join to
