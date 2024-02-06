@@ -4841,7 +4841,7 @@ void appd_wifi_sta_poll()
         memset(data,'\0',sizeof(data));
         snprintf(command, sizeof(command), GET_GW_WIFI_WET_MODE_STATUS);
         exec_systemcmd(command, data, DATA_SIZE);
-        if ( strcmp (data, "") ) {
+        if ( strlen(data) > 0) {
            appd_send_wifi_sta_data(GW_WIFI_WET_MODE_STATUS, data);
         }
         else {
@@ -4922,6 +4922,12 @@ static int appd_send_wifi_sta_data(char *name, char *value)
 {
 	int tmp = 0;
         char temp[MIN_BUF_LEN];
+
+        if ((name == NULL) || (value == NULL))
+        {
+           log_debug("[%d] [arg1] name - %s or [arg2] value - %s",__LINE__,name,value);
+           return 0;
+        }
 
 	if (!strcmp(name, WIFI_STA_CHANNEL)) {
 
