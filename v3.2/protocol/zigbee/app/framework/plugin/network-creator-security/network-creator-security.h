@@ -46,7 +46,7 @@ EmberStatus emberAfPluginNetworkCreatorSecurityStart(bool centralizedNetwork);
  * reinit when afnetwork state is 0x01
  */
 
-EmberStatus emberAfPluginNetworkCreatorSecurityReinitAfNetworkState(void){
+EmberStatus emberAfPluginNetworkCreatorSecurityReinitAfNetworkState(void);
 
 /** @brief Opens a network for joining.
  *
