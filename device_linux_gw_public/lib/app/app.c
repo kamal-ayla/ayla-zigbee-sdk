@@ -720,6 +720,7 @@ int app_run(bool foreground)
 	ops_app_ready_for_cloud_updates();
 	app->started = true;
 
+	log_info("appd main loop started");
 	/* Main loop */
 	while (!app->exit_pending) {
 		/* Run timer events and calculate the next timeout */

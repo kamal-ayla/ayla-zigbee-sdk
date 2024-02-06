@@ -64,10 +64,23 @@ int appd_internet_speed_set(struct prop *prop, const void *val,
         if(gw_speed_test_enable)
         {
                 if (!speed_test_thread) {
-                        if (pthread_create(&speed_test_thread, NULL, (void *)&speed_test_thread_fun, NULL)) {
+                        pthread_attr_t tattr;
+                        size_t stacksize;
+                        int detachstate;
+                        int rc;
+                        pthread_attr_init(&tattr);
+                        size_t size = PTHREAD_STACK_MIN + 0x100;
+                        pthread_attr_setstacksize(&tattr, size);
+                        pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
+                        if (pthread_create(&speed_test_thread, &tattr, (void *)&speed_test_thread_fun, NULL)) {
                                 log_debug("pthread creation failed");
                                 pthread_cancel(speed_test_thread);
                         }
+                        rc = pthread_attr_getdetachstate (&tattr, &detachstate);
+                        log_info("detached state [%d] [%d]",detachstate,rc);
+                        pthread_attr_getstacksize(&tattr, &stacksize);
+                        log_info("speedtest thrd stack size: %u", stacksize);
+                        pthread_attr_destroy(&tattr);
 	        }
         }
         return 0;
@@ -108,11 +121,12 @@ void appd_gw_internet_speed_update()
 /*
  *Speedtest thread callback function to execute speedtest
  */
-void speed_test_thread_fun(void)
+void* speed_test_thread_fun(void* arg)
 {
+        log_debug("speed_test_thread_fun, the thread id = %lu", pthread_self());
         appd_gw_internet_speed_update();
         speed_test_thread = (pthread_t)NULL;
-        pthread_exit(NULL);
+        pthread_exit(0);
 }
 
 /*

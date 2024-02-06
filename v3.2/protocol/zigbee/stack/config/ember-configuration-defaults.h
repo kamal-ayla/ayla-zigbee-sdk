@@ -353,7 +353,7 @@
  * two or more packet buffers.
  */
 #ifndef EMBER_APS_UNICAST_MESSAGE_COUNT
-  #define EMBER_APS_UNICAST_MESSAGE_COUNT 10
+  #define EMBER_APS_UNICAST_MESSAGE_COUNT 255
 #endif
 /** @brief The maximum number of bindings supported by the stack.
  * The default is 0 bindings. Each binding consumes 2 bytes of RAM.

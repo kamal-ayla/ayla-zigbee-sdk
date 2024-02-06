@@ -41,6 +41,7 @@
 #include "ops_internal.h"
 #include "props_internal.h"
 #include "data_internal.h"
+#include "pthread.h"
 
 struct file_event_table *data_file_events;
 static int data_sock = -1;
@@ -549,7 +550,7 @@ static void data_recv(void *arg, int sock)
 		if (!buf) {
 			/* drop the packet */
 			len = recv(sock, tmp, sizeof(tmp), 0);
-			log_debug("APPD_DEBUG : drop the packet recv %s",tmp);
+			log_debug("APPD_DEBUG : drop the packet recv %s thrdId[%lu]",tmp,pthread_self());
 			if (len <= 0) {
 				goto disconn;
 			}
@@ -612,7 +613,7 @@ inval_json:
 	}
 
 	str_dbg = json_dumps(root, JSON_COMPACT);
-	log_debug("APPD DEBUG: str_bdg : %s", str_dbg);
+	log_debug("APPD DEBUG: str_bdg : %s thrdId[%lu]", str_dbg,pthread_self());
 	free(str_dbg);
 
 	cmd = json_object_get(root, "cmd");
@@ -649,6 +650,7 @@ inval_json:
 		data_cmd_parse(cmd, protocol, recv_request_id);
 		break;
 	}
+	log_debug("data recv call end thrdId[%lu]",pthread_self());
 cleanup:
 	json_decref(root);
 	free(buf);

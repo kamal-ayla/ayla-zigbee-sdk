@@ -180,5 +180,10 @@ void appd_zb_send_battery_voltage_request(char *node_addr);
 
 void appd_zb_send_power_source_request(char *node_addr);
 
+/*
+ * Update gateway ZigBee network join status to cloud
+ */
+void appd_update_network_join_status(bool status);
+
 #endif /* __APPD_INTERFACE_H__ */
 

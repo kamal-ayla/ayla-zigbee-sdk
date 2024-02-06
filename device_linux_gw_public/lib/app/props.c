@@ -1038,6 +1038,8 @@ static enum err_t prop_val_send_helper(struct prop *prop, int req_id,
 	enum err_t err;
 	size_t str_len;
 
+	log_debug("prop_val_send_helper start");
+
 	ASSERT(prop !=  NULL);
 	if (!val) {
 		return ERR_VAL;
@@ -1083,6 +1085,7 @@ static enum err_t prop_val_send_helper(struct prop *prop, int req_id,
 		log_err("unsupported type");
 		err = ERR_TYPE;
 	}
+	log_debug("prop_val_send_helper end");
 	return err;
 }
 

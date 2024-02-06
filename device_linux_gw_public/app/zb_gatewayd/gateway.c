@@ -68,7 +68,8 @@ static unsigned int custo_iteration_value;
 #define ARR_POINTER_LEN 3
 #define MIN_BUF_LEN 8
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "vantiva_zigbee_gateway_v1.4";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.5";
+
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -83,6 +84,7 @@ static u8 zb_join_status;
 static u8 zb_network_up;
 static char zb_bind_cmd[PROP_STRING_LEN + 1];
 static char zb_bind_result[PROP_STRING_LEN + 1];
+static char zb_ember_status[PROP_STRING_LEN + 1];
 static unsigned int zb_num_nodes;
 
 /* add info*/
@@ -547,9 +549,15 @@ extern char gw_internet_upload_speed[INTERNET_SPEED_BUF_SIZE];
 extern char gw_speed_test_status[INTERNET_SPEED_BUF_SIZE];
 extern u8 gw_speed_test_enable;
 extern pthread_t speed_test_thread;
+static pthread_t prop_thread = (pthread_t)NULL;
+static pthread_t get_sysinfo_thread = (pthread_t)NULL;
+
+
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);
 char *strptime(const char *buf, const char *format, struct tm *tm);
+static void* prop_thread_fun(void* arg);
+static void* get_sysinfo_thread_fun(void* arg);
 void uppercase_convert(char str[])
 {
     int i;
@@ -1251,10 +1259,19 @@ not_supported:
  */
 static void appd_zb_permit_join_timeout(struct timer *timer)
 {
+        static int join_timeout_retry;
 	timer_cancel(app_get_timers(), timer);
-	if (zb_permit_join(0, false) < 0) {
-		log_debug("disable permit join failed");
-		timer_set(app_get_timers(), &zb_permit_join_timer, 100);
+	if (zb_permit_join(0, false) < 0 ) {
+                if(join_timeout_retry < 3)
+                {
+                        log_debug("disable permit join failed");
+                        timer_set(app_get_timers(), &zb_permit_join_timer, 10000);
+                        ++join_timeout_retry;
+                }else{
+                        log_debug("disable permit join max retry reached");
+                        join_timeout_retry = 0;
+                }
+
 	} else {
 		log_debug("disable ZigBee permit join successed");
 		zb_join_status = 0;
@@ -1301,23 +1318,32 @@ static int appd_gw_join_enable_set(struct prop *prop, const void *val,
 	if (zb_permit_join(zb_join_enable, false) < 0) {
 		log_debug("enabled permit join for %u seconds failed",
 		    zb_join_enable);
+                /* Disable join after enabled join  */
+                zb_join_enable = 0;
+                prop_send_by_name("zb_join_enable");
 		return -1;
 	} else {
 		log_debug("enabled permit join for %u seconds successed",
 		    zb_join_enable);
 	}
 
+        #if 0
 	/* Make sure the join permit to disable */
 	if ((0 < zb_join_enable) && (zb_join_enable < 255)) {
+                //seba debug
+                log_info("zb join enable timer start");
 		timer_set(app_get_timers(), &zb_permit_join_timer,
 		    zb_join_enable * 1000);
 	}
+        #endif
 
 	if (zb_join_enable) {
 		zb_join_status = 1;
 	} else {
 		zb_join_status = 0;
 	}
+        //seba debug
+        log_info("zb join status [%d]",zb_join_status);
 	prop_send_by_name("zb_join_status");
 
 	/* Disable join after enabled join  */
@@ -1499,6 +1525,8 @@ void appd_prop_init()
    prop_send_by_name("gw_board_type");
    prop_send_by_name("gw_sys_active_version");
    prop_send_by_name("gw_sys_passive_version");
+   //seba
+   log_info("appd prop get called");
    appd_properties_get();
 
    // Get the last checked timestamp from the attributes conf file
@@ -2554,34 +2582,59 @@ static int appd_sysinfo_set(struct prop *prop, const void *val,
    }
 
    if (get_sysinfo_status) {
-      prop_send_by_name("controller_status");
-      prop_send_by_name("up_time");
-      prop_send_by_name("ram_usage");
-      prop_send_by_name("cpu_usage");
-      prop_send_by_name("radio1_fw_version");
-      prop_send_by_name("radio2_fw_version");
-      prop_send_by_name("radio0_fw_version");
-      prop_send_by_name("gw_wifi_bh_uptime");
-      prop_send_by_name("gw_led_status");
-   prop_send_by_name("gw_sys_active_version");
-      prop_send_by_name("gw_sys_passive_version");
-      prop_send_by_name("gw_sys_upgrade_status");
+                if (!get_sysinfo_thread) {
+                        pthread_attr_t tattr;
+                        size_t stacksize;
+                        int detachstate;
+                        int rc;
 
-      
-      if(appd_is_ngrok_installed > 0) {
-         appd_ngrok_update();
-      }
-      else {
-	prop_send_by_name("ngrok_status");
-      }
-      appd_properties_get();
-      log_debug("get sysinfo success");
+                        pthread_attr_init(&tattr);
+                        size_t size = PTHREAD_STACK_MIN + 0x100;
+                        pthread_attr_setstacksize(&tattr, size);
+                        pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
+                        if (pthread_create(&get_sysinfo_thread, &tattr, (void *)&get_sysinfo_thread_fun, NULL)) {
+                                pthread_cancel(get_sysinfo_thread);
+                        }
+                        rc = pthread_attr_getdetachstate (&tattr, &detachstate);
+                        log_info("detached state [%d] [%d]",detachstate,rc);
+                        pthread_attr_getstacksize(&tattr, &stacksize);
+                        log_info("sysinfo thrd stack size: %u", stacksize);
+                        pthread_attr_destroy(&tattr);
+                }
    }
-
-   get_sysinfo_status = 0;
-   prop_send_by_name("get_sysinfo_status");
-
    return 0;
+}
+
+/*
+ * get sysinfo thread function
+ */
+static void* get_sysinfo_thread_fun(void* arg)
+{
+        log_debug("get_sysinfo_thread_fun, the thread id = %lu", pthread_self());
+        prop_send_by_name("controller_status");
+        prop_send_by_name("up_time");
+        prop_send_by_name("ram_usage");
+        prop_send_by_name("cpu_usage");
+        prop_send_by_name("radio1_fw_version");
+        prop_send_by_name("radio2_fw_version");
+        prop_send_by_name("radio0_fw_version");
+        prop_send_by_name("gw_wifi_bh_uptime");
+        prop_send_by_name("gw_led_status");
+        prop_send_by_name("gw_sys_active_version");
+        prop_send_by_name("gw_sys_passive_version");
+        prop_send_by_name("gw_sys_upgrade_status");
+        if(appd_is_ngrok_installed > 0) {
+                appd_ngrok_update();
+        }
+        else {
+                prop_send_by_name("ngrok_status");
+        }
+        appd_properties_get();
+        log_debug("get sysinfo success");
+        get_sysinfo_status = 0;
+        prop_send_by_name("get_sysinfo_status");
+        get_sysinfo_thread = (pthread_t)NULL;
+        pthread_exit(0);
 }
 
 /*
@@ -6235,7 +6288,8 @@ static struct prop appd_gw_prop_table[] = {
 		.set = appd_gw_join_enable_set,
 		.send = appd_gw_join_enable_send,
 		.arg = &zb_join_enable,
-		.len = sizeof(zb_join_enable)
+		.len = sizeof(zb_join_enable),
+                .skip_init_update_from_cloud = 1,
 	},
 	{
 		.name = "zb_change_channel",
@@ -6243,8 +6297,16 @@ static struct prop appd_gw_prop_table[] = {
 		.set = appd_gw_change_channel_set,
 		.send = prop_arg_send,
 		.arg = &zb_change_channel,
-		.len = sizeof(zb_change_channel)
+		.len = sizeof(zb_change_channel),
+                .skip_init_update_from_cloud = 1,
         },
+        {
+		.name = "zb_ember_status",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &zb_ember_status,
+		.len = sizeof(zb_ember_status)
+	},
 	{
 		.name = "zb_num_nodes",
 		.type = PROP_INTEGER,
@@ -7145,6 +7207,8 @@ int appd_init(void)
 	node_set_cloud_callbacks(&cloud_callbacks);
 	appd_node_network_callback_init();
 
+        //seba debug prints
+        log_info("timer init called");
 	timer_init(&zb_permit_join_timer, appd_zb_permit_join_timeout);
 	timer_init(&ngrok_data_update_timer, appd_ngrok_data_update);
 	timer_init(&gw_led_status_timer, appd_gw_wps_status_update);
@@ -7153,9 +7217,38 @@ int appd_init(void)
 	timer_init(&wps_button_update_timer, appd_wps_button_update);
 	timer_init(&tx_max_pwr_adjust_update_timer, appd_tx_max_pwr_adjust_update);
 
-	appd_prop_init();
+	//appd_prop_init();
+        if (!prop_thread) {
+                pthread_attr_t tattr;
+                size_t stacksize;
+                int detachstate;
+                int rc;
+                pthread_attr_init(&tattr);
+                size_t size = PTHREAD_STACK_MIN + 0x100;
+                pthread_attr_setstacksize(&tattr, size);
+                pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
+                if (pthread_create(&prop_thread, &tattr, (void *)&prop_thread_fun, NULL)) {
+                        pthread_cancel(prop_thread);
+                }
+                rc = pthread_attr_getdetachstate (&tattr, &detachstate);
+                log_info("detached state [%d] [%d]",detachstate,rc);
+                pthread_attr_getstacksize(&tattr, &stacksize);
+                log_info("prop_init thrd stack size: %u", stacksize);
+                pthread_attr_destroy(&tattr);
+        }
 
 	return 0;
+}
+
+/*
+ * Property init thread function
+ */
+static void* prop_thread_fun(void* arg)
+{
+        log_debug("prop_thread_fun, the thread id = %lu", pthread_self());
+        appd_prop_init();
+        prop_thread = (pthread_t)NULL;
+        pthread_exit(0);
 }
 
 /*
@@ -7174,6 +7267,8 @@ int appd_start(void)
    	app_set_template_version(appd_template_version);
 
 zb_reinit:
+        //seba debug
+        log_info("zb_start called");
 	/* Start the ZigBee interface */
 	if (zb_start() < 0) {
 		zb_reinit_count++;
@@ -7209,6 +7304,8 @@ void appd_exit(int status)
 static void vnode_poll_thread_fun(void) 
 {
 	 while(1) {
+                //seba debug log
+                log_info("vnode poll thread called");
 		 att_poll();
 
 		 appd_wifi_sta_poll();

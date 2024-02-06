@@ -40,6 +40,9 @@
 #include "appd_interface_node.h"
 
 #include <arpa/inet.h>
+#include <time.h>
+#include "pthread.h"
+
 
 #define BAUD_RATE 115200
 #define TRACE_ALL (TRACE_FRAMES_BASIC | TRACE_FRAMES_VERBOSE \
@@ -60,6 +63,32 @@ static bool ncpNeedsResetAndInit;
 
 
 
+static int zb_send_error_status(EmberStatus status, const char *emberfunction){
+
+		struct prop *prop;
+
+		char error_status[50];
+		log_debug("Sending error status in zb_ember_status");
+
+		//strncpy(error_status,emberfunction,strlen(emberfunction));
+		sprintf(error_status,"%s-0x%X",emberfunction,status);
+		log_debug("Sending error status in zb_ember_status- %s",error_status);
+		prop = prop_lookup("zb_ember_status");
+		if (!prop) {
+			log_err("cnnot find property zb_ember_status");
+			return -1;
+		}
+		if (prop_arg_set(prop, &error_status, strlen(error_status), NULL) != ERR_OK) {
+		log_err("prop_arg_set returned error");
+		return -1;
+		}
+		if (prop_send(prop) != ERR_OK) {
+		log_err("prop_send returned error");
+		return -1;
+		}
+	return 0;
+}
+
 /*
  * Send simple descriptor request to node
  */
@@ -71,6 +100,7 @@ int zb_send_simple_request(uint16_t node_id)
 	if (status != EMBER_SUCCESS) {
 		log_err("emberSimpleDescriptorRequest for node"
 		    " 0x%04X ret %d", node_id, status);
+		zb_send_error_status(status,"Simple decriptor request");
 		return -1;
 	} else {
 		log_debug("emberSimpleDescriptorRequest for node"
@@ -91,6 +121,7 @@ int zb_send_power_request(uint16_t node_id)
 	if (status != EMBER_SUCCESS) {
 		log_err("emberPowerDescriptorRequest for node_id=0x%04X"
 		    " ret %d", node_id, status);
+		zb_send_error_status(status,"Power Descriptor request");
 		return -1;
 	} else {
 		log_debug("emberPowerDescriptorRequest for node_id=0x%04X"
@@ -116,6 +147,7 @@ int zb_send_leave_request(uint16_t node_id)
 	if (status != EMBER_SUCCESS) {
 		log_err("emberLeaveRequest for node_id=0x%04X"
 		    " ret %d", node_id, status);
+		zb_send_error_status(status,"Node leave request");
 		return -1;
 	} else {
 		log_debug("emberLeaveRequest for node_id=0x%04X"
@@ -134,6 +166,7 @@ int zb_send_net_addr_request(EmberEUI64 node_eui)
 	status = emberNetworkAddressRequest(node_eui, false, 0);
 	if (status != EMBER_SUCCESS) {
 		log_err("emberNetworkAddressRequest ret %d", status);
+		zb_send_error_status(status,"Network Address request");
 		return -1;
 	} else {
 		log_debug("emberNetworkAddressRequest ret success");
@@ -151,6 +184,7 @@ int zb_send_ieee_addr_request(uint16_t node_id)
 	status = emberIeeeAddressRequest(node_id, false, 0, options);
 	if (status != EMBER_SUCCESS) {
 		log_err("emberIeeeAddressRequest ret %d", status);
+		zb_send_error_status(status,"IEEE Address request");
 		return -1;
 	} else {
 		log_debug("emberIeeeAddressRequest ret success");
@@ -164,7 +198,7 @@ int zb_send_ieee_addr_request(uint16_t node_id)
 int zb_send_onoff_request(uint16_t node_id, bool onoff)
 {
 	EmberStatus status;
-
+	log_debug("zb_send_onoff_request start");
 	if (onoff) {
 		emberAfFillCommandOnOffClusterOn();
 	} else {
@@ -176,10 +210,13 @@ int zb_send_onoff_request(uint16_t node_id, bool onoff)
 	if (status == EMBER_SUCCESS) {
 		log_debug("emberAfSendCommandUnicast node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_onoff_request end");
 		return 0;
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"On/Off request");
+		log_debug("zb_send_onoff_request end");
 		return -1;
 	}
 }
@@ -192,7 +229,7 @@ int zb_send_lock_request(uint16_t node_id, bool lock)
 	EmberStatus status;
 	struct node_prop *prop;
 	char *pin;
-
+	log_debug("zb_send_lock_request start");
 	prop = appd_get_node_prop_val(node_id, ZB_PIN_PROP_NAME);
 	if (prop == NULL) {
 		log_debug("Requested node_prop is NULL");
@@ -215,10 +252,13 @@ int zb_send_lock_request(uint16_t node_id, bool lock)
 	if (status == EMBER_SUCCESS) {
 		log_debug("ember lock send node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_lock_request end");
 		return 0;
 	} else {
 		log_err("ember lock send node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send lock request");
+		log_debug("zb_send_lock_request end");
 		return -1;
 	}
 }
@@ -229,7 +269,7 @@ int zb_send_lock_request(uint16_t node_id, bool lock)
 int zb_send_pin_request(uint16_t node_id)
 {
 	EmberStatus status;
-
+	log_debug("zb_send_pin_request start");
 	emberAfFillCommandDoorLockClusterGetPin(0);
 
 	emberAfSetCommandEndpoints(1, 1);
@@ -238,10 +278,13 @@ int zb_send_pin_request(uint16_t node_id)
 	if (status == EMBER_SUCCESS) {
 		log_debug("ember pin request node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_pin_request end");
 		return 0;
 	} else {
 		log_err("ember pin request node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send pin request");
+		log_debug("zb_send_pin_request end");
 		return -1;
 	}
 }
@@ -252,6 +295,8 @@ int zb_send_pin_request(uint16_t node_id)
 int zb_send_pin_id_request(uint16_t node_id, int user_id)
 {
 	EmberStatus status;
+
+	log_debug("zb_send_pin_id_request start");
 
 	emberAfFillCommandDoorLockClusterGetPin(user_id);
 	emberAfSetCommandEndpoints(1, 1);
@@ -264,10 +309,13 @@ int zb_send_pin_id_request(uint16_t node_id, int user_id)
 	if (status == EMBER_SUCCESS) {
 		log_debug("ember pin request node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_pin_id_request end");
 		return 0;
 	} else {
 		log_err("ember pin request node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send pin id request");
+		log_debug("zb_send_pin_id_request end");
 		return -1;
 	}
 }
@@ -283,6 +331,7 @@ int zb_send_lock_config_request(uint16_t node_id)
 		uint32_t part2;
 	};
 
+	log_debug("zb_send_lock_config_request start");
 	struct config_request *message;
 	message = (struct config_request *)malloc
 			(sizeof(struct config_request));
@@ -307,10 +356,13 @@ int zb_send_lock_config_request(uint16_t node_id)
 	if (status == EMBER_SUCCESS) {
 		log_debug("ember lock configuration node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_lock_config_request end");
 		return 0;
 	} else {
 		log_err("ember lock configuration node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send lock config request");
+		log_debug("zb_send_lock_config_request end");
 		return -1;
 	}
 }
@@ -325,7 +377,7 @@ int zb_send_level_control_request(uint16_t node_id, int level)
 	uint8_t levelRate = (uint8_t)((level & LEVEL_RATE_MASK) >> 8);
 	uint16_t transTime = (uint16_t)((level & TRANS_TIME_MASK) >> 16);
 	EmberStatus status;
-
+	log_debug("zb_send_level_control_request  start");
 	switch (commandId) {
 	case ZCL_MOVE_TO_LEVEL_COMMAND_ID:
 		log_debug("Send level control command: mv-to-level");
@@ -376,10 +428,13 @@ int zb_send_level_control_request(uint16_t node_id, int level)
 	if (status == EMBER_SUCCESS) {
 		log_debug("emberAfSendCommandUnicast node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_level_control_request  end");
 		return 0;
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send level control request");
+		log_debug("zb_send_level_control_request  end");
 		return -1;
 	}
 }
@@ -390,6 +445,8 @@ int zb_send_level_control_request(uint16_t node_id, int level)
 static int zb_send_read_attribute_request(uint16_t node_id,
 			uint16_t cluster_id, uint16_t attribute_id)
 {
+	log_debug("ZIGBEE_DEBUG zb_send_read_attribute_request thread self %lu",(unsigned long int)pthread_self());
+	log_debug("read_attribute start");
 	EmberStatus status;
 
 	emberAfFillCommandGlobalClientToServerReadAttributes(
@@ -401,10 +458,17 @@ static int zb_send_read_attribute_request(uint16_t node_id,
 	if (status == EMBER_SUCCESS) {
 		log_debug("emberAfSendCommandUnicast node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("read_attribute end");
 		return 0;
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send read attribute request");
+		log_debug("read_attribute end ");
+		if(status == 0x30){
+			log_debug("ZIGBEE_DEBUG zb_send_read_attribute_request failed with 0x30 so setting ncpNeedsResetAndInit");
+			ncpNeedsResetAndInit = true;
+		}
 		return -1;
 	}
 }
@@ -424,7 +488,7 @@ int zb_send_power_source_request(uint16_t node_id)
  */
 int zb_send_power_level_request(uint16_t node_id)
 {
-	log_debug("#################node node_id=0x%04X get power level(voltage) request sending", node_id);
+	log_debug("#################node node_id=0x%04X get power level(voltage) request sending thread self %lu", node_id, (unsigned long int)pthread_self());
 	return zb_send_read_attribute_request(node_id,
 	    ZCL_POWER_CONFIG_CLUSTER_ID, ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID);
 }
@@ -494,6 +558,8 @@ static int zb_send_write_attribute_request(uint16_t node_id,
 			uint16_t cluster_id,
 			uint8_t *write_attr, uint16_t write_len)
 {
+	log_debug("write attr start");
+	log_debug("ZIGBEE_DEBUG zb_send_write_attribute_request thread self %lu",(unsigned long int)pthread_self());
 	EmberStatus status;
 
 	emberAfFillCommandGlobalClientToServerWriteAttributes(
@@ -505,10 +571,17 @@ static int zb_send_write_attribute_request(uint16_t node_id,
 	if (status == EMBER_SUCCESS) {
 		log_debug("emberAfSendCommandUnicast node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("write attr end");
 		return 0;
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send write attribute request");
+		log_debug("write attr end");
+		if(status == 0x30){
+			log_debug("ZIGBEE_DEBUG zb_send_write_attr failed with 0x30 so setting ncpNeedsResetAndInit");
+			ncpNeedsResetAndInit = true;
+		}
 		return -1;
 	}
 }
@@ -573,7 +646,8 @@ int zb_send_enroll_response(uint16_t node_id,
 			uint8_t resp_code, uint8_t zone_id)
 {
 	EmberStatus status;
-
+	log_debug("zb_send_enroll_response start");
+	log_debug("ZIGBEE_DEBUG zb_send_enroll_response thread self %lu",(unsigned long int)pthread_self());
 	emberAfFillCommandIasZoneClusterZoneEnrollResponse(
 	    resp_code, zone_id);
 
@@ -587,6 +661,8 @@ int zb_send_enroll_response(uint16_t node_id,
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send enroll response");
+		log_debug("zb_send_enroll_response end");
 		return -1;
 	}
 }
@@ -598,7 +674,7 @@ static int zb_send_default_response(uint16_t node_id, uint16_t cluster_id,
 			uint8_t command_id, uint8_t status_code)
 {
 	EmberStatus status;
-
+	log_debug("zb_send_default_response start");
 	emberAfFillCommandGlobalClientToServerDefaultResponse(
 		cluster_id, command_id, status_code);
 
@@ -608,10 +684,13 @@ static int zb_send_default_response(uint16_t node_id, uint16_t cluster_id,
 	if (status == EMBER_SUCCESS) {
 		log_debug("emberAfSendCommandUnicast node_id=0x%04X success"
 		    " 0x%X", node_id, status);
+		log_debug("zb_send_default_response end");
 		return 0;
 	} else {
 		log_err("emberAfSendCommandUnicast node_id=0x%04X failure"
 		    " 0x%X", node_id, status);
+		zb_send_error_status(status,"Send default response");
+		log_debug("zb_send_default_response end");
 		return -1;
 	}
 }
@@ -634,7 +713,7 @@ int zb_send_match_response(uint16_t node_id, uint8_t *content, uint8_t length)
 {
 	EmberApsFrame apsFrame;
 	EmberStatus status;
-
+	log_debug("zb_send_match_response start");
 	apsFrame.sourceEndpoint = EMBER_ZDO_ENDPOINT;
 	apsFrame.destinationEndpoint = EMBER_ZDO_ENDPOINT;
 	apsFrame.clusterId = MATCH_DESCRIPTORS_RESPONSE;
@@ -652,10 +731,13 @@ int zb_send_match_response(uint16_t node_id, uint8_t *content, uint8_t length)
 		log_debug("ezspSendUnicast node_id=0x%04X success 0x%X"
 			", returned seq_no=%d",
 		    node_id, status, apsFrame.sequence);
+		log_debug("zb_send_match_response end");
 		return 0;
 	} else {
 		log_err("ezspSendUnicast node_id=0x%04X failure 0x%X",
 		    node_id, status);
+		zb_send_error_status(status,"Send match response");
+		log_debug("zb_send_match_response end");
 		return -1;
 	}
 }
@@ -673,6 +755,11 @@ int zb_send_bind_request(uint16_t node_id, uint8_t *src_eui,
 	if (status != EMBER_SUCCESS) {
 		log_err("emberBindRequest node_id=0x%04X cluster_id=0x%04X"
 		    " returned %d", node_id, cluster_id, status);
+		zb_send_error_status(status,"Bind request");
+		if(status == 0x30){
+			log_debug("ZIGBEE_DEBUG zb_bind_request failed with 0x30 so setting ncpNeedsResetAndInit");
+			ncpNeedsResetAndInit = true;
+		}
 		return -1;
 	} else {
 		log_debug("emberBindRequest node_id=0x%04X cluster_id=0x%04X"
@@ -695,6 +782,7 @@ int zb_send_unbind_request(uint16_t node_id, uint8_t *src_eui,
 	if (status != EMBER_SUCCESS) {
 		log_err("emberUnbindRequest node_id=0x%04X cluster_id=0x%04X"
 		    " returned %d", node_id, cluster_id, status);
+		zb_send_error_status(status,"Unbind request");
 		return -1;
 	} else {
 		log_debug("emberUnbindRequest node_id=0x%04X cluster_id=0x%04X"
@@ -720,6 +808,7 @@ int zb_thermostat_bind_request(uint16_t node_id, uint8_t *src_eui,
 	if (status != EMBER_SUCCESS) {
 		log_err("emberBindRequest node_id=0x%04X cluster_id=0x%04X"
 		    " returned %d", node_id, cluster_id, status);
+		zb_send_error_status(status,"Thermostat bind request");
 		return -1;
 	} else {
 		log_debug("emberBindRequest node_id=0x%04X cluster_id=0x%04X"
@@ -783,6 +872,10 @@ static void getInfoCommand(void)
         EmberStatus status;
 
         status = ezspGetXncpInfo(&manufacturerId, &version);
+
+		if(status!=EMBER_SUCCESS){
+			zb_send_error_status(status,"getInfoCommand request");
+		}
 
         emberAfCorePrintln("Get XNCP info: status: 0x%X", status);
         emberAfCorePrintln("  manufacturerId: 0x%X, version: 0x%X",
@@ -1126,6 +1219,7 @@ int zb_prop_set_handler(struct node *node, struct node_prop *prop,
 			ret = zb_send_lock_request(node_id, bool_value);
 		} else if (!strcmp(prop->name, ZB_MEASURE_TEMPERATURE)) {
 			find = true;
+			log_debug("Sending temp bind request in zb_prop_set_handler to node_id 0x%04X", node_id);
 			ret = appd_node_bind_control(node_id,
 				ZCL_TEMP_MEASUREMENT_CLUSTER_ID, bool_value);
 			if (bool_value) {
@@ -1135,6 +1229,7 @@ int zb_prop_set_handler(struct node *node, struct node_prop *prop,
 			}
 		} else if (!strcmp(prop->name, ZB_MEASURE_HUMIDITY)) {
 			find = true;
+			log_debug("Sending humidity bind request in zb_prop_set_handler to node_id 0x%04X", node_id);
 			ret = appd_node_bind_control(node_id,
 				ZCL_RELATIVE_HUMIDITY_MEASUREMENT_CLUSTER_ID, bool_value);
 			if (bool_value) {
@@ -1221,7 +1316,8 @@ int zb_init(void)
 	}
 
 	/* Disable nodes to join network */
-	zb_permit_join(0, false);
+	/*moved from zb_init to here so that reinit works properly*/
+	//zb_permit_join(0, false);
 
 	return 0;
 }
@@ -1272,6 +1368,7 @@ void zb_poll(void)
 		if (ncpNeedsResetAndInit) {
 			ncpNeedsResetAndInit = false;
 			/* re-initialize the NCP */
+			log_debug("ZIGBEE_DEBUG ncpNeedsResetAndInit is set so calling emAfResetAndInitNCP %lu", (unsigned long int)pthread_self());
 			emAfResetAndInitNCP();
 		}
 
@@ -1329,6 +1426,11 @@ int zb_permit_join(uint8_t duration, bool broadcast)
 	if (status != EMBER_SUCCESS) {
 		log_err("%s returned 0x%x",
 			duration ? "OpenNetwork" : "CloseNetwork", status);
+		zb_send_error_status(status,"Network Open/Close");
+		//if(status == 0x30){
+			log_debug("ZIGBEE_DEBUG Network Open/Close failed so setting ncpNeedsResetAndInit");
+			ncpNeedsResetAndInit = true;
+		//}
 		return -1;
 	} else {
 		log_debug("%s success",
@@ -1361,6 +1463,11 @@ int zb_network_channel_change(uint8_t channel)
 
 	if (status != EMBER_SUCCESS) {
                 log_err("%s returned 0x%x","Channel change", status);
+			zb_send_error_status(status,"Channel change request");
+		if(status == 0x30){
+			log_debug("ZIGBEE_DEBUG zb_network_channel_change failed with 0x30 so setting ncpNeedsResetAndInit");
+			ncpNeedsResetAndInit = true;
+		}
         } else {
 		log_debug("Channel change success");
         }

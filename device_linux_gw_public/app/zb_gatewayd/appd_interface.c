@@ -140,7 +140,9 @@
 #define POLL_TIMEOUT_COUNT			 3
 #define READ_TIMEOUT_COUNT			10
 #define WAIT_RESP_PERIOD			30000
+#define WAIT_RESP_PERIOD1			36000000
 #define ZONE_STATE_PERIOD			3000
+#define ZONE_STATE_PERIOD1			3600000
 #define LEAVE_WAIT_PERIOD			3000
 
 #define ZB_NODE_EUI_LEN				8
@@ -1019,6 +1021,10 @@ static struct nd_prop_info prop_info_array[] = {
 
 };
 
+#define MAX_NODES 128
+uint16_t nodes[MAX_NODES]={0};
+static uint16_t current_node=0;
+
 /*
  * Add node to gateway node list.
  */
@@ -1195,6 +1201,7 @@ static void appd_send_node_prop(struct node *zb_node, char *name, void *value)
 	struct node_prop *nd_prop;
 	int ret;
 
+	log_debug("appd_send_node_prop start");
 	ASSERT(zb_node != NULL);
 	ASSERT(name != NULL);
 	ASSERT(value != NULL);
@@ -1226,6 +1233,7 @@ static void appd_send_node_prop(struct node *zb_node, char *name, void *value)
 		ret = -1;
 		break;
 	}
+	log_debug("appd_send_node_prop end");
 
 	if (ret < 0) {
 		log_err("node %s sent property %s fail", zb_node->addr, name);
@@ -1592,6 +1600,15 @@ void appd_node_left(const uint8_t *node_eui)
 			info->query_complete(info->node, NETWORK_UNKNOWN);
 			info->query_complete = NULL;
 	} else {
+		log_debug("zigbee node_id [0x%04X] leaving", info->node_id);
+		for (int i = 0; i <= current_node ; i++)
+		{
+			if (nodes[i] == info->node_id)
+			{
+				log_debug("Removing node_id [0x%04X] in index [%d]", info->node_id, i);
+				nodes[i] = 0;
+			}
+		}
 		node_left(zb_node);
 		info->leaving = true;
 	}
@@ -1667,7 +1684,7 @@ static void appd_write_cie_timeout(struct timer *timer)
 	info = CONTAINER_OF(struct zb_node_info, poll_timer, timer);
 	log_debug("node %s write CIE address timeout", info->node->addr);
 	zb_send_write_cie_request(info->node_id);
-	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
+	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD1);
 }
 
 /*
@@ -1681,7 +1698,7 @@ static void appd_start_write_cie(struct zb_node_info *info)
 	info->zone_state = ZB_IAS_ZONE_NOT_WROTE_CIE;
 	conf_save();	/* Save management state to config */
 	timer_reset(app_get_timers(), &(info->poll_timer),
-	    appd_write_cie_timeout, WAIT_RESP_PERIOD);
+	    appd_write_cie_timeout, WAIT_RESP_PERIOD1);
 	zb_send_write_cie_request(info->node_id);
 }
 
@@ -1694,7 +1711,7 @@ static void appd_read_zone_state_timeout(struct timer *timer)
 	info = CONTAINER_OF(struct zb_node_info, poll_timer, timer);
 	log_debug("node %s read zone state timeout", info->node->addr);
 	zb_send_read_zone_state_request(info->node_id);
-	timer_set(app_get_timers(), timer, ZONE_STATE_PERIOD);
+	timer_set(app_get_timers(), timer, ZONE_STATE_PERIOD1);
 	info->poll_count++;
 	if (info->poll_count >= READ_TIMEOUT_COUNT) {
 		log_info("node %s read zone state timeout %u times",
@@ -1713,7 +1730,7 @@ static void appd_start_read_zone_state(struct zb_node_info *info)
 	log_debug("node %s start to read zone state", info->node->addr);
 	info->poll_count = 0;
 	timer_reset(app_get_timers(), &(info->poll_timer),
-	    appd_read_zone_state_timeout, ZONE_STATE_PERIOD);
+	    appd_read_zone_state_timeout, ZONE_STATE_PERIOD1);
 }
 
 /*
@@ -1792,6 +1809,7 @@ int appd_node_bind_control(uint16_t node_id, uint16_t cluster_id, bool onoff)
 	return ret;
 }
 
+#if 1
 /*
  * Handle poll timer timeout
  */
@@ -1810,11 +1828,13 @@ static void appd_power_query_timeout(struct timer *timer)
 	log_debug("Send power request to node %s, poll_count %u",
 	    info->node->addr, info->poll_count);
 	zb_send_power_request(info->node_id);
-		zb_send_power_level_request(info->node_id);
+		//zb_send_power_level_request(info->node_id);
 
-	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
+	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD1);
 }
+#endif
 
+#if 0
 /*
  * Handle poll timer timeout
  */
@@ -1836,7 +1856,9 @@ static void appd_battery_voltage_query_timeout(struct timer *timer)
 
 	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
 }
+#endif
 
+#if 1
 /*
  * Start power descriptor poll
  */
@@ -1847,12 +1869,11 @@ static void appd_start_power_poll(struct zb_node_info *info)
 	log_debug("node %s start to power descriptor info query",
 	    info->node->addr);
 	timer_reset(app_get_timers(), &(info->poll_timer),
-	    appd_power_query_timeout, WAIT_RESP_PERIOD);
+	    appd_power_query_timeout, WAIT_RESP_PERIOD1);
 	zb_send_power_request(info->node_id);
-		zb_send_power_level_request(info->node_id);
-
+		//zb_send_power_level_request(info->node_id);
 }
-
+#endif
 /*
  * Start battery voltage request poll
  */
@@ -1862,8 +1883,8 @@ static void appd_start_battery_voltage_poll(struct zb_node_info *info)
 	/* Set poll timer to get battery voltage info query */
 	log_debug("node %s start to battery voltage info query",
 	    info->node->addr);
-	timer_reset(app_get_timers(), &(info->poll_timer),
-	    appd_battery_voltage_query_timeout, WAIT_RESP_PERIOD);
+	//timer_reset(app_get_timers(), &(info->poll_timer),
+	  //  appd_battery_voltage_query_timeout, WAIT_RESP_PERIOD);
 		zb_send_power_level_request(info->node_id);
 
 }
@@ -1925,8 +1946,8 @@ static void appd_power_source_query_timeout(struct timer *timer)
 	info = CONTAINER_OF(struct zb_node_info, poll_timer, timer);
 	log_debug("node %s get power source timeout", info->node->addr);
 	zb_send_power_source_request(info->node_id);
-	log_debug("#################node %s get power level timeout", info->node->addr);
-	zb_send_power_level_request(info->node_id);
+	//log_debug("#################node %s get power level timeout", info->node->addr);
+	//zb_send_power_level_request(info->node_id);
 	timer_set(app_get_timers(), timer, WAIT_RESP_PERIOD);
 }
 
@@ -1940,9 +1961,9 @@ static void appd_start_power_source_query(struct zb_node_info *info)
 	log_debug("node %s start power source query", info->node->addr);
 	timer_reset(app_get_timers(), &(info->poll_timer),
 	    appd_power_source_query_timeout, WAIT_RESP_PERIOD);
-	zb_send_power_source_request(info->node_id);
-	log_debug("#################node %s get power level", info->node->addr);
-	zb_send_power_level_request(info->node_id);
+	//zb_send_power_source_request(info->node_id);
+	//log_debug("#################node %s get power level", info->node->addr);
+	//zb_send_power_level_request(info->node_id);
 }
 
 /*
@@ -2077,9 +2098,9 @@ void appd_set_config_complete_cb(struct node *zb_node,
 	if (info->device_id == ZB_DEVICE_ID_THERMOSTAT) {
 		appd_start_thermostat_bind(info);
 	} else if (info->device_id == ZB_DEVICE_ID_IAS_ZONE) {
-		appd_start_write_cie(info);
+		//appd_start_write_cie(info);
 	} else {
-		appd_start_power_poll(info);
+		//appd_start_power_poll(info);
 	}
 }
 
@@ -2439,6 +2460,7 @@ void appd_device_specific_complete_handler(uint16_t node_id,
 		appd_node_bind_control(node_id,
 			ZCL_TEMP_MEASUREMENT_CLUSTER_ID, 1);
 		if (!strcmp(info->model_id, ZB_MODEL_ID_CENTRALITE_TEMPHUMI)){
+			usleep(30000);
 			log_debug("************ appd_device_specific_complete_handler  bind fc45 for humidity");
 			appd_node_bind_control(node_id,
 			0xFC45, 1);
@@ -2460,6 +2482,7 @@ void appd_model_identifier_complete_handler(uint16_t node_id, char *model_id)
 {
 	struct node *zb_node;
 	struct zb_node_info *info;
+	bool needs_bind = true;
 
 	zb_node = appd_get_node(node_id);
 	if (!zb_node) {
@@ -2488,7 +2511,24 @@ void appd_model_identifier_complete_handler(uint16_t node_id, char *model_id)
 
 	appd_query_complete_handler(info);
 
-	appd_device_specific_complete_handler(node_id, info);
+	//appd_device_specific_complete_handler(node_id, info);
+	for(int i = 0; i <= current_node; i++)
+	{
+		if (nodes[i] == node_id)
+		{
+			log_debug("node_id [0x%04X] is already present in index [%d] so no need to trigger bind request again", node_id, i);
+			needs_bind = false;
+			break;
+		}
+	}
+
+	if (needs_bind)
+	{
+		log_debug("Adding node_id [0x%04X] to index [%d]", node_id, current_node);
+		nodes[current_node] = node_id;
+		current_node ++;
+		appd_device_specific_complete_handler(node_id, info);
+	}
 }
 
 /*
@@ -2554,7 +2594,7 @@ static void appd_thermostat_bound_handler(struct zb_node_info *info,
 			info->thermostat_bind = ZB_BIND_FAN_CONTROL;
 			log_debug("node %s fan control cluster bound"
 			    " completed", info->node->addr);
-			appd_start_power_poll(info);
+			//appd_start_power_poll(info);
 		} else {
 			log_debug("node %s thermostat bind state %d error",
 			    info->node->addr, info->thermostat_bind);
@@ -2604,7 +2644,8 @@ void appd_power_complete_handler(uint16_t node_id,
 	info = (struct zb_node_info *)node_state_get(zb_node, STATE_SLOT_NET);
 	ASSERT(info != NULL);
 
-	timer_set(app_get_timers(), &(info->poll_timer), msTime);
+	//timer_set(app_get_timers(), &(info->poll_timer), msTime);
+	timer_set(app_get_timers(), &(info->poll_timer), WAIT_RESP_PERIOD1);
 	info->poll_count = 0;
 
 	/* Set node as ready state after got power response,
@@ -2915,6 +2956,30 @@ void appd_update_network_status(bool status)
 }
 
 /*
+ * Update gateway ZigBee network join status to cloud
+ */
+void appd_update_network_join_status(bool status)
+{
+	struct prop *prop;
+
+	prop = prop_lookup("zb_join_status");
+	if (!prop) {
+		log_err("cnnot find property zb_network_up");
+		return;
+	}
+
+	if (prop_arg_set(prop, &status, sizeof(bool), NULL) != ERR_OK) {
+		log_err("prop_arg_set returned error");
+		return;
+	}
+
+	if (prop_send(prop) != ERR_OK) {
+		log_err("prop_send returned error");
+		return;
+	}
+}
+
+/*
  * Get a zonde id
  */
 static int appd_get_a_zone_id(uint8_t *zone_id)
@@ -2942,7 +3007,7 @@ static void appd_ias_enrolled_handler(struct zb_node_info *info)
 		timer_cancel(app_get_timers(), &(info->poll_timer));
 		info->zone_state = ZB_IAS_ZONE_ENROLLED;
 		conf_save();
-		appd_start_power_poll(info);
+		//appd_start_power_poll(info);
 	}
 }
 
@@ -3203,7 +3268,7 @@ void appd_ias_zone_status_change_handler(uint16_t node_id, uint8_t *msg)
 			info->zone_type);
 	}
 
-	zb_send_notification_response(node_id);
+	//zb_send_notification_response(node_id);
 
 	return;
 }
@@ -3392,6 +3457,7 @@ int appd_gw_bind_prop_handler(const char *cmd, char *result, int len)
 	}
 
 	if (!unbind) {
+		log_debug("zb_send_bind_request for node [0x%04X] from appd_gw_bind_prop_handler", src_info->node_id);
 		ret = zb_send_bind_request(src_info->node_id,
 		    src_info->node_eui, cluster_id, dst_info->node_eui);
 	} else {

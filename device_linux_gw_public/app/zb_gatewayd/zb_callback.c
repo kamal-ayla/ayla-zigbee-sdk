@@ -477,26 +477,28 @@ static void zbc_read_attr_resp_handle(uint16_t source, uint8_t *msg)
 				strncpy(model_id,
 				    (char *)&attr->value[1], len);
 				model_id[len] = '\0';
+				appd_model_identifier_complete_handler(source, model_id);
 			} else {
 				log_err("data type %d wrong", attr->data_type);
 			}
 		} else {
 			log_err("status %d error", attr->status);
 		}
-		appd_model_identifier_complete_handler(source, model_id);
+		//appd_model_identifier_complete_handler(source, model_id);
 	} else if (attr->attr_id == ZCL_POWER_SOURCE_ATTRIBUTE_ID) {
 		log_debug("################# read attr resp ZCL_POWER_SOURCE_ATTRIBUTE_ID ");
 		if (attr->status == 0) {
 			if (attr->data_type == ZCL_ENUM8_ATTRIBUTE_TYPE) {
 				primary_power = (attr->value[0] & 0x0F);
 				log_debug("################# read attr resp primary_power = %d",primary_power);
+				appd_power_source_complete_handler(source, primary_power);
 			} else {
 				log_err("data type %d wrong", attr->data_type);
 			}
 		} else {
 			log_err("status %d error", attr->status);
 		}
-		appd_power_source_complete_handler(source, primary_power);
+		//appd_power_source_complete_handler(source, primary_power);
 	}
 
 	else if (attr->attr_id == ZCL_BATTERY_VOLTAGE_ATTRIBUTE_ID) {
@@ -1029,7 +1031,8 @@ static bool zbc_door_lock_cluster_msg_handle(uint16_t source,
 	} else if (frame_type == ZCL_GLOBAL_COMMAND) {
 		switch (cmd_id) {
 		case ZCL_CONFIGURE_REPORTING_RESPONSE_COMMAND_ID:
-			log_debug("recieved configuration response");
+			//log_debug("recieved configuration response");
+			log_debug("recieved configuration response and sending Bind request");
 			appd_start_node_bind(source,
 				ZCL_DOOR_LOCK_CLUSTER_ID);
 			break;
@@ -1353,11 +1356,16 @@ bool emberAfPreMessageReceivedCallback(EmberAfIncomingMessage *incomingMessage)
  */
 bool emberAfStackStatusCallback(EmberStatus status)
 {
+	log_debug("############################# ember stackStatus in callback 0x%x", status);
 	switch (status) {
 	case EMBER_NETWORK_UP:
 		log_debug("Coordinator network up");
 		appd_update_network_status(true);
 		appd_start_all_power_query();
+		break;
+	case EMBER_NETWORK_CLOSED:
+		log_debug("Network is closed");
+		appd_update_network_join_status(false);
 		break;
 	case EMBER_NETWORK_DOWN:
 		log_debug("Coordinator network down");

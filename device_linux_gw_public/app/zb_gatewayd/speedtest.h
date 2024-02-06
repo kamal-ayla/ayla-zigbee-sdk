@@ -35,7 +35,7 @@ void appd_gw_internet_speed_update();
 /*
  *Speedtest thread callback function to execute speedtest
  */
-void speed_test_thread_fun(void);
+void* speed_test_thread_fun(void* arg);
 
 /*
  *To get upload or download speed values

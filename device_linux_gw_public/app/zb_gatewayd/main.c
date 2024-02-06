@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	app_init(cmdname, appd_version, appd_init, appd_start);
 	app_set_debug(debug);
 	app_set_exit_func(appd_exit);
-	app_set_poll_func(appd_poll, 1000);
+	app_set_poll_func(appd_poll, 100);
 	app_set_factory_reset_func(appd_factory_reset);
 	app_set_conn_event_func(appd_connectivity_event);
 	app_set_registration_event_func(appd_registration_event);

@@ -34,6 +34,7 @@
 #include "ops_devd.h"
 #include "props_client.h"
 #include "app_if.h"
+#include "pthread.h"
 
 #define APPD_REQUEST_TIMEOUT	10000	/* prop request to appd expires */
 
@@ -114,7 +115,7 @@ static void app_recv(void *arg, int sock)
 	json_error_t jerr;
 	int recv_request_id;
 	json_t *opts_obj;
-
+	log_debug("DEVD_DEBUG : app_recv,thread self %lu",(unsigned long int)pthread_self());
 	while (1) {
 		buf = malloc(buf_size);
 		if (!buf) {
@@ -129,6 +130,7 @@ static void app_recv(void *arg, int sock)
 			return;
 		}
 		len = recv(sock, buf, buf_size, MSG_PEEK);
+		log_debug("DEVD_DEBUG : app_recv,thread self %lu",(unsigned long int)pthread_self());
 		if (!len) {
 			free(buf);
 disconn:

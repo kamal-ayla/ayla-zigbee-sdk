@@ -18,12 +18,12 @@
 
 #include "app/framework/include/af.h"
 #include "app/framework/util/af-main.h"
-#include "app/framework/include/log.h"
+
 #include "network-creator-security.h"
 
 #include "app/framework/security/af-security.h" // emAfAllowTrustCenterRejoins
 #include "app/util/zigbee-framework/zigbee-device-common.h" // emberLeaveRequest
-
+#include "app/framework/include/log.h"
 #ifdef EZSP_HOST
 // NCP
   #define allowTrustCenterLinkKeyRequests() \
@@ -261,19 +261,11 @@ EmberStatus emberAfPluginNetworkCreatorSecurityStart(bool centralizedNetwork)
 
 EmberStatus emberAfPluginNetworkCreatorSecurityOpenNetwork(void)
 {
-   int p_id, p_pid;
-
-   p_id = getpid(); /*process id*/
-   p_pid = getpid(); /*parent process id*/
-
-   log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityOpenNetwork process id %d parent process id %d pthread_self %lu",p_id,p_pid,(unsigned long int)pthread_self());
-
   EmberStatus status = EMBER_SUCCESS;
   EmberCurrentSecurityState securityState;
-
+  log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityOpenNetwork emberAfNetworkState %02x",emberAfNetworkState());
   if (emberAfNetworkState() != EMBER_JOINED_NETWORK) {
-	  log_debug("ZIGBEE_DEBUG emberAfPluginNetworkCreatorSecurityCloseNetwork emberAfNetworkState != EMBER_JOINED_NETWORK %02x",emberAfNetworkState());
-	return EMBER_ERR_FATAL;
+    return EMBER_ERR_FATAL;
   }
 
   emberGetCurrentSecurityState(&securityState);
@@ -320,6 +312,7 @@ EmberStatus emberAfPluginNetworkCreatorSecurityCloseNetwork(void)
     zaTrustCenterSetJoinPolicy(EMBER_ALLOW_REJOINS_ONLY);
     status = emberAfPermitJoin(0, true); // broadcast
   }
+
   return status;
 }
 
