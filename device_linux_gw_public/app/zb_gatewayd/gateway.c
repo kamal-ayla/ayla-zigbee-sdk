@@ -37,7 +37,6 @@
 
 #include "opkg.h"
 
-
 #include <ayla/ayla_interface.h>
 #include <ayla/time_utils.h>
 #include <ayla/timer.h>
@@ -399,8 +398,8 @@ static char file_upload_path[512];
 #define CHAR_LARGE_SIZE 516
 /* core dump log files verifing one by one */
 static int core_dump_file_verfication(void);
-/* timestamp conversion */
-static int timestamp_conversion(char buff1[]);
+/* timestamp check */
+static int timestamp_check(char ts_file[], char ts_conf[]);
 /* To set the current timestamp */
 static void gw_set_core_dump_timestamp(void);
 /* To get the timestamp from the conf file */
@@ -551,7 +550,7 @@ extern u8 gw_speed_test_enable;
 extern pthread_t speed_test_thread;
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);
-
+char *strptime(const char *buf, const char *format, struct tm *tm);
 void uppercase_convert(char str[])
 {
     int i;
@@ -2092,9 +2091,6 @@ static int  core_dump_file_verfication(void)
    FILE *cmd_resp;
    FILE *core_dump;
    char line[BUFFER_LEN];
-   int log_file = 0;
-   int conf_file = 0;
-   int core_file = 0;
    char metadata_buf[METADATA_SIZE];
    char file_timestamp[CHAR_MINI_SIZE];
    char tar_cmd[CHAR_LARGE_SIZE];
@@ -2142,16 +2138,10 @@ static int  core_dump_file_verfication(void)
       while(fgets(line, sizeof(line), cmd_resp)) {
          memset(file_timestamp,'\0',sizeof(file_timestamp));
 	 memcpy(file_timestamp,line, CHAR_TIMESTAMP);
-         log_debug("file timestamp : %s",file_timestamp);
-
-	 // log file date & time convert into integer format
-         log_file = timestamp_conversion(file_timestamp);
-
-	 // last checked timestamp convert into integer format
-	 conf_file = timestamp_conversion(core_timestamp);
-
+         log_debug("[IOT_CORE_DUMP_DEBUG]:[%d] file timestamp : %s",__LINE__,file_timestamp);
+         log_debug("[IOT_CORE_DUMP_DEBUG]:[%d] config timestamp : %s",__LINE__,core_timestamp);
 	 // check log file timestamp should be greate than last checked timestamp
-         if ( log_file > conf_file ) {
+	 if( timestamp_check(file_timestamp, core_timestamp) ) {
             log_debug("file timestamp is greater than last check timestamp !!!");
 	    crash_count++;
 	    log_flag = 1;
@@ -2179,7 +2169,7 @@ static int  core_dump_file_verfication(void)
 	 }
 
       }
-      log_debug("core dump log files status  - %d !!!",log_flag);
+      log_debug("core dump log files status  : %d !!!",log_flag);
       memset(log_time,'\0',sizeof(log_time));
       memcpy(log_time,buf,sizeof(buf));
       log_debug("multiple log files time: %s",log_time);
@@ -2200,13 +2190,7 @@ static int  core_dump_file_verfication(void)
          fscanf(cmd_fp, "%[^\n]", file_path);
          pclose(cmd_fp);
          if(strcmp(file_path, "")) {
-            // core file date & time convert into integer format
-	    core_file = timestamp_conversion(file_path);
-            // last checked timestamp convert into integer format
-            conf_file = timestamp_conversion(core_timestamp);
-
-	    log_debug("core timestamp : %s, conf timestamp : %s",file_path, core_timestamp);
-	    if ( core_file > conf_file ) {
+	    if (timestamp_check(file_path, core_timestamp) ) {
                core_dump = popen(GET_CORE_DUMP_FILE_NAME,"r");
                if (core_dump == NULL) {
                   log_debug("Get TAR file failed");
@@ -2317,38 +2301,54 @@ static int  core_dump_file_verfication(void)
    return 0;
 }
 
-/*
- * date & time is in string format which is convert into integer format
+/** @brief timestamp_check
+ *          This function will check the core dump logread file timestamp and core dump file timestamp
+ *          compare with dcm_rops config stored timestamp and return the value .
+ *          Initally timestamp converted into single string format and pass to the predefined functions
+ *          strptime, mktime and difftime to verify the differencies
+ *
+ * @param1 ts_file is the core dump logread file timestamp or core dump file timstamp.
+ * @param2 ts_conf is the timestamp which is read from the dcm_props config file.
+ *
+ * @return return 1 if core dump file timstamp is more than config file timestamp or else return 0
  */
 
-static int timestamp_conversion(char buff1[])
+static int timestamp_check(char ts_file[], char ts_conf[])
 {
+   struct tm dt = {0};
+   time_t file = 0, conf = 0;
+   long int sec = 0;
 
-   char string[40];
-   char timeval[10];
-   int i=0;
-   int j=0;
-   int ret = 0;
+   /* convert a string representation of time to a time tm structure */
+   if( strptime (ts_conf, "%Y-%m-%d %H:%M:%S", &dt) == NULL ) {
+      log_err("[%d] strptime failed !!!",__LINE__);
+      return 0;
+   }
+   log_debug("config timestamp - Year(year-1900) : %d, Month (0-11) : %d, Day : %d, Hours : %d, Min : %d, Sec : %d\n",dt.tm_year, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
 
-   memset(string, '\0', sizeof(string));
+   /* mktime function interprets tm structure as calendar time
+   mktime() function take an argument representing broken-down time, which is a representation separated into year, month, day, and so on */
+   conf = mktime (&dt);
 
-   for (i=0; i < strlen(buff1); i++) {
-      if ((buff1[i] == '-') || (buff1[i] == ':') || (buff1[i] == ' ')) {
-      }
-      else {
-         string[j] = buff1[i];
-        j++;
-      }
+   if( strptime (ts_file, "%Y-%m-%d %H:%M:%S", &dt) == NULL ) {
+      log_err("[%d] strptime failed !!!",__LINE__);
+      return 0;
+   }
+   log_debug("file timestamp - Year(year-1900) : %d, Month (0-11) : %d, Day : %d, Hours : %d, Min : %d, Sec : %d\n",dt.tm_year, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+
+   file = mktime (&dt);
+
+   /* get difference in calendar time */
+   sec = difftime (file,conf);
+
+   log_debug("[%d]time diff in seconds: %ld",__LINE__,sec);
+
+   if ( sec > 0 ) {
+	   return 1;
    }
 
-   memset(timeval,'\0',sizeof(timeval));
-   memcpy(timeval, string+4, 10);
-
-   ret = atoi(timeval);
-
-   return ret;
+   return 0;
 }
-
 
 /*
  *  *To get the last checked timestamp from dcm_props file
@@ -2361,6 +2361,7 @@ static void gw_get_core_dump_timestamp(void)
       log_debug("GET TIMESTAMP FAILED");
       exit(1);
    }
+   memset(core_timestamp,'\0',sizeof(core_timestamp));
    fscanf(fp, "%[^\n]", core_timestamp);
    log_debug("Get timestamp from conf file : %s",core_timestamp);
    pclose(fp);
