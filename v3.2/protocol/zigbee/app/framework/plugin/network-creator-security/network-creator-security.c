@@ -341,6 +341,7 @@ EmberStatus emberAfPluginNetworkCreatorSecurityCloseNetwork(void)
               zb_network_close_recount=0;
 	      zb_exit();
 	}
+  }
   return status;
 }
 
