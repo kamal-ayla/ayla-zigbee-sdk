@@ -1499,8 +1499,9 @@ static void ds_notify_event(enum notify_event event)
  * reboot the system, so make sure all pending operations are completed
  * before calling it.
  */
-static void ds_reset_execute(struct device_state *dev, bool factory)
+static bool ds_reset_execute(struct device_state *dev, bool factory)
 {
+	bool ds_return = false;
 	log_info("%s reset", factory ? "factory" : "hard");
 
 	if (factory) {
@@ -1508,12 +1509,19 @@ static void ds_reset_execute(struct device_state *dev, bool factory)
 			log_err("factory reset failed");
 		}
 		/* Perform any factory reset actions on system */
-		platform_factory_reset();
-		dev->factory_reset = 0;
+		if(platform_factory_reset())
+		{
+			dev->factory_reset = 0;
+			ds_return = true;
+		}
 	}else{
-		platform_reset();
-		dev->hard_reset = 0;
+		if(platform_reset())
+		{
+			dev->hard_reset = 0;
+			ds_return = true;
+		}
 	}
+	return ds_return;
 }
 
 /*
@@ -1545,12 +1553,16 @@ static void ds_step_timeout(struct timer *timer)
 	}
 	if (dev->hard_reset || dev->factory_reset) {
 		/* Terminate appd on reset, if managed by devd */
+		set_exit_appd_status(true);
 		ds_kill_appd();
 		/* Perform the factory reset (may not return) */
-		ds_reset_execute(dev, dev->factory_reset);
-		/* Force reconnect in case platform_reset() not implemented */
-		dev->do_reconnect = 1;
-		ds_step();
+		if(!ds_reset_execute(dev, dev->factory_reset))
+		{
+			/* Force reconnect in case platform_reset() not implemented */
+			dev->do_reconnect = 1;
+			set_exit_appd_status(false);
+			ds_step();
+		}
 		return;
 	}
 	if (dev->do_reconnect) {

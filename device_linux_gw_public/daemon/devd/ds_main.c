@@ -611,3 +611,9 @@ int main(int argc, char **argv)
 	ds_run();
 	return 0;
 }
+
+void set_exit_appd_status(bool appd_need)
+{
+	ds_no_appd = appd_need;
+	log_info("appd restart status changed [%d]",ds_no_appd);
+}

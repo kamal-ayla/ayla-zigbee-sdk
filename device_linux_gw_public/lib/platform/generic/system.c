@@ -57,23 +57,26 @@ void platform_configure_led(bool cloud_up, bool registered,
  * the reset status or running an external script.  During a normal factory
  * reset, platform_reset() will be called after this function returns.
  */
-void platform_factory_reset(void)
+bool platform_factory_reset(void)
 {
 	log_debug("platform factory reset: /usr/bin/rtfd --soft");
 	if(system("/usr/bin/rtfd --soft"))
 	{
 		log_warn("/usr/bin/rtfd --soft factory reset failed");
+		return false;
 	}
 
-	return;
+	return true;
 }
 
 /*
  * Reboot the system.
  */
-void platform_reset(void)
+bool platform_reset(void)
 {
-     if (system("reboot")) {
-         log_warn("reboot failed");
-    }
+	if (system("reboot")) {
+		log_warn("reboot failed");
+		return false;
+	}
+	return true;
 }

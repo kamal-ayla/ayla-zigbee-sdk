@@ -41,12 +41,12 @@ void platform_apply_setup_mode(bool enable);
  * the reset status or running an external script.  During a normal factory
  * reset, platform_reset() will be called after this function returns.
  */
-void platform_factory_reset(void);
+bool platform_factory_reset(void);
 
 /*
  * Reboot the system.
  */
-void platform_reset(void);
+bool platform_reset(void);
 
 
 #endif /* __AYLA_PLATFORM_SYSTEM_H__ */

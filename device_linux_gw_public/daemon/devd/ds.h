@@ -248,4 +248,6 @@ void client_lan_cmd_resp(struct server_req *, int status);
 int client_lan_post(struct device_state *dev, struct client_lan_reg *lan,
 			json_t *body, const char *url, const char **err_type);
 
+void set_exit_appd_status(bool appd_need);
+
 #endif /* __AYLA_DS_CLIENT_H__ */
