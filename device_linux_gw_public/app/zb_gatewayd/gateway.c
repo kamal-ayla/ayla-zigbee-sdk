@@ -53,7 +53,7 @@
 #include "appd_interface.h"
 #include "att/vt_interface.h"
 #include "att/att_interface.h"
-
+#include "speedtest.h"
 #include "pthread.h"
 #include <libgen.h>
 #include <stdlib.h>
@@ -66,7 +66,7 @@
 #define ARR_POINTER_LEN 3
 #define MIN_BUF_LEN 8
 const char *appd_version = "zb_gatewayd " BUILD_VERSION_LABEL;
-const char *appd_template_version = "vantiva_zigbee_gateway_v1.3";
+const char *appd_template_version = "vantiva_zigbee_gateway_v1.4";
 
 /* ZigBee protocol property states */
 static struct timer zb_permit_join_timer;
@@ -540,6 +540,11 @@ static int wps_iteration;
 static char gw_wifi_pwr_adjust_5G[MIN_BUF_LEN];
 static char gw_wifi_pwr_adjust_2G[MIN_BUF_LEN];
 
+extern char gw_internet_download_speed[INTERNET_SPEED_BUF_SIZE];
+extern char gw_internet_upload_speed[INTERNET_SPEED_BUF_SIZE];
+extern char gw_speed_test_status[INTERNET_SPEED_BUF_SIZE];
+extern u8 gw_speed_test_enable;
+extern pthread_t speed_test_thread;
 static void appd_wifi_status_update(void);
 static void  gw_wifi_verification(void);
 
@@ -6814,8 +6819,36 @@ static struct prop appd_gw_prop_table[] = {
                 .send = prop_arg_send,
                 .arg = &gw_wifi_pwr_adjust_5G,
                 .len = sizeof(gw_wifi_pwr_adjust_5G),
-        }
-
+        },
+        {
+                .name = "gw_internet_download_speed",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_internet_download_speed,
+                .len = sizeof(gw_internet_download_speed),
+        },
+        {
+                .name = "gw_internet_upload_speed",
+                .type = PROP_STRING,
+                .send = prop_arg_send,
+                .arg = &gw_internet_upload_speed,
+                .len = sizeof(gw_internet_upload_speed),
+        },
+        {
+		.name = "gw_speed_test_enable",
+		.type = PROP_BOOLEAN,
+		.set = appd_internet_speed_set,
+		.send = prop_arg_send,
+		.arg = &gw_speed_test_enable,
+		.len = sizeof(gw_speed_test_enable),
+	},
+        {
+		.name = "gw_speed_test_status",
+		.type = PROP_STRING,
+		.send = prop_arg_send,
+		.arg = &gw_speed_test_status,
+		.len = sizeof(gw_speed_test_status),
+	}
 };
 
 
