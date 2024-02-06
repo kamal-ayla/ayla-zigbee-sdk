@@ -1443,7 +1443,8 @@ void appd_update_as_online_status(uint16_t node_id)
 
 	if (info->node_ready == 0) {
 		log_debug("node %s not ready", zb_node->addr);
-		return;
+		info->node_ready = 1; //If not ready making it 1 because it reaches here only if its a known node
+		log_debug("node %s was not ready now set to is ready as it is valid node", zb_node->addr);
 	}
 
 	if (!(zb_node->online)) {
@@ -1913,7 +1914,7 @@ static int appd_start_power_query(struct node *zb_node, void *arg)
 		log_debug("IAS node %s zone_state is 0x%02X",
 		    zb_node->addr, info->zone_state);
 		appd_start_write_cie(info);
-		return 0;
+		//return 0; //Continue for other poll
 	}
 
 	if(!strcmp(info->model_id, "3310-G") || !strcmp(info->model_id, "3315-G")
