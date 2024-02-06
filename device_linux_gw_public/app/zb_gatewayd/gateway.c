@@ -3566,7 +3566,7 @@ static int appd_ssid_2ghz(struct prop *prop, const void *val,
 
 	memset(ssid_2ghz,'\0',sizeof(ssid_2ghz));
 
-	fp1 = popen(RESTART_MESH_BROKER, "r");
+	fp1 = popen(SMART_MESH_RELOAD, "r");
 	if( fp1 == NULL) {
 	   log_err("restart mesh broker failed");
 	   exit(1);
@@ -3656,7 +3656,7 @@ static int appd_ssid_key_2ghz(struct prop *prop, const void *val,
 
         memset(ssid_key_2ghz,'\0',sizeof(ssid_key_2ghz));			
 			
-	fp1 = popen(RESTART_MESH_BROKER, "r");
+	fp1 = popen(SMART_MESH_RELOAD, "r");
 	if( fp1 == NULL) {
 	   log_err("restart mesh broker failed");
 	   exit(1);
@@ -3740,7 +3740,7 @@ static int appd_ssid_5ghz(struct prop *prop, const void *val,
 
 	   memset(ssid_5ghz,'\0',sizeof(ssid_5ghz));
 
-	   fp1 = popen(RESTART_MESH_BROKER, "r");
+	   fp1 = popen(SMART_MESH_RELOAD, "r");
 	   if( fp1 == NULL) {
 	      log_err("restart mesh broker failed");
 	      exit(1);
@@ -3834,7 +3834,7 @@ static int appd_ssid_key_5ghz(struct prop *prop, const void *val,
 
 	memset(ssid_key_5ghz,'\0',sizeof(ssid_key_5ghz));
 
-	fp1 = popen(RESTART_MESH_BROKER, "r");
+	fp1 = popen(SMART_MESH_RELOAD, "r");
 	if( fp1 == NULL) {
 	   log_err("restart mesh broker failed");
 	   exit(1);
@@ -3920,7 +3920,7 @@ static int appd_guest_ssid_2ghz(struct prop *prop, const void *val,
 
 	memset(guest_ssid_2ghz,'\0',sizeof(guest_ssid_2ghz));
 
-	fp1 = popen(RESTART_MESH_BROKER, "r");
+	fp1 = popen(SMART_MESH_RELOAD, "r");
 	if( fp1 == NULL) {
 	   log_err("restart mesh broker failed");
 	   exit(1);
@@ -4012,7 +4012,7 @@ static int appd_guest_ssid_key_2ghz(struct prop *prop, const void *val,
 
         memset(guest_ssid_key_2ghz,'\0',sizeof(guest_ssid_key_2ghz));
 
-	fp1 = popen(RESTART_MESH_BROKER, "r");
+	fp1 = popen(SMART_MESH_RELOAD, "r");
 	if( fp1 == NULL) {
 	   log_err("restart mesh broker failed");
 	   exit(1);
@@ -4098,7 +4098,7 @@ static int appd_guest_ssid_5ghz(struct prop *prop, const void *val,
 
 	   memset(guest_ssid_5ghz,'\0',sizeof(guest_ssid_5ghz));
 
-	   fp1 = popen(RESTART_MESH_BROKER, "r");
+	   fp1 = popen(SMART_MESH_RELOAD, "r");
 	   if( fp1 == NULL) {
 	      log_err("restart mesh broker failed");
 	      exit(1);
@@ -4192,7 +4192,7 @@ static int appd_guest_ssid_key_5ghz(struct prop *prop, const void *val,
 
 	 memset(guest_ssid_key_5ghz,'\0',sizeof(guest_ssid_key_5ghz));
 
-	 fp1 = popen(RESTART_MESH_BROKER, "r");
+	 fp1 = popen(SMART_MESH_RELOAD, "r");
 	 if( fp1 == NULL) {
 	    log_err("restart mesh broker failed");
 	    exit(1);
