@@ -20,6 +20,9 @@
 #ifndef SILABS_EZSP_H
 #define SILABS_EZSP_H
 
+/* Initialize mutex lock for "sendingCommand"*/
+EzspStatus ezspMutexInit(void);
+
 // Reset the NCP and initialize the serial protocol (SPI or UART). After this
 // function returns EZSP_SUCCESS, the NCP has finished rebooting and is ready
 // to accept a command.

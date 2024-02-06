@@ -29,6 +29,14 @@
 #include "app/util/ezsp/serial-interface.h"
 #include "app/util/ezsp/ezsp-frame-utilities.h"
 
+#include "app/framework/include/log.h"
+#include <pthread.h>
+
+static void acquiresendCommandLock(void);
+static void releasesendCommandLock(void);
+
+static pthread_mutex_t sendCommandLock;
+
 #ifdef EZSP_ASH
   #include "app/ezsp-host/ezsp-host-priv.h"
   #define EZSP_ASH_TRACE(...) ezspTraceEzspVerbose(__VA_ARGS__)
@@ -632,6 +640,7 @@ static uint8_t responseReceived(void)
 
 static EzspStatus sendCommand(void)
 {
+  acquiresendCommandLock();
   EzspStatus status;
   serialSetCommandByte(EZSP_SEQUENCE_INDEX, ezspSequence);
   ezspSequence++;
@@ -678,6 +687,7 @@ static EzspStatus sendCommand(void)
     ezspErrorHandler(status);
   }
   sendingCommand = false;
+  releasesendCommandLock();
   return status;
 }
 
@@ -700,12 +710,53 @@ void ezspTick(void)
 {
   uint8_t count = serialPendingResponseCount() + 1;
   // Ensure that we are not being called from within a command.
+      acquiresendCommandLock();
   assert(!sendingCommand);
+      releasesendCommandLock();
+
   while (count > 0 && responseReceived() == RESPONSE_SUCCESS) {
     callbackDispatch();
     count--;
   }
   simulatedTimePasses();
+
+}
+
+EzspStatus ezspMutexInit(void)
+{
+    log_debug("Calling ezspMutexInit");
+    int status;
+
+  status = pthread_mutex_init(&sendCommandLock, NULL);
+
+  if (status != 0) {
+    log_debug("pthread_mutex_init failed, status = 0x%X", status);
+    assert(false);
+  }
+	log_debug("ezspMutexInit done");
+
+return 0;
+}
+
+static void acquiresendCommandLock(void)
+{
+  int status;
+  // Locking the mutex shouldn't fail, so we simply assert if it does
+  status = pthread_mutex_lock(&sendCommandLock);
+  if (status != 0) {
+    log_debug("pthread_mutex_lock failed, status = 0x%X", status);
+  }
+
+}
+
+static void releasesendCommandLock(void)
+{
+  int status;
+  // Unlocking the mutex shouldn't fail, so we simply assert if it does
+  status = pthread_mutex_unlock(&sendCommandLock);
+  if (status != 0) {
+    log_debug("pthread_mutex_lock failed, status = 0x%X", status);
+  }
 }
 
 // ZLL methods

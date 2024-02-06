@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-
+#include "pthread.h"
 
 #define ANNO_NET_ADDR_OFFSET   1
 #define ANNO_IEEE_ADDR_OFFSET    (ANNO_NET_ADDR_OFFSET + 2)
@@ -316,6 +316,7 @@ static void debug_print_join_info(EmberNodeId newNodeId,
 static bool zbc_zdo_profile_msg_handle(uint16_t source, uint16_t cluster_id,
 			uint8_t *message, uint16_t msgLen)
 {
+	log_debug("ZIGBEE_DEBUG: thread self %lu",(unsigned long int)pthread_self());
 	struct zdo_match_req *match;
 	uint8_t *ptr;
 	struct zdo_anno *anno;
@@ -1203,6 +1204,7 @@ static bool zbc_manufacturer_specific_cluster_msg_handle(uint16_t source,
 static bool zbc_ha_profile_msg_handle(uint16_t source, uint16_t clusterId,
 				uint8_t *message, uint16_t msgLen)
 {
+	log_debug("ZIGBEE_DEBUG: thread self %lu",(unsigned long int)pthread_self());
 	struct zcl_msg *zcl;
 	struct zcl_manuft_msg *manuft;
 	bool ret = false;

@@ -41,7 +41,7 @@
 
 #include <arpa/inet.h>
 
-
+#include "pthread.h"
 
 
 #define BAUD_RATE 115200
@@ -1214,6 +1214,9 @@ int zb_gw_bind_prop_handler(const char *cmd, char *result, int len)
  */
 int zb_init(void)
 {
+	/* Init mutex lock before any zigbee event*/
+	ezspMutexInit();
+
 	/* Init appd interface */
 	appd_interface_init();
 
