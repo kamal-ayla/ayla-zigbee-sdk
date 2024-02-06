@@ -41,9 +41,6 @@
 
 #include <arpa/inet.h>
 
-#include "pthread.h"
-
-
 #define BAUD_RATE 115200
 #define TRACE_ALL (TRACE_FRAMES_BASIC | TRACE_FRAMES_VERBOSE \
 			| TRACE_EVENTS | TRACE_EZSP | TRACE_EZSP_VERBOSE)
@@ -1214,9 +1211,6 @@ int zb_gw_bind_prop_handler(const char *cmd, char *result, int len)
  */
 int zb_init(void)
 {
-	/* Init mutex lock before any zigbee event*/
-	ezspMutexInit();
-
 	/* Init appd interface */
 	appd_interface_init();
 

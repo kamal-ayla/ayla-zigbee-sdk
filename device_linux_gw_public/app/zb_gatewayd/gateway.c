@@ -124,7 +124,6 @@ static char up_time[UPTIME_LEN];
 extern char command[BUFF_LEN];
 extern char data[DATA_SIZE];
 static pthread_t vnode_poll_thread = (pthread_t)NULL;
-static pthread_t zb_poll_thread = (pthread_t)NULL;
 static unsigned int wifi_sta_info_update_period_min;
 
 static int appd_check_wifi_sta_data_deviation(char *name, char *value);
@@ -7218,13 +7217,6 @@ static void vnode_poll_thread_fun(void)
 	 }
 }
 
-static void zb_poll_thread_function(void){
-	while(1){
-                zb_poll();
-                sleep(1);
-	}
-}
-
 /*
  * GUEST ssid 5g & 2g enable/disable status will be updated in the corresponding properies
  */
@@ -7344,7 +7336,7 @@ void appd_poll(void)
 	struct tag_num_nodes num;
 
 	/* Handle network stack events */
-	//zb_poll(); /*Moved to separate thread*/
+	zb_poll();
 
 	appd_update_num_nodes(&num);
 
@@ -7371,14 +7363,6 @@ void appd_poll(void)
             		pthread_cancel(vnode_poll_thread);
 		}
 	}
-
-        /* Zigbee poll thread which handles the events/callbacks from NCP to host*/
-        if(!zb_poll_thread){
-		if (pthread_create(&zb_poll_thread, NULL, (void *)&zb_poll_thread_function, NULL)) {
-			 pthread_cancel(zb_poll_thread);
-		}
-	}
-
 	return;
 }
 
