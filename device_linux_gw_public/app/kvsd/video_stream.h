@@ -32,6 +32,7 @@ struct hls_data {
 	char * session_token;
 	int expiration_time;
 	int retention_days;
+    bool valid;
 };
 
 enum kvs_data_str_index {
@@ -55,6 +56,7 @@ struct webrtc_data {
 	char * secret_access_key;
 	char * session_token;
 	int expiration_time;
+    bool valid;
 };
 
 enum webrtc_data_str_index {

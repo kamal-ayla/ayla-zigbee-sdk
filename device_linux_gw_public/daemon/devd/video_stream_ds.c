@@ -105,11 +105,13 @@ int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr)
 	log_debug("get WebRTC stream for ADDR: '%s'", addr);
 	log_debug("API CALL: '%s'", ds_data->buff);
 
+    memset(&ds_data->info, 0, sizeof(ds_data->info));
     ds_data->info.method = HTTP_GET;
     ds_data->info.host = dev->ads_host;
     ds_data->info.uri = ds_data->buff;
+    ds_data->client = &dev->client;
     ds_data->handler = ds_get_webrtc_signalling_channel_done;
-    ds_data->handler_arg = NULL;
+    ds_data->handler_arg = ds_data;
 
 	if (ds_client_busy(&dev->client)) {
 	    ds_send_later(ds_data);
@@ -117,7 +119,7 @@ int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr)
 	}
 
 	log_debug2("sending the webrtc signalling channel GET request**************");
-	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, ds_data->handler_arg) < 0) {
+	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, NULL) < 0) {
 	    free(ds_data);
 		log_warn("send failed");
 		return -1;
@@ -138,11 +140,13 @@ int ds_get_kvs_streaming_channel(struct device_state *dev, const char* addr)
 	log_debug("get KVS stream for ADDR: '%s'", addr);
 	log_debug("API CALL: '%s'", ds_data->buff);
 
+    memset(&ds_data->info, 0, sizeof(ds_data->info));
     ds_data->info.method = HTTP_GET;
     ds_data->info.host = dev->ads_host;
     ds_data->info.uri = ds_data->buff;
+    ds_data->client = &dev->client;
     ds_data->handler = ds_get_kvs_streaming_channel_done;
-    ds_data->handler_arg = NULL;
+    ds_data->handler_arg = ds_data;
 
     if (ds_client_busy(&dev->client)) {
         ds_send_later(ds_data);
@@ -150,7 +154,7 @@ int ds_get_kvs_streaming_channel(struct device_state *dev, const char* addr)
     }
 
 	log_debug2("sending the kvs streaming channel GET request**************");
-	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, ds_data->handler_arg) < 0) {
+	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, NULL) < 0) {
 	    free(ds_data);
 		log_warn("send failed");
 		return -1;
@@ -181,20 +185,22 @@ static void* ds_send_later_thread(void *arg)
     struct DsClientSendData *ds_data = (struct DsClientSendData *)arg;
     int ret = 0;
     unsigned int retry = 0;
-    const unsigned int max_retry = 10;
+    const unsigned int retry_interval_us = 250000;
+    const unsigned int max_retry_sec = 30;
+    const unsigned int max_retry_cnt = max_retry_sec * (1000000 / retry_interval_us);
 
     pthread_mutex_lock(&ds_send_later_mtx);
-    log_debug2("sending the webrtc signalling channel GET request**************");
     do
     {
+        log_debug2("ds_send_later_thread: ds_send: retry: %u", retry);
         ret = ds_send(ds_data->client, &ds_data->info, ds_data->handler, ds_data->handler_arg);
         ++retry;
-        usleep(250000);
-    } while(ret != 0 && retry < max_retry);
+        usleep(retry_interval_us);
+    } while(ret != 0 && retry < max_retry_cnt);
     free(ds_data);
     pthread_mutex_unlock(&ds_send_later_mtx);
 
-    if(retry >= max_retry)
+    if(retry >= max_retry_cnt)
     {
         log_warn("ds_send_later_thread: send failed, reached max retry");
         return (void *)-1;
