@@ -18,6 +18,10 @@
 #include "ds_client.h"
 #include "dapi.h"
 
+#include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 
 /*
  * GET KVS Signalling Channel request complete handler.
@@ -94,27 +98,34 @@ static void ds_get_webrtc_signalling_channel_done(enum http_client_err err,
 
 int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr)
 {
-	char buff[256];
-	snprintf(buff, sizeof(buff), "videoservice/dsns/$DSN/signaling_channels.json?camera_ids=%s", addr);
+    struct DsClientSendData *ds_data = malloc(sizeof(struct DsClientSendData));
+
+	snprintf(ds_data->buff, sizeof(ds_data->buff), "videoservice/dsns/$DSN/signaling_channels.json?camera_ids=%s", addr);
 
 	log_debug("get WebRTC stream for ADDR: '%s'", addr);
-	log_debug("API CALL: '%s'", buff);
+	log_debug("API CALL: '%s'", ds_data->buff);
 
-	struct ds_client_req_info info = {
-			.method = HTTP_GET,
-			.host = dev->ads_host,
-			.uri = buff
-	};
+    memset(&ds_data->info, 0, sizeof(ds_data->info));
+    ds_data->info.method = HTTP_GET;
+    ds_data->info.host = dev->ads_host;
+    ds_data->info.uri = ds_data->buff;
+    ds_data->client = &dev->client;
+    ds_data->handler = ds_get_webrtc_signalling_channel_done;
+    ds_data->handler_arg = ds_data;
 
 	if (ds_client_busy(&dev->client)) {
-		return -1;
+	    ds_send_later(ds_data);
+		return 0;
 	}
 
 	log_debug2("sending the webrtc signalling channel GET request**************");
-	if (ds_send(&dev->client, &info, ds_get_webrtc_signalling_channel_done, NULL) < 0) {
+	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, NULL) < 0) {
+	    free(ds_data);
 		log_warn("send failed");
 		return -1;
 	}
+
+    free(ds_data);
 
 	return 0;
 }
@@ -122,27 +133,34 @@ int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr)
 
 int ds_get_kvs_streaming_channel(struct device_state *dev, const char* addr)
 {
-	char buff[256];
-	snprintf(buff, sizeof(buff), "videoservice/dsns/$DSN/streams.json?camera_ids=%s", addr);
+    struct DsClientSendData *ds_data = malloc(sizeof(struct DsClientSendData));
+
+    snprintf(ds_data->buff, sizeof(ds_data->buff), "videoservice/dsns/$DSN/streams.json?camera_ids=%s", addr);
 
 	log_debug("get KVS stream for ADDR: '%s'", addr);
-	log_debug("API CALL: '%s'", buff);
+	log_debug("API CALL: '%s'", ds_data->buff);
 
-	struct ds_client_req_info info = {
-			.method = HTTP_GET,
-			.host = dev->ads_host,
-			.uri = buff
-	};
+    memset(&ds_data->info, 0, sizeof(ds_data->info));
+    ds_data->info.method = HTTP_GET;
+    ds_data->info.host = dev->ads_host;
+    ds_data->info.uri = ds_data->buff;
+    ds_data->client = &dev->client;
+    ds_data->handler = ds_get_kvs_streaming_channel_done;
+    ds_data->handler_arg = ds_data;
 
-	if (ds_client_busy(&dev->client)) {
-		return -1;
-	}
+    if (ds_client_busy(&dev->client)) {
+        ds_send_later(ds_data);
+        return 0;
+    }
 
 	log_debug2("sending the kvs streaming channel GET request**************");
-	if (ds_send(&dev->client, &info, ds_get_kvs_streaming_channel_done, NULL) < 0) {
+	if (ds_send(ds_data->client, &ds_data->info, ds_data->handler, NULL) < 0) {
+	    free(ds_data);
 		log_warn("send failed");
 		return -1;
 	}
+
+    free(ds_data);
 
 	return 0;
 }
@@ -160,3 +178,40 @@ int ds_update_webrtc_streaming_channel(const char* addr)
 
 	return ds_get_webrtc_signalling_channel(&device, addr);
 }
+
+static pthread_mutex_t ds_send_later_mtx = PTHREAD_MUTEX_INITIALIZER;
+static void* ds_send_later_thread(void *arg)
+{
+    struct DsClientSendData *ds_data = (struct DsClientSendData *)arg;
+    int ret = 0;
+    unsigned int retry = 0;
+    const unsigned int retry_interval_us = 250000;
+    const unsigned int max_retry_sec = 30;
+    const unsigned int max_retry_cnt = max_retry_sec * (1000000 / retry_interval_us);
+
+    pthread_mutex_lock(&ds_send_later_mtx);
+    do
+    {
+        log_debug2("ds_send_later_thread: ds_send: retry: %u", retry);
+        ret = ds_send(ds_data->client, &ds_data->info, ds_data->handler, ds_data->handler_arg);
+        ++retry;
+        usleep(retry_interval_us);
+    } while(ret != 0 && retry < max_retry_cnt);
+    free(ds_data);
+    pthread_mutex_unlock(&ds_send_later_mtx);
+
+    if(retry >= max_retry_cnt)
+    {
+        log_warn("ds_send_later_thread: send failed, reached max retry");
+        return (void *)-1;
+    }
+
+    return NULL;
+}
+
+void ds_send_later(struct DsClientSendData *ds_data)
+{
+	pthread_t thread;
+    pthread_create(&thread, NULL, ds_send_later_thread, ds_data);
+}
+

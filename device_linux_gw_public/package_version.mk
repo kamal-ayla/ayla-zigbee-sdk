@@ -9,8 +9,8 @@
 # Global package version definition.  This makefile will be referenced by all
 # make targets.
 #
-MAJOR_VERSION := 2
-MINOR_VERSION := 0
+MAJOR_VERSION := 1
+MINOR_VERSION := 7
 MAINTENANCE_VERSION :=
 
 BUILD_TAG :=
