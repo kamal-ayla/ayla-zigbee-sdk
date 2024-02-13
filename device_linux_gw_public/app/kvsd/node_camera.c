@@ -2033,7 +2033,14 @@ static void fork_and_start_webrtc_streaming(struct node *node)
 	if(ret != 0)
 	{
 		log_err("Failed to send start WebRTC command to master stream process");
-		return;
+		log_err("Retrying...");
+		sleep(10);
+		ret = master_stream_send_cmd(SC_TM_CMD_START_WEBRTC, cam_node);
+		if (ret != 0) {
+			log_err("Fatal error: Failed to send start WebRTC \
+				command to master stream process");
+			return;
+		}
 	}
 	usleep(10000);
 
