@@ -61,7 +61,7 @@
 
 #define CAM_NODES_MAX			4		/* Max number of camera nodes */
 
-const char *appd_version = "kvsd " BUILD_VERSION_LABEL;
+const char *appd_version = "gatewayd " BUILD_VERSION_LABEL;
 const char *appd_template_version = "kvs_test_0.14";
 
 /* Gateway property states */
