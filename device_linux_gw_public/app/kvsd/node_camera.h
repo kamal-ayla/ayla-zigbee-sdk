@@ -28,6 +28,7 @@ DEF_ENUM(camera_node_type, CAMERA_NODE_TYPES);
  * Streaming state
  */
 struct stream_state {
+	bool starting;					/* Flag indicating if streaming is starting */
 	pid_t pid;						/* Streaming process ID */
 	struct timer stream_timer;		/* Timer for streaming */
 	struct timer start_delay_timer;	/* Timer for streaming start delay */
