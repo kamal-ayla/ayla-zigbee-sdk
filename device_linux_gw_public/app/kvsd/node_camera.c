@@ -48,7 +48,7 @@
 #define CAM_NODE_TEMPLATE_NODE		"kvs_cam2"
 
 /* Default between node property updates */
-#define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	1000
+#define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	10000
 
 #define CAM_NODE_STATE_MACHINE_TIME_MS	1000
 
@@ -210,6 +210,8 @@ static void kill_master_stream(struct node* node);
 static void cam_webrtc_stream_update_exec(struct cam_node_state *cam_node);
 static void cam_kvs_stream_update_exec(struct cam_node_state *cam_node);
 static void cam_node_state_machine(struct timer *timer);
+static void kvs_stream_failed_inform(struct node *node);
+static void webrtc_stream_failed_inform(struct node *node);
 
 
 /*****************************************
@@ -689,6 +691,13 @@ static int cam_node_prop_update_kvs_enable(struct node *node,
 	struct cam_node_state *cam_node = cam_node_state_get(node);
 	if(enabled)
 	{
+	    if(! cam_node->hls_data.valid)
+	    {
+	        log_warn("Cannot start HLS stream - credentials not valid.");
+	        kvs_stream_failed_inform(cam_node->node);
+	        return -1;
+	    }
+
 		log_debug("Starting KVS Streaming");
 		int ret = check_start_master_stream(cam_node);
 		if(MS_CHILD_PROC == ret)
@@ -722,6 +731,13 @@ static int cam_node_prop_update_webrtc_enable(struct node *node,
 	struct cam_node_state *cam_node = cam_node_state_get(node);
 	if(enabled)
 	{
+	    if(! cam_node->webrtc_data.valid)
+	    {
+	        log_warn("Cannot start WebRTC stream - credentials not valid.");
+	        webrtc_stream_failed_inform(cam_node->node);
+	        return -1;
+	    }
+
 		log_debug("Starting WebRTC streaming");
 		int ret = check_start_master_stream(cam_node);
 		if(MS_CHILD_PROC == ret)
@@ -1709,11 +1725,8 @@ static void cam_node_sample_timeout(struct timer *timer)
 	struct cam_node_state *node_state = CONTAINER_OF(struct cam_node_state,
 	    sample_timer, timer);
 
-//	// Print node properties
-//	static uint32_t print_props_counter;
-//	if(print_props_counter++ % 100 == 0) {
-//		cam_debug_print_props(node_state->node);
-//	}
+	// // Print node properties
+	// cam_debug_print_props(node_state->node);
 
 //	// Check for update HLS and WebRTC stream credentials
 //	if(/*(! gst_video_stream_is_initialized(&node_state->gst_data)) &&*/ node_state->hls_data.received && node_state->webrtc_data.received)
