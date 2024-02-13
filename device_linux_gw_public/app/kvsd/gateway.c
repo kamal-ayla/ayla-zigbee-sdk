@@ -61,7 +61,7 @@
 
 #define CAM_NODES_MAX			4		/* Max number of camera nodes */
 
-const char *appd_version = "gatewayd " BUILD_VERSION_LABEL;
+const char *appd_version = "kvsd " BUILD_VERSION_LABEL;
 const char *appd_template_version = "kvs_test_0.14";
 
 /* Gateway property states */
@@ -1070,18 +1070,6 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
 
 	memcpy(&node_state->hls_data, &kvsdata, sizeof(kvsdata));
 
-    // Check if data is valid an strings are not equal to ""
-    if (node_state->hls_data.kvs_channel_name && (strcmp(node_state->hls_data.kvs_channel_name, "") != 0) &&
-        node_state->hls_data.arn && (strcmp(node_state->hls_data.arn, "") != 0) &&
-        node_state->hls_data.region && (strcmp(node_state->hls_data.region, "") != 0) &&
-        node_state->hls_data.access_key_id && (strcmp(node_state->hls_data.access_key_id, "") != 0) &&
-        node_state->hls_data.secret_access_key && (strcmp(node_state->hls_data.secret_access_key, "") != 0) &&
-        node_state->hls_data.session_token && (strcmp(node_state->hls_data.session_token, "") != 0)) {
-        node_state->hls_data.valid = true;
-    } else {
-        node_state->hls_data.valid = false;
-    }
-
 	log_debug("kvs stream info for cam node addr: %s", cam_node_name);
 
 	// conf_save();
@@ -1161,18 +1149,6 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
 	free_ptrstr(&node_state->webrtc_data.session_token);
 
 	memcpy(&node_state->webrtc_data, &webrtcdata, sizeof(webrtcdata));
-
-    // Check if data is valid an strings are not equal to ""
-    if (node_state->webrtc_data.webrtc_channel_name && (strcmp(node_state->webrtc_data.webrtc_channel_name, "") != 0) &&
-        node_state->webrtc_data.arn && (strcmp(node_state->webrtc_data.arn, "") != 0) &&
-        node_state->webrtc_data.region && (strcmp(node_state->webrtc_data.region, "") != 0) &&
-        node_state->webrtc_data.access_key_id && (strcmp(node_state->webrtc_data.access_key_id, "") != 0) &&
-        node_state->webrtc_data.secret_access_key && (strcmp(node_state->webrtc_data.secret_access_key, "") != 0) &&
-        node_state->webrtc_data.session_token && (strcmp(node_state->webrtc_data.session_token, "") != 0)) {
-        node_state->webrtc_data.valid = true;
-    } else {
-        node_state->webrtc_data.valid = false;
-    }
 
 	log_debug("kvs stream info for cam node addr: %s", cam_node_name);
 

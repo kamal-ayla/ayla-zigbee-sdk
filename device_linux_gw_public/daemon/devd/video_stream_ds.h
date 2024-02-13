@@ -27,20 +27,4 @@ int ds_update_webrtc_streaming_channel(const char* addr);
  */
 int ds_get_webrtc_signalling_channel(struct device_state *dev, const char* addr);
 
-struct DsClientSendData
-{
-    struct ds_client *client;
-    struct ds_client_req_info info;
-    char buff[256];
-    void (*handler)(enum http_client_err, const struct http_client_req_info *, const struct ds_client_data *, void *);
-    void *handler_arg;
-};
-
-/*
- * Spawn a thread to run ds_send() in case ds_client_busy() is true.
- */
-void ds_send_later(struct DsClientSendData *ds_data);
-
-
-
 #endif /* VIDEO_STREAM_DS_H */

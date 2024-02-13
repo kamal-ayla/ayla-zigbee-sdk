@@ -48,7 +48,7 @@
 #define CAM_NODE_TEMPLATE_NODE		"kvs_cam2"
 
 /* Default between node property updates */
-#define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	10000
+#define CAM_NODE_SAMPLE_TIME_DEFAULT_MS	1000
 
 #define CAM_NODE_STATE_MACHINE_TIME_MS	1000
 
@@ -210,8 +210,6 @@ static void kill_master_stream(struct node* node);
 static void cam_webrtc_stream_update_exec(struct cam_node_state *cam_node);
 static void cam_kvs_stream_update_exec(struct cam_node_state *cam_node);
 static void cam_node_state_machine(struct timer *timer);
-static void kvs_stream_failed_inform(struct node *node);
-static void webrtc_stream_failed_inform(struct node *node);
 
 
 /*****************************************
@@ -355,6 +353,29 @@ static const struct cam_node_prop_def *cam_node_template_lookup(
 		}
 	}
 	return NULL;
+}
+#if 0
+static bool HLS_ready(struct node *node)
+{
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	struct hls_data* kvs_ds = &cam_node->hls_data;
+	if (NULL == kvs_ds->kvs_channel_name) {
+		log_err("Failed to get channel name for use in HLS streaming");
+		return false;
+	}
+	return true;
+}
+#endif
+
+static bool webrtc_ready(struct node *node)
+{
+	struct cam_node_state *cam_node = cam_node_state_get(node);
+	struct webrtc_data* kvs_ds = &cam_node->webrtc_data;
+	if (NULL == kvs_ds->webrtc_channel_name) {
+		log_err("Failed to get channel name for use in WebRTC");
+		return false;
+	}
+	return true;
 }
 
 /*
@@ -653,7 +674,6 @@ static int check_start_master_stream(struct cam_node_state* cam_node)
 			log_err("did not get a valid HLS port");
 		if (cam_node->master_stream_state.webrtc_port == 0)
 			log_err("did not get a valid webrtc port");
-
 		cam_node->master_stream_state.pid = fork();
 		if (cam_node->master_stream_state.pid == -1)
 		{
@@ -711,13 +731,6 @@ static int cam_node_prop_update_kvs_enable(struct node *node,
 	struct cam_node_state *cam_node = cam_node_state_get(node);
 	if(enabled)
 	{
-	    if(! cam_node->hls_data.valid)
-	    {
-	        log_warn("Cannot start HLS stream - credentials not valid.");
-	        kvs_stream_failed_inform(cam_node->node);
-	        return -1;
-	    }
-
 		log_debug("Starting KVS Streaming");
 		int ret = check_start_master_stream(cam_node);
 		if(MS_CHILD_PROC == ret)
@@ -726,6 +739,7 @@ static int cam_node_prop_update_kvs_enable(struct node *node,
 		}
 		else if(MS_ERROR == ret)
 		{
+			cam_node->kvs_streaming_required = true;
 			return -1;
 		}
 
@@ -760,13 +774,6 @@ static int cam_node_prop_update_webrtc_enable(struct node *node,
 	struct cam_node_state *cam_node = cam_node_state_get(node);
 	if(enabled)
 	{
-	    if(! cam_node->webrtc_data.valid)
-	    {
-	        log_warn("Cannot start WebRTC stream - credentials not valid.");
-	        webrtc_stream_failed_inform(cam_node->node);
-	        return -1;
-	    }
-
 		log_debug("Starting WebRTC streaming");
 		int ret = check_start_master_stream(cam_node);
 		if(MS_CHILD_PROC == ret)
@@ -775,6 +782,7 @@ static int cam_node_prop_update_webrtc_enable(struct node *node,
 		}
 		else if(MS_ERROR == ret)
 		{
+			cam_node->webrtc_streaming_required = true;
 			return -1;
 		}
 
@@ -1185,6 +1193,13 @@ static struct cam_node_state *cam_node_start(struct node *node,
 	node_state->node = node;
 	node_state->type = type;
 
+	node_state->url_prop_handler_called = false;
+	node_state->user_prop_handler_called = false;
+	node_state->password_prop_handler_called = false;
+	node_state->master_stream_aborted = false;
+	node_state->kvs_streaming_required = false;
+	node_state->webrtc_streaming_required = false;
+
 	/* Associate state with node entity */
 	node_state_set(node, STATE_SLOT_NET, node_state,
 	    cam_node_state_cleanup);
@@ -1306,13 +1321,36 @@ static int cam_node_prop_set_handler(struct node *node, struct node_prop *prop,
 	} else if (callback) {
 		callback(node, prop, NETWORK_OFFLINE);
 	}
-	if (cam_node->master_stream_aborted) {
+	if (!strcmp(prop->name, "url")) {
+		cam_node->url_prop_handler_called = true;
+	}
+	if (!strcmp(prop->name, "user")) {
+		cam_node->user_prop_handler_called = true;
+	}
+	if (!strcmp(prop->name, "password")) {
+		cam_node->password_prop_handler_called = true;
+	}
+	if (cam_node->url_prop_handler_called &&\
+	       	cam_node->user_prop_handler_called && \
+		cam_node->password_prop_handler_called && \
+		cam_node->master_stream_aborted) {
 		cam_node->master_stream_aborted = false;
 		if (check_start_master_stream(cam_node) == MS_ERROR) {
 			cam_node->master_stream_aborted = true;
 			return -1;
 		}
+		if (cam_node->kvs_streaming_required == true) {
+			cam_node->kvs_streaming_required = false;
+			kvs_start_delayed_streaming(cam_node,\
+			 STREAM_START_DELAY_MS);
+		}
+		if (cam_node->webrtc_streaming_required == true) {
+			cam_node->webrtc_streaming_required = false;
+			webrtc_start_delayed_streaming(cam_node,\
+			 STREAM_START_DELAY_MS);
+		}
 	}
+
 	return 0;
 }
 
@@ -1359,7 +1397,7 @@ static int cam_node_ota_handler(struct node *node,
 	}
 	return 0;
 }
-
+#if 0
 #define SAVE_KVS_STREAM_DATA_STR(name, data) \
 	if(NULL == data) { \
 		CHK_RET(json_object_set_new(net_state_obj, get_kvs_data_str(name), json_string(""))); \
@@ -1398,7 +1436,6 @@ static int cam_node_save_webrtc_data(json_t* net_state_obj, const struct webrtc_
 
 	return 0;
 }
-
 static int cam_node_load_kvs_data(const json_t* net_state_obj, struct hls_data* kvs_data)
 {
 	/* Check KVS data structure for initialized data */
@@ -1428,7 +1465,6 @@ static int cam_node_load_kvs_data(const json_t* net_state_obj, struct hls_data* 
 
 	return 0;
 }
-
 static int cam_node_load_webrtc_data(const json_t* net_state_obj, struct webrtc_data* webrtc_data)
 {
 	/* Check WEBRTC data structure for initialized data */
@@ -1455,6 +1491,7 @@ static int cam_node_load_webrtc_data(const json_t* net_state_obj, struct webrtc_
 
 	return 0;
 }
+#endif
 
 json_t *cam_node_save(const struct node *node)
 {
@@ -1522,8 +1559,8 @@ static int cam_node_loaded(struct node *node, json_t *net_state_obj)
 		return -1;
 	}
 
-	struct cam_node_state *cam_node =
-			cam_node_state_get((struct node *)node);
+//	struct cam_node_state *cam_node =
+//			cam_node_state_get((struct node *)node);
 	
 	/* Load KVS data */
 	// if(cam_node_load_kvs_data(net_state_obj, &cam_node->hls_data) != 0)
@@ -1661,6 +1698,7 @@ static void cam_webrtc_stream_update_timeout(struct timer *timer)
 	timer_set(app_get_timers(), &cam_node->webrtc_stream_state.stream_update_timer, CAM_STREAM_UPDATE_TIME_MS);
 }
 
+#if 0
 static void cam_debug_print_props(struct node *node)
 {
 #define NODE_CHECK_PTR(ptr) if ((ptr) == NULL) { log_debug("NULL pointer"); return; }
@@ -1704,6 +1742,7 @@ static void cam_debug_print_props(struct node *node)
 	log_debug("webrtcdata session_token: %s", node_state->webrtc_data.session_token);
 	log_debug("webrtcdata expiration_time: %d", node_state->webrtc_data.expiration_time);
 }
+#endif
 
 //static int cam_node_start_video_stream_control(struct gst_data *gst_data, struct cam_node_state* node_state)
 //{
@@ -1772,8 +1811,11 @@ static void cam_node_sample_timeout(struct timer *timer)
 	struct cam_node_state *node_state = CONTAINER_OF(struct cam_node_state,
 	    sample_timer, timer);
 
-	// // Print node properties
-	// cam_debug_print_props(node_state->node);
+//	// Print node properties
+//	static uint32_t print_props_counter;
+//	if(print_props_counter++ % 100 == 0) {
+//		cam_debug_print_props(node_state->node);
+//	}
 
 //	// Check for update HLS and WebRTC stream credentials
 //	if(/*(! gst_video_stream_is_initialized(&node_state->gst_data)) &&*/ node_state->hls_data.received && node_state->webrtc_data.received)
@@ -1987,13 +2029,6 @@ static void webrtc_stream_failed_inform(struct node *node)
 static void fork_and_start_kvs_streaming(struct node *node)
 {
 	struct cam_node_state *cam_node = cam_node_state_get(node);
-	if (cam_node->master_stream_aborted) {
-		cam_node->master_stream_aborted = false;
-		if (check_start_master_stream(cam_node) == MS_ERROR) {
-			cam_node->master_stream_aborted = true;
-			return;
-		}
-	}
 
 	int ret = master_stream_send_cmd(SC_TM_CMD_START_HLS, cam_node);
 	if(ret != 0)
@@ -2034,14 +2069,6 @@ static void fork_and_start_kvs_streaming(struct node *node)
 static void fork_and_start_webrtc_streaming(struct node *node)
 {
 	struct cam_node_state *cam_node = cam_node_state_get(node);
-	if (cam_node->master_stream_aborted) {
-		cam_node->master_stream_aborted = false;
-		if (check_start_master_stream(cam_node) == MS_ERROR) {
-			cam_node->master_stream_aborted = true;
-			return;
-		}
-	}
-
 	int ret = master_stream_send_cmd(SC_TM_CMD_START_WEBRTC, cam_node);
 	if(ret != 0)
 	{
@@ -2145,20 +2172,53 @@ static void kill_master_stream(struct node* node)
 /*
  * Handle kvs streaming start delay timer
  */
+#if 0
+void* delayed_HLS_thread(void* data)
+{
+	//give sufficient time to fetch JSON data from AWS cloud
+	while (!HLS_ready((struct node*)data))
+		sleep(5);
+	fork_and_start_kvs_streaming((struct node *)data);
+	return NULL;
+}
+#endif
+
 static void kvs_streaming_start_delay_timeout(struct timer *timer)
 {
+	pthread_t thr;
 	log_info("Starting delayed KVS Stream");
 	timer_cancel(app_get_timers(), timer);
+#if 0
+	if (!HLS_ready(timer->data)) {
+		pthread_create(&thr, NULL, delayed_HLS_thread,\
+			       	(void *)timer->data);
+		return;
+	}
+#endif
 	fork_and_start_kvs_streaming(timer->data);
 }
 
 /*
  * Handle webrtc streaming start delay timer
  */
+void* delayed_webrtc_thread(void* data)
+{
+	//give sufficient time to fetch JSON data from AWS cloud
+	while (!webrtc_ready((struct node*)data))
+		sleep(5);
+	fork_and_start_webrtc_streaming((struct node *)data);
+	return NULL;
+}
 static void webrtc_streaming_start_delay_timeout(struct timer *timer)
 {
+	pthread_t thr;
 	log_info("Starting delayed WebRTC Stream");
 	timer_cancel(app_get_timers(), timer);
+	if (!webrtc_ready(timer->data)) {
+		pthread_create(&thr, NULL, delayed_webrtc_thread,\
+			       	(void *)timer->data);
+		return;
+	}
 	fork_and_start_webrtc_streaming(timer->data);
 }
 
@@ -2221,7 +2281,7 @@ static void start_kvs_streaming(struct node* node)
 	//if (debug)
 	{
 		int j = 0;
-		log_debug("Starting %s using args: ", SHELL_DEFAULT);
+		log_debug("Starting %s using args: ", HLS_STREAM_APP);
 		for (j = 0; j < i; j++) {
 			log_debug("%s", argv[j]);
 		}
@@ -2314,7 +2374,7 @@ static void start_webrtc_streaming(struct node* node)
 	//if (debug)
 	{
 		int j = 0;
-		log_debug("Starting %s using args: ", SHELL_DEFAULT);
+		log_debug("Starting %s using args: ", WEBRTC_STREAM_APP);
 		for (j = 0; j < i; j++) {
 			log_debug("%s", argv[j]);
 		}
@@ -2412,6 +2472,7 @@ static void start_master_stream(struct node* node)
 	{
 		log_err("Failed to get service queue property");
 		strncpy(service_queue, "", sizeof(service_queue));
+		service_queue_prop_present = false;
 	}
 	else
 	{
@@ -2442,7 +2503,7 @@ static void start_master_stream(struct node* node)
 	//if (debug)
 	{
 		int j = 0;
-		log_debug("Starting %s using args: ", SHELL_DEFAULT);
+		log_debug("Starting %s using args: ", MASTER_STREAM_APP);
 		for (j = 0; j < i; j++) {
 			log_debug("%s", argv[j]);
 		}
