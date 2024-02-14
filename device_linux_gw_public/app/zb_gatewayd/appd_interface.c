@@ -1443,10 +1443,15 @@ void appd_update_as_online_status(uint16_t node_id)
 
 	if (info->node_ready == 0) {
 		log_debug("node %s not ready", zb_node->addr);
+		return;
+	}
+/*//Keeping this change to check later
+	if (info->node_ready == 0) {
+		log_debug("node %s not ready", zb_node->addr);
 		info->node_ready = 1; //If not ready making it 1 because it reaches here only if its a known node
 		log_debug("node %s was not ready now set to is ready as it is valid node", zb_node->addr);
 	}
-
+*/
 	if (!(zb_node->online)) {
 		info->sent_online = 1;
 		node_conn_status_changed(zb_node, true);
@@ -2052,6 +2057,12 @@ static void appd_query_complete_handler(struct zb_node_info *info)
 	}
 	else{
 		log_debug("Else condition may be old device/sensor needs update");
+		if (info->node_ready == 0) {
+               log_debug("node %s not ready", info->node->addr);
+               info->node_ready = 1; //If not ready making it 1 because it this previously added sensor
+               log_debug("node %s was not ready now set to is ready", info->node->addr);
+        }
+
 		ret = appd_set_node_template(info);
 		if (ret < 0) {
 			result = NETWORK_UNSUPPORTED;
