@@ -30,7 +30,7 @@ struct hls_data {
 	char * access_key_id;
 	char * secret_access_key;
 	char * session_token;
-	int expiration_time;
+	time_t expiration_time;
 	int retention_days;
     bool valid;
 };
@@ -55,7 +55,7 @@ struct webrtc_data {
 	char * access_key_id;
 	char * secret_access_key;
 	char * session_token;
-	int expiration_time;
+	time_t expiration_time;
     bool valid;
 };
 

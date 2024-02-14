@@ -441,7 +441,6 @@ static void stop_kvs_streaming(struct node *node, struct cam_node_state *cam_nod
 
 	cam_node->hls_stream_state.starting = false;
 	timer_cancel(app_get_timers(), &cam_node->hls_stream_state.stream_timer);
-	timer_cancel(app_get_timers(), &cam_node->hls_stream_state.stream_update_timer);
 
 	if(cam_node->master_stream_state.fd == 0)
 	{
@@ -467,7 +466,6 @@ static void stop_webrtc_streaming(struct node *node, struct cam_node_state *cam_
 
 	cam_node->webrtc_stream_state.starting = false;
 	timer_cancel(app_get_timers(), &cam_node->webrtc_stream_state.stream_timer);
-	timer_cancel(app_get_timers(), &cam_node->webrtc_stream_state.stream_update_timer);
 
 	if(cam_node->master_stream_state.fd == 0)
 	{
@@ -1148,6 +1146,7 @@ static void stream_state_init(struct stream_state* ss, struct node* node,
 
 	ss->stream_update_timer.data = node;
 	timer_init(&ss->stream_update_timer, stream_update_timeout);
+    timer_set(app_get_timers(), &ss->stream_update_timer, CAM_STREAM_UPDATE_TIME_MS);
 
 	ss->stream_data = stream_data;
 }
@@ -1394,12 +1393,16 @@ static int cam_node_load_kvs_data(const json_t* net_state_obj, struct hls_data* 
 	kvs_data->secret_access_key = json_get_string_dup(net_state_obj, get_kvs_data_str(KVS_SECRET_ACCESS_KEY)); CHK_PTR(kvs_data->secret_access_key);
 	kvs_data->session_token = json_get_string_dup(net_state_obj, get_kvs_data_str(KVS_SESSION_TOKEN)); CHK_PTR(kvs_data->session_token);
 
-	if (json_get_int(net_state_obj, get_kvs_data_str(KVS_EXPIRATION_TIME), &kvs_data->expiration_time) < 0) {
+    s64 expiration_time, retention_days;
+	if (json_get_int64(net_state_obj, get_kvs_data_str(KVS_EXPIRATION_TIME), &expiration_time) < 0) {
 		return -1;
 	}
-	if (json_get_int(net_state_obj, get_kvs_data_str(KVS_RETENTION_DAYS), &kvs_data->retention_days) < 0) {
+    kvs_data->expiration_time = expiration_time;
+
+	if (json_get_int64(net_state_obj, get_kvs_data_str(KVS_RETENTION_DAYS), &retention_days) < 0) {
 		return -1;
 	}
+    kvs_data->retention_days = retention_days;
 
 	return 0;
 }
@@ -1424,9 +1427,11 @@ static int cam_node_load_webrtc_data(const json_t* net_state_obj, struct webrtc_
 	webrtc_data->secret_access_key = json_get_string_dup(net_state_obj, get_webrtc_data_str(WEBRTC_SECRET_ACCESS_KEY)); CHK_PTR(webrtc_data->secret_access_key);
 	webrtc_data->session_token = json_get_string_dup(net_state_obj, get_webrtc_data_str(WEBRTC_SESSION_TOKEN)); CHK_PTR(webrtc_data->session_token);
 
-	if (json_get_int(net_state_obj, get_webrtc_data_str(WEBRTC_EXPIRATION_TIME), &webrtc_data->expiration_time) < 0) {
+    s64 expiration_time;
+	if (json_get_int64(net_state_obj, get_webrtc_data_str(WEBRTC_EXPIRATION_TIME), &expiration_time) < 0) {
 		return -1;
 	}
+    webrtc_data->expiration_time = expiration_time;
 
 	return 0;
 }
@@ -1559,18 +1564,19 @@ static void cam_step_timeout(struct timer *timer)
 	timer_set(app_get_timers(), &state.step_timer, CAM_STEP_TIME_MS);
 }
 
-static bool check_stream_force_update(struct stream_state* ss, int expire_time)
+static bool check_stream_force_update(struct stream_state* ss, time_t expire_time)
 {
 	// get current unix time
 	time_t current_time;
 	time(&current_time);
 
 	// get delta time
-	int delta_time = difftime(expire_time, current_time);
-	log_debug("Stream needs to be updated in : %d [sec]", delta_time);
+	double delta_time_d = difftime(expire_time, current_time);
+    time_t delta_time = (time_t)delta_time_d;
+	log_debug("Stream needs to be updated in : %lld [sec]. Curr. time: %lld, expire time: %lld", (long long)delta_time, (long long)current_time, (long long)expire_time);
 
 	// check if delta time is greater than threshold
-	if(delta_time < CAM_STREAM_TIME_DIFF_THRESHOLD)
+	if(0 > delta_time || CAM_STREAM_TIME_DIFF_THRESHOLD > delta_time)
 	{
 		log_debug("Stream is going to be updated");
 		return true;
@@ -1589,9 +1595,20 @@ static void cam_kvs_stream_update_exec(struct cam_node_state *cam_node)
 		// Stream needs to update credentials
 		log_debug("KVS stream update requested");
 
+	    struct node_prop * en_prop = node_prop_lookup(cam_node->node, NULL, NULL, CAM_PROP_NAME_KVS_ENABLE);
+	    bool reenable = *((bool*)en_prop->val);
+
 		stop_kvs_streaming(cam_node->node, cam_node);
 		cam_node_request_kvs_stream_update(cam_node->node);
-		kvs_start_delayed_streaming(cam_node, STREAM_START_DELAY_MS * 2);
+	    if(reenable)
+	    {
+	        log_debug("KVS stream update requested - reenabling stream after update.");
+	        kvs_start_delayed_streaming(cam_node, STREAM_START_DELAY_MS * 2);
+	    }
+	    else
+	    {
+	        log_debug("KVS stream update requested - stream will not be reenabled after update; was not enabled.");
+	    }
 	}
 }
 
@@ -1617,9 +1634,20 @@ static void cam_webrtc_stream_update_exec(struct cam_node_state *cam_node)
 		// Stream needs to update credentials
 		log_debug("WebRTC stream update requested");
 
+	    struct node_prop * en_prop = node_prop_lookup(cam_node->node, NULL, NULL, CAM_PROP_NAME_WEBRTC_ENABLE);
+	    bool reenable = *((bool*)en_prop->val);
+
 		stop_webrtc_streaming(cam_node->node, cam_node);
 		cam_node_request_webrtc_stream_update(cam_node->node);
-		webrtc_start_delayed_streaming(cam_node, STREAM_START_DELAY_MS * 2);
+	    if(reenable)
+	    {
+	        log_debug("WebRTC stream update requested - reenabling stream after update.");
+	        webrtc_start_delayed_streaming(cam_node, STREAM_START_DELAY_MS * 2);
+	    }
+	    else
+	    {
+	        log_debug("WebRTC stream update requested - stream will not be reenabled after update; was not enabled.");
+	    }
 	}
 }
 
@@ -1667,7 +1695,7 @@ static void cam_debug_print_props(struct node *node)
 	log_debug("kvsdata aws_secret_key: %s", node_state->hls_data.secret_access_key);
 	log_debug("kvsdata aws_region: %s", node_state->hls_data.region);
 	log_debug("kvsdata session_token: %s", node_state->hls_data.session_token);
-	log_debug("kvsdata expiration_time: %d", node_state->hls_data.expiration_time);
+	log_debug("kvsdata expiration_time: %lld", node_state->hls_data.expiration_time);
 	log_debug("kvsdata retention_days: %d", node_state->hls_data.retention_days);
 
 	// Prints webrtcdata structure elements from node_state
@@ -1677,7 +1705,7 @@ static void cam_debug_print_props(struct node *node)
 	log_debug("webrtcdata aws_secret_key: %s", node_state->webrtc_data.secret_access_key);
 	log_debug("webrtcdata aws_region: %s", node_state->webrtc_data.region);
 	log_debug("webrtcdata session_token: %s", node_state->webrtc_data.session_token);
-	log_debug("webrtcdata expiration_time: %d", node_state->webrtc_data.expiration_time);
+	log_debug("webrtcdata expiration_time: %lld", node_state->webrtc_data.expiration_time);
 }
 
 //static int cam_node_start_video_stream_control(struct gst_data *gst_data, struct cam_node_state* node_state)
@@ -1995,7 +2023,6 @@ static void fork_and_start_kvs_streaming(struct node *node)
 		if(0 < stream_time) {
 			timer_set(app_get_timers(), &cam_node->hls_stream_state.stream_timer, (stream_time * 1000));
 		}
-		timer_set(app_get_timers(), &cam_node->hls_stream_state.stream_update_timer, CAM_STREAM_UPDATE_TIME_MS);
 	}
 }
 
@@ -2028,7 +2055,6 @@ static void fork_and_start_webrtc_streaming(struct node *node)
 		start_webrtc_streaming(node);
 	} else {
 		cam_node->webrtc_stream_state.pid = pid;
-		timer_set(app_get_timers(), &cam_node->webrtc_stream_state.stream_update_timer, CAM_STREAM_UPDATE_TIME_MS);
 	}
 }
 
