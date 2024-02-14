@@ -1002,7 +1002,8 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
 
     json_t *dev_node_a, *dev_node, *credentials;
     void * itr;
-    int retention_days , expiration_time;
+    int retention_days;
+    s64 expiration_time;
 
     json_t *info = (json_t *)val;
 
@@ -1045,11 +1046,11 @@ static int kvs_streams_json(struct prop *prop, const void *val, size_t len,
 
 		json_get_int(dev_node, "retention_days", &retention_days);
         kvsdata.retention_days = retention_days;
-        log_debug2("retention days '%d' and '%d' ", retention_days , kvsdata.retention_days);
+        log_debug2("retention days '%lld' ", kvsdata.retention_days);
 
-		json_get_int(credentials, "expiration", &expiration_time);
-        kvsdata.expiration_time= expiration_time;
-        log_debug2("expiration time '%d' and '%d' ", expiration_time , kvsdata.expiration_time);
+		json_get_int64(credentials, "expiration", &expiration_time);
+        kvsdata.expiration_time = expiration_time;
+        log_debug2("expiration time '%lld'", (long long)kvsdata.expiration_time);
     }
 	else {
 		return -1;
@@ -1097,7 +1098,7 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
 
 	json_t *dev_node_a, *dev_node, *credentials;
 	void * itr;
-	int expiration_time;
+	s64 expiration_time;
 
 	json_t *info = (json_t *)val;
 
@@ -1138,10 +1139,10 @@ static int webrtc_signaling_channels_json (struct prop *prop, const void *val, s
         log_debug2("secret_access_key '%s'",webrtcdata.secret_access_key);
 
         webrtcdata.session_token = json_get_string_dup(credentials, "session_token");
-        json_get_int(credentials, "expiration", &expiration_time);
 
+        json_get_int64(credentials, "expiration", &expiration_time);
         webrtcdata.expiration_time = expiration_time;
-        log_debug2("expiration time '%d' and '%d' ", expiration_time , webrtcdata.expiration_time);
+        log_debug2("expiration time '%lld'", (long long)webrtcdata.expiration_time);
     }
 	else {
 		return -1;
