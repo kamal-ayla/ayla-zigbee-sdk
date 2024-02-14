@@ -114,7 +114,7 @@ static char up_time[UPTIME_LEN];
 #define GET_CURRENT_CPU_USAGE   "top -n 1 | grep CPU | awk '{print $2}' | head -n1"
 #define GET_AYLA_VERSION "opkg list | grep ayla"
 
-#define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.core_logread.log | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
+#define GET_CORE_DUMP_LOG_FILE "ls --full-time /root/*.core_logread.log /root/debug* | awk '{print $6,$7,$9}'  > /tmp/files_list.txt"
 #define GET_CORE_DUMP_LOG_FILE_TIMESTAMP "ls --full-time %s | awk '{print $6,$7}'"
 #define GET_CORE_DUMP_FILE_NAME "ls /root/*.gz"
 #define GET_CORE_DUMP_FILE "ls --full-time /root/*.core.gz | awk '{print $6,$7}'"
