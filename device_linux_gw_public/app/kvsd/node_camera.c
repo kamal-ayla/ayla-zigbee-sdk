@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 #include <jansson.h>
 
@@ -1896,6 +1898,16 @@ void cam_init(struct timer_head *timers)
 	node_set_network_callbacks(&callbacks);
 }
 
+void handle_SIGCHLD(int sig)
+{
+    // Reap terminated child processes
+    pid_t pid;
+    int status;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        log_debug2("Child process PID: '%d' terminated.\n", pid);
+    }
+}
+
 /*
  * Start the node.
  */
@@ -1903,6 +1915,7 @@ void cam_start(void)
 {
 	log_app("starting cam gateway");
 	timer_set(app_get_timers(), &state.step_timer, 0);
+    signal(SIGCHLD, handle_SIGCHLD);
 }
 
 /*
