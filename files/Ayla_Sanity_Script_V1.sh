@@ -54,13 +54,12 @@ Sanity_Report_Version()
 {
         if [ "${ENABLE_CONSOLE_LOG}" = true ]
         then
-                echo "Sanity_Script_Version: 1.0"
+                echo "Sanity_Script_Version: 1.1"
                 echo
         else
-                echo "Sanity_Script_Version, 1.0"
+                echo "Sanity_Script_Version, 1.1"
         fi
 }
-
 
 check_os_version()
 {
@@ -392,25 +391,6 @@ check_meminfo()
 	fi
 }
 
-check_os_disk_usage()
-{
-	if [ "${ENABLE_CONSOLE_LOG}" = true ]
-	then
-		echo "Disk space:"
-		df -h
-		echo
-	else
-		disk_usage=`df | grep ubi0_20 | awk '/^\/dev/ {print $5}' | tr -d '%'`
-
-		if [ $disk_usage -lt 10 ]
-		then
-			echo "check_os_disk_usage, PASSED"
-		else
-			echo "check_os_disk_usage, FAILED"
-		fi
-	fi
-}
-
 check_running_process_list()
 {
 	if [ "${ENABLE_CONSOLE_LOG}" = true ]
@@ -428,13 +408,29 @@ check_device_core_dump()
 		echo "List of Core dump Files"
 		ls -lh /root/*.gz
 		ls -lh /root/*.tgz
+		ls -lh /root/*.log
+		echo
+
+	fi
+}
+
+check_disk_usage()
+{
+	if [ "${ENABLE_CONSOLE_LOG}" = true ]
+	then
+		echo "Disk space:"
+		df -h
 		echo
 	else
-		if [ -f /root/*.gz ]
+		disk_usage=`df | grep ubi0_20 | awk '/^\/dev/ {print $5}' | tr -d '%'`
+
+		if [ $disk_usage -gt 70 ]
 		then
-			echo "checked coredump Core_available, FAILED"
-	else
-			echo "checked coredump Not_Available, PASSED"
+			rm -r /root/*.gz
+			rm -r /root/*.log
+			echo "check_os_disk_usage, FAILED"
+		else
+			echo "check_os_disk_usage, PASSED"
 		fi
 	fi
 }
@@ -960,9 +956,9 @@ execute_sanity_test_result()
 	check_os_cpu_usage
 	check_os_ram_usage
 	check_meminfo
-	check_os_disk_usage
 	check_running_process_list
 	check_device_core_dump
+	check_disk_usage
 	check_whitelist_supplicant
 	check_device_ap_scan_mode
 	check_os_mesh_connected
