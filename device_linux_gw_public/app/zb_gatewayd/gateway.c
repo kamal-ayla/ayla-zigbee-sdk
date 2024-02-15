@@ -403,6 +403,8 @@ static int core_dump_file_verfication(void);
 static int timestamp_check(char ts_file[], char ts_conf[]);
 /* To set the current timestamp */
 static void gw_set_core_dump_timestamp(void);
+/* To set crash count in the dcm_props file */
+static int gw_set_crash_count(void);
 /* To get the timestamp from the conf file */
 static void gw_get_core_dump_timestamp(void);
 /* To set the ota type */
@@ -419,6 +421,7 @@ static int file_upload_confirm = 0;
 static int delete_fileupload_files;
 static int delete_file;
 static int gw_crash_count;
+static int crash_count = 0;
 /* data convert to the UPPER CASE */
 
 /* serial number command  */
@@ -2127,8 +2130,6 @@ static int  core_dump_file_verfication(void)
    int i = 0;
    int log_flag = 0;
    char *array[3];
-   int crash_count = 0;
-   char crash_cmd[CHAR_SIZE];
    unsigned int core_dump_exist = 0;
 
    // To list of core dump log file names and timestamp  routing to the log list file
@@ -2238,27 +2239,6 @@ static int  core_dump_file_verfication(void)
 	       }
 	       core_dump_exist = 1;
 	       pclose(core_dump);
-
-               //crash_count++;
-               snprintf(crash_cmd, sizeof(crash_cmd), SET_CRASH_COUNT, crash_count);
-	       log_debug("set crash count : %d in the dcm_props file",crash_count);
-	       // To set crash count in the dcm_props file
-               core_dump = popen(crash_cmd,"r");
-               if( core_dump == NULL) {
-                  log_debug("SET CRASH COUNT FILE FAILED");
-		  pclose(core_dump);
-                  return 1;
-                }
-                pclose(core_dump);
-
-               core_dump = popen(UCI_COMMIT, "r");
-               if( core_dump == NULL) {
-                  log_debug("uci commit command failed");
-		  pclose(core_dump);
-                  return 1;
-               }
-               pclose(core_dump);
-
 	    }
          }
 
@@ -2304,24 +2284,6 @@ static int  core_dump_file_verfication(void)
 
    }
    fclose(cmd_resp);
-
-   cmd_fp = popen(GET_CRASH_COUNT,"r");
-   if( cmd_fp == NULL) {
-      log_debug("GET CRASH COUNT FILE FAILED");
-      pclose(cmd_fp);
-      return 1;
-   }
-   fscanf(cmd_fp, "%d", &crash_count);
-   log_debug("Get crash count from dcm_props file : %d",crash_count);
-   pclose(cmd_fp);
-
-   if ( gw_crash_count != crash_count ) {
-      gw_crash_count = crash_count;
-      prop_send_by_name("gw_crash_count");
-   }
-   else {
-     log_debug("same crash count should not be send to the cloud");
-   }
    // enable file upload flag and verify in the file upload callback function .
    file_upload_confirm = 1;
 
@@ -5930,6 +5892,44 @@ static enum err_t appd_num_nodes_send(struct prop *prop, int req_id,
 	return prop_arg_send(prop, req_id, opts);
 }
 
+/** @brief gw_set_crash_count
+ *          This function will excute the crash count command to set the value in the dcm_props file.
+ *          crash count will be sending to the cloud if crash count mismatch with the cloud. 
+ *
+ * @param No input argument
+ *
+ * @return return value 1 if command failed to excute and 0 if everything is success
+ */
+static int gw_set_crash_count(void)
+{
+   FILE *count = NULL;
+   char crash_cmd[CHAR_SIZE];
+   snprintf(crash_cmd, sizeof(crash_cmd), SET_CRASH_COUNT, crash_count);
+   log_debug("set crash count : %d in the dcm_props file", crash_count);
+   // To set crash count in the dcm_props file
+   count = popen(crash_cmd,"r");
+   if( count == NULL) {
+      log_debug("SET CRASH COUNT FILE FAILED");
+      pclose(count);
+      return 1;
+   }
+   pclose(count);
+
+   count = popen(UCI_COMMIT, "r");
+   if( count == NULL) {
+      log_debug("uci commit command failed");
+      pclose(count);
+      return 1;
+   }
+   pclose(count);
+
+   if ( gw_crash_count != crash_count ) {
+      gw_crash_count = crash_count;
+      prop_send_by_name("gw_crash_count");
+   }
+   return 0;
+}
+
 /*
  * File upload complete callback
  */
@@ -5951,6 +5951,8 @@ static int file_upload_confirm_cb(struct prop *prop, const void *val,
        if( file_upload_confirm == 1 ) {
 	  // set the current timestamp in the conf file
           gw_set_core_dump_timestamp();
+          // set the crash count in the dcm_props file
+          gw_set_crash_count();
 
 	  // To get the the value from delete_uploaded_file in dcm_props file
 	  // 0 - don't delete, 1 - delete the files from the device.
