@@ -1532,17 +1532,8 @@ void appd_prop_init()
    log_info("appd prop get called");
    appd_properties_get();
 
-   // Get the last checked timestamp from the attributes conf file
-   gw_get_core_dump_timestamp();
-
    //tx power update
    gw_tx_power_init();
-   // verifing the timestamp available or not in the conf file
-   if ( strcmp ( core_timestamp, "" ) == 0 ) {
-     // set the current timestamp in the conf file because timestamp not availble
-      gw_set_core_dump_timestamp();
-   }
-
    timer_set(app_get_timers(), &reboot_cause_update_timer, 180000);
 }
 
@@ -5715,7 +5706,13 @@ static int appd_update_from_device_prop_value(void)
     pclose(update_dev);
     // update the current max target power adjust 2g & 5g values in the cloud
     appd_gw_tx_pwr_adjusted_status();
-
+    // Get the last checked timestamp from the attributes conf file
+    gw_get_core_dump_timestamp();
+    // verifing the timestamp available or not in the conf file
+    if ( strcmp ( core_timestamp, "" ) == 0 ) {
+       // set the current timestamp in the conf file because timestamp not availble
+       gw_set_core_dump_timestamp();
+    }
     return 0;
 }
 
