@@ -320,7 +320,7 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                 char pipeline_str[4096];
                 snprintf(pipeline_str, 4096,
                          "udpsrc port=%u ! application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96 ! rtph264depay ! "
-                         "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=TRUE emit-signals=TRUE name=appsink-video",
+                         "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! appsink sync=FALSE emit-signals=TRUE name=appsink-video",
                         port);
 
                 pipeline = gst_parse_launch(pipeline_str, &error);

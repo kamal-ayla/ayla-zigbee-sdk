@@ -13,8 +13,8 @@
 #include "cJSON.h"
 
 
-#define GST_CHK_ELEM(elem) if(elem == NULL) { g_printerr("Error\n"); exit(-1); }
-#define GST_CHK(bool) if(bool == FALSE) { g_printerr("Error\n"); exit(-1); }
+#define GST_CHK_ELEM(elem) if(elem == NULL) { const gchar *elementName; g_object_get(elem, "name", &elementName, NULL); g_printerr("Error: GST_CHK_ELEM: %s. Line: %d\n", elementName, __LINE__); exit(-1); }
+#define GST_CHK(bool) if(bool == FALSE) { g_printerr("Error: GST_CHK returned false, Line: %d\n", __LINE__); exit(-1); }
 #define COMM_BUFFER_SIZE        32
 
 #define SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_STR            "flush-on-eos"
@@ -24,7 +24,7 @@
 
 #define SERVICE_QUEUE_PARAM_FLUSH_ON_EOS_DEFAULT        true
 #define SERVICE_QUEUE_PARAM_MAX_SIZE_BUFFERS_DEFAULT    30
-#define SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_DEFAULT      5000000
+#define SERVICE_QUEUE_PARAM_MAX_SIZE_BYTES_DEFAULT      65536
 #define SERVICE_QUEUE_PARAM_MAX_SIZE_TIME_MS_DEFAULT    250000000
 
 static GMainLoop* loop = NULL;
@@ -346,17 +346,21 @@ start_source()
     set_check_property(source, "latency", 0, NULL);
     set_check_property(source, "drop-on-latency", TRUE, NULL);
     set_check_property(source, "buffer-mode", 0, NULL);
-    set_check_property(source, "ntp-sync", FALSE, NULL);
-    set_check_property(source, "udp-buffer-size", 51200, NULL);
+    set_check_property(source, "ntp-sync", TRUE, NULL);
+    //set_check_property(source, "udp-buffer-size", 51200, NULL);
     set_check_property(source, "tcp-timeout", 1000, NULL);
     set_check_property(source, "short-header", TRUE, NULL);
     set_check_property(source, "location", rtsp_location, NULL);
+	//set_check_property(source, "protocols", "tcp", NULL);
+	//set_check_property(source, "do-retransmission", false, NULL);
+	set_check_property(source, "do-timestamp", TRUE, NULL);
 
     GstElement* decodebin = gst_element_factory_make("decodebin", "decodebin"); GST_CHK_ELEM(decodebin);
     GstElement* videoconvert = gst_element_factory_make("videoconvert", "videoconvert"); GST_CHK_ELEM(videoconvert);
     GstElement* x264enc = gst_element_factory_make("x264enc", "x264enc"); GST_CHK_ELEM(x264enc);
     set_check_property(x264enc, "tune", 4 /*"zerolatency"*/, NULL);
-    set_check_property(x264enc, "key-int-max", 10, NULL);
+    set_check_property(x264enc, "key-int-max", 60, NULL);
+    set_check_property(x264enc, "speed-preset", 1 /* ultrafast */, NULL);
     GstElement* rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay"); GST_CHK_ELEM(rtph264pay);
 
     tee = gst_element_factory_make("tee", "tee"); GST_CHK_ELEM(tee);
@@ -365,6 +369,7 @@ start_source()
     udpsink2 = gst_element_factory_make("udpsink", "udpsink2"); GST_CHK_ELEM(udpsink2);
     set_check_property(udpsink1, "host", "127.0.0.1", "port", hls_stream_data.port, NULL);
     set_check_property(udpsink2, "host", "127.0.0.1", "port", webrtc_stream_data.port, NULL);
+    set_check_property(udpsink2, "async", FALSE, NULL);
 
     queue1 = gst_element_factory_make("queue", "queue1"); GST_CHK_ELEM(queue1);
     set_check_property(queue1, "flush-on-eos", service_queue_params.flush_on_eos, NULL);
