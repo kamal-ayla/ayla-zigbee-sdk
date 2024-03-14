@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ayla-zigbee-sdk
-PKG_RELEASE:=1.10
+PKG_RELEASE:=1.11
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 PKG_INSTALL_DIR := $(PKG_BUILD_DIR)/device_linux_gw_public/build/$(TARGET_CROSS)/obj

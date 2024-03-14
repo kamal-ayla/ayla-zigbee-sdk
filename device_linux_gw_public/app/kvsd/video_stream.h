@@ -16,7 +16,7 @@
 #define MASTER_STREAM_APP			"/usr/bin/kvsd_stream_master"
 #define HLS_STREAM_APP 				"/usr/bin/kvsd_stream_hls"
 #define WEBRTC_STREAM_APP			"/usr/bin/kvsd_stream_webrtc"
-#define SHELL_DEFAULT				"/usr/bin/bash"
+#define SHELL_DEFAULT				"/bin/bash"
 #define GST_PLUGIN_PATH_ENV			"GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0"
 #define GST_PLUGIN_SCANNER_PATH_ENV "GST_PLUGIN_SCANNER=/usr/lib/gstreamer-1.0/gst-plugin-scanner"
 #define ADDITIONAL_LIB_PATH_ENV		"LD_LIBRARY_PATH=/usr/lib"
