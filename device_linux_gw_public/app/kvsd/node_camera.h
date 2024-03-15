@@ -79,6 +79,14 @@ struct cam_node_state {
 	struct timer sm_timer;	/* Timer for state machine */
 	unsigned int sm_timeout_ms;			/* Timeout for state machine */
 	unsigned int sm_state;			/* State machine state */
+
+	//Flags for ensuring persistence of webrtc or KVS
+	bool url_prop_handler_called;
+	bool user_prop_handler_called;
+	bool password_prop_handler_called;
+	bool master_stream_aborted;
+	bool kvs_streaming_required;
+	bool webrtc_streaming_required;
 };
 
 /*
