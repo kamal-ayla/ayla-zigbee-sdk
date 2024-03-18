@@ -17,6 +17,8 @@
 
 #include "utils.h"
 
+#include <asm-generic/errno-base.h>
+
 
 int check_url_userpass(const char* url)
 {
@@ -136,7 +138,8 @@ int kill_all_proc(const char* proc_name, uint32_t wait_ms)
 	while (fgets(pid, sizeof(pid)-1, fp) != NULL) {
 		int pid_val = atoi(pid);
 		// Kill each process
-		if (kill(pid_val, SIGKILL) == -1) {
+	    int ret = kill(pid_val, SIGKILL);
+		if (ret != 0 && ret != ESRCH) {
 			log_err("Failed to kill process: %d", pid_val);
 			++err;
 		}
