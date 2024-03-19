@@ -2043,6 +2043,22 @@ int cam_node_remove(enum camera_node_type type)
 	return 0;
 }
 
+static void kvs_stream_failed_inform(struct node *node)
+{
+        struct cam_node_state *cam_node = cam_node_state_get(node);
+        cam_node->hls_stream_state.starting = false;
+        struct node_prop * en_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_KVS_ENABLE);
+        node_prop_boolean_send(node, en_prop, false);
+}
+
+static void webrtc_stream_failed_inform(struct node *node)
+{
+        struct cam_node_state *cam_node = cam_node_state_get(node);
+        cam_node->webrtc_stream_state.starting = false;
+        struct node_prop * en_prop = node_prop_lookup(node, NULL, NULL, CAM_PROP_NAME_WEBRTC_ENABLE);
+        node_prop_boolean_send(node, en_prop, false);
+}
+
 static void fork_and_start_kvs_streaming(struct node *node)
 {
 	struct cam_node_state *cam_node = cam_node_state_get(node);
@@ -2051,6 +2067,7 @@ static void fork_and_start_kvs_streaming(struct node *node)
 	if(ret != 0)
 	{
 		log_err("Failed to send start HLS command to master stream process");
+		kvs_stream_failed_inform(node);
 		return;
 	}
 	usleep(100000);
@@ -2095,6 +2112,7 @@ static void fork_and_start_webrtc_streaming(struct node *node)
 		if (ret != 0) {
 			log_err("Fatal error: Failed to send start WebRTC \
 				command to master stream process");
+			webrtc_stream_failed_inform(node);
 			return;
 		}
 	}
